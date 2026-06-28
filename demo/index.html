@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lifeline — iOS Simulator Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=SF+Pro+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════════════════════
+           CSS RESET & GLOBAL
+           ═══════════════════════════════════════════════════════════════════════ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-deep: #0a0a0f;
+            --bg-surface: #111118;
+            --bg-card: rgba(255,255,255,0.04);
+            --bg-card-hover: rgba(255,255,255,0.07);
+            --glass: rgba(255,255,255,0.06);
+            --glass-border: rgba(255,255,255,0.08);
+            --accent: #00d4aa;
+            --accent-glow: rgba(0,212,170,0.25);
+            --accent-2: #7c5cfc;
+            --accent-3: #ff6b6b;
+            --accent-4: #ffd43b;
+            --text-primary: #f0f0f5;
+            --text-secondary: rgba(240,240,245,0.55);
+            --text-tertiary: rgba(240,240,245,0.30);
+            --border-subtle: rgba(255,255,255,0.06);
+            --success: #34d399;
+            --warning: #fbbf24;
+            --danger: #f87171;
+            --phone-width: 393px;
+            --phone-height: 852px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Ambient background glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -40%;
+            left: -20%;
+            width: 70%;
+            height: 70%;
+            background: radial-gradient(ellipse, rgba(0,212,170,0.06) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -30%;
+            right: -20%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(ellipse, rgba(124,92,252,0.05) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           HEADER
+           ═══════════════════════════════════════════════════════════════════════ */
+        .page-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(10,10,15,0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .page-header .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.02em;
+        }
+
+        .page-header .logo .icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+            transition: background 0.3s;
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+            box-shadow: 0 0 8px rgba(52,211,153,0.5);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           MAIN LAYOUT
+           ═══════════════════════════════════════════════════════════════════════ */
+        .simulator-container {
+            display: flex;
+            align-items: center;
+            gap: 48px;
+            z-index: 1;
+            margin-top: 60px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           iPHONE 15 PRO FRAME
+           ═══════════════════════════════════════════════════════════════════════ */
+        .iphone-frame {
+            width: calc(var(--phone-width) + 24px);
+            height: calc(var(--phone-height) + 24px);
+            background: linear-gradient(145deg, #2a2a30, #1a1a20);
+            border-radius: 58px;
+            padding: 12px;
+            position: relative;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.08),
+                0 25px 80px rgba(0,0,0,0.6),
+                inset 0 0 0 1px rgba(255,255,255,0.04),
+                0 0 120px rgba(0,212,170,0.03);
+        }
+
+        /* Titanium side buttons */
+        .iphone-frame::before {
+            content: '';
+            position: absolute;
+            right: -3px;
+            top: 180px;
+            width: 4px;
+            height: 80px;
+            background: linear-gradient(180deg, #3a3a40, #2a2a30, #3a3a40);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .iphone-frame::after {
+            content: '';
+            position: absolute;
+            left: -3px;
+            top: 160px;
+            width: 4px;
+            height: 42px;
+            background: linear-gradient(180deg, #3a3a40, #2a2a30, #3a3a40);
+            border-radius: 3px 0 0 3px;
+            box-shadow: 0 60px 0 0 #2a2a30;
+        }
+
+        .iphone-screen {
+            width: var(--phone-width);
+            height: var(--phone-height);
+            background: #000;
+            border-radius: 48px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Dynamic Island */
+        .dynamic-island {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 126px;
+            height: 36px;
+            background: #000;
+            border-radius: 20px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dynamic-island.active {
+            width: 220px;
+            height: 42px;
+            background: #1a1a1e;
+        }
+
+        .dynamic-island .island-content {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .dynamic-island.active .island-content {
+            display: flex;
+        }
+
+        /* iOS Status Bar */
+        .ios-status-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 54px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 0 32px 4px;
+            z-index: 40;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .ios-status-bar .time { font-size: 16px; font-weight: 700; }
+        .ios-status-bar .icons { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+
+        /* Home indicator */
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 134px;
+            height: 5px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 3px;
+            z-index: 50;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           APP SCREENS
+           ═══════════════════════════════════════════════════════════════════════ */
+        .app-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, #0c0c14 0%, #0a0a10 100%);
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .app-screen::-webkit-scrollbar { display: none; }
+        .app-screen.active { display: flex; }
+
+        /* ── Splash Screen ──────────────────────────────────────────────────── */
+        #splash-screen {
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at center, #0f1020 0%, #0a0a0f 100%);
+        }
+
+        .splash-logo {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            margin-bottom: 24px;
+            animation: splash-pulse 2s ease-in-out infinite;
+            box-shadow: 0 20px 60px rgba(0,212,170,0.2);
+        }
+
+        @keyframes splash-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 20px 60px rgba(0,212,170,0.2); }
+            50% { transform: scale(1.05); box-shadow: 0 25px 80px rgba(0,212,170,0.3); }
+        }
+
+        .splash-title {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .splash-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .splash-progress {
+            margin-top: 48px;
+            width: 200px;
+            height: 3px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .splash-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .splash-status-text {
+            margin-top: 16px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            min-height: 18px;
+            transition: opacity 0.3s;
+        }
+
+        /* ── Dashboard Screen ───────────────────────────────────────────────── */
+        #dashboard-screen {
+            padding: 60px 20px 100px;
+        }
+
+        .dashboard-greeting {
+            margin-bottom: 4px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .dashboard-title {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 24px;
+        }
+
+        /* Biometric Ring Card */
+        .health-ring-card {
+            background: linear-gradient(135deg, rgba(0,212,170,0.08), rgba(124,92,252,0.06));
+            border: 1px solid rgba(0,212,170,0.12);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .health-ring-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -30%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(0,212,170,0.08), transparent 60%);
+            pointer-events: none;
+        }
+
+        .ring-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            flex-shrink: 0;
+        }
+
+        .ring-container svg {
+            transform: rotate(-90deg);
+            width: 100px;
+            height: 100px;
+        }
+
+        .ring-container svg circle {
+            fill: none;
+            stroke-linecap: round;
+        }
+
+        .ring-bg { stroke: rgba(255,255,255,0.06); }
+        .ring-progress { transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .ring-center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .ring-info h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .ring-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Metric Cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 18px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        .metric-card .metric-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .metric-card .metric-value {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 2px;
+        }
+
+        .metric-card .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .metric-card .metric-trend {
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--danger); }
+
+        /* Section headers */
+        .section-header {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            margin-top: 8px;
+        }
+
+        /* Server Connection Card */
+        .server-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 18px;
+            margin-bottom: 12px;
+        }
+
+        .server-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .server-card-header h4 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .server-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(52,211,153,0.12);
+            color: var(--success);
+        }
+
+        .server-badge.offline {
+            background: rgba(248,113,113,0.12);
+            color: var(--danger);
+        }
+
+        .server-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .server-detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .server-detail-row .label {
+            color: var(--text-secondary);
+        }
+
+        .server-detail-row .value {
+            font-weight: 600;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 12px;
+        }
+
+        /* ── AI Chat Screen ─────────────────────────────────────────────────── */
+        #chat-screen {
+            padding: 60px 0 100px;
+        }
+
+        .chat-header {
+            padding: 8px 20px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .chat-header h2 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .chat-header p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .chat-bubble {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+            animation: bubble-in 0.3s ease;
+        }
+
+        @keyframes bubble-in {
+            from { opacity: 0; transform: translateY(10px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .chat-bubble.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--accent), #00b894);
+            color: #000;
+            font-weight: 500;
+            border-bottom-right-radius: 6px;
+        }
+
+        .chat-bubble.ai {
+            align-self: flex-start;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            border-bottom-left-radius: 6px;
+        }
+
+        .chat-bubble.ai .ai-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-2);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .chat-bubble.system {
+            align-self: center;
+            background: transparent;
+            color: var(--text-tertiary);
+            font-size: 12px;
+            padding: 8px;
+        }
+
+        .chat-input-bar {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            gap: 8px;
+            background: rgba(12,12,20,0.95);
+            backdrop-filter: blur(20px);
+        }
+
+        .chat-input-bar input {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 12px 18px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input-bar input:focus {
+            border-color: var(--accent);
+        }
+
+        .chat-input-bar input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .chat-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border: none;
+            color: #000;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            flex-shrink: 0;
+        }
+
+        .chat-send-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 6px 0;
+        }
+
+        .typing-indicator span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--text-tertiary);
+            animation: typing-bounce 1.4s ease-in-out infinite;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing-bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+
+        /* ── Sync Screen ────────────────────────────────────────────────────── */
+        #sync-screen {
+            padding: 60px 20px 100px;
+        }
+
+        .sync-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .sync-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .sync-doc-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 18px;
+            margin-bottom: 12px;
+            transition: all 0.3s;
+        }
+
+        .sync-doc-card:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .sync-doc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .sync-doc-name {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .sync-doc-version {
+            font-size: 12px;
+            color: var(--accent);
+            font-weight: 600;
+            background: rgba(0,212,170,0.1);
+            padding: 3px 10px;
+            border-radius: 12px;
+        }
+
+        .sync-doc-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .sync-action-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border: none;
+            color: #000;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.3s;
+        }
+
+        .sync-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px var(--accent-glow);
+        }
+
+        .sync-action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Activity log */
+        .activity-log {
+            margin-top: 24px;
+        }
+
+        .activity-log h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-subtle);
+            animation: slide-in 0.3s ease;
+        }
+
+        @keyframes slide-in {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-entry:last-child { border-bottom: none; }
+
+        .log-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+
+        .log-dot.success { background: var(--success); }
+        .log-dot.error { background: var(--danger); }
+        .log-dot.info { background: var(--accent); }
+        .log-dot.warning { background: var(--warning); }
+
+        .log-text {
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--text-secondary);
+        }
+
+        .log-text strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .log-text .time {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* ── Tab Bar ────────────────────────────────────────────────────────── */
+        .tab-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 85px;
+            background: rgba(12,12,20,0.92);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-around;
+            padding-top: 8px;
+            z-index: 40;
+        }
+
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 4px 12px;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .tab-item .tab-icon {
+            font-size: 22px;
+            opacity: 0.4;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        .tab-item .tab-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            transition: color 0.2s;
+        }
+
+        .tab-item.active .tab-icon {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .tab-item.active .tab-label {
+            color: var(--accent);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           SIDEBAR CONSOLE
+           ═══════════════════════════════════════════════════════════════════════ */
+        .console-panel {
+            width: 440px;
+            height: calc(var(--phone-height) + 24px);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .console-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .console-header h3 {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .console-tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .console-tab {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .console-tab.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .console-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.08) transparent;
+        }
+
+        .console-line {
+            display: flex;
+            gap: 8px;
+            padding: 2px 0;
+            animation: console-in 0.2s ease;
+        }
+
+        @keyframes console-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .console-line .timestamp {
+            color: var(--text-tertiary);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .console-line .method {
+            font-weight: 700;
+            flex-shrink: 0;
+            padding: 0 4px;
+            border-radius: 3px;
+        }
+
+        .method-get { color: var(--success); }
+        .method-post { color: var(--accent-2); }
+        .method-ws { color: var(--accent-4); }
+
+        .console-line .path {
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        .console-line .status {
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .status-200 { color: var(--success); }
+        .status-201 { color: var(--success); }
+        .status-400 { color: var(--danger); }
+        .status-401 { color: var(--danger); }
+        .status-409 { color: var(--warning); }
+        .status-500 { color: var(--danger); }
+
+        .console-line.info .msg { color: var(--accent); }
+        .console-line.error .msg { color: var(--danger); }
+        .console-line.warn .msg { color: var(--warning); }
+
+        .console-line .response-data {
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════════════════════════════════ */
+        @media (max-width: 960px) {
+            .simulator-container {
+                flex-direction: column;
+                padding: 20px;
+            }
+            .console-panel {
+                width: 100%;
+                max-width: 440px;
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ═══════════ PAGE HEADER ═══════════ -->
+    <header class="page-header">
+        <div class="logo">
+            <div class="icon">⚡</div>
+            <span>Antigravity Engine</span>
+        </div>
+        <div class="server-status">
+            <div class="status-dot" id="serverDot"></div>
+            <span id="serverStatusText">Connecting…</span>
+        </div>
+    </header>
+
+    <!-- ═══════════ MAIN LAYOUT ═══════════ -->
+    <div class="simulator-container">
+        <!-- ── iPhone Frame ────────────────────────────────────────────── -->
+        <div class="iphone-frame">
+            <div class="iphone-screen">
+                <!-- iOS Status Bar -->
+                <div class="ios-status-bar">
+                    <span class="time" id="iosTime">9:41</span>
+                    <span class="icons">
+                        <span>📶</span>
+                        <span>📡</span>
+                        <span>🔋</span>
+                    </span>
+                </div>
+
+                <!-- Dynamic Island -->
+                <div class="dynamic-island" id="dynamicIsland">
+                    <div class="island-content" id="islandContent">
+                        <span>🔒</span>
+                        <span id="islandText">Secure</span>
+                    </div>
+                </div>
+
+                <!-- ═══ SPLASH SCREEN ═══ -->
+                <div class="app-screen active" id="splash-screen">
+                    <div class="splash-logo">💚</div>
+                    <div class="splash-title">Lifeline</div>
+                    <div class="splash-subtitle">Private Health Companion</div>
+                    <div class="splash-progress">
+                        <div class="splash-progress-bar" id="splashProgress"></div>
+                    </div>
+                    <div class="splash-status-text" id="splashStatus">Initializing secure engine…</div>
+                </div>
+
+                <!-- ═══ DASHBOARD SCREEN ═══ -->
+                <div class="app-screen" id="dashboard-screen">
+                    <div class="dashboard-greeting" id="greetingText">Good morning</div>
+                    <div class="dashboard-title">Your Health</div>
+
+                    <!-- Health Ring Card -->
+                    <div class="health-ring-card">
+                        <div class="ring-container">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="ring-bg" cx="50" cy="50" r="40" stroke-width="8"/>
+                                <circle class="ring-progress" cx="50" cy="50" r="40" stroke-width="8"
+                                    stroke="url(#ringGradient)"
+                                    stroke-dasharray="251.2"
+                                    stroke-dashoffset="251.2"
+                                    id="healthRing"/>
+                                <defs>
+                                    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="var(--accent)"/>
+                                        <stop offset="100%" stop-color="var(--accent-2)"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="ring-center-text" id="healthScore">—</div>
+                        </div>
+                        <div class="ring-info">
+                            <h3>Health Score</h3>
+                            <p>Based on today's biometric data from HealthKit</p>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Grid -->
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-icon" style="background:rgba(248,113,113,0.12);">❤️</div>
+                            <div class="metric-value" style="color:#f87171;">72</div>
+                            <div class="metric-label">Heart Rate</div>
+                            <div class="metric-trend trend-down">↓ 3 bpm</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon" style="background:rgba(0,212,170,0.12);">🏃</div>
+                            <div class="metric-value" style="color:var(--accent);">8,247</div>
+                            <div class="metric-label">Steps</div>
+                            <div class="metric-trend trend-up">↑ 12%</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon" style="background:rgba(124,92,252,0.12);">😴</div>
+                            <div class="metric-value" style="color:var(--accent-2);">7h 24m</div>
+                            <div class="metric-label">Sleep</div>
+                            <div class="metric-trend trend-up">↑ 18 min</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon" style="background:rgba(255,212,59,0.12);">🔥</div>
+                            <div class="metric-value" style="color:var(--accent-4);">486</div>
+                            <div class="metric-label">Calories</div>
+                            <div class="metric-trend trend-up">↑ 8%</div>
+                        </div>
+                    </div>
+
+                    <div class="section-header">Server</div>
+
+                    <!-- Server Status Card -->
+                    <div class="server-card">
+                        <div class="server-card-header">
+                            <h4>🔗 Antigravity Backend</h4>
+                            <span class="server-badge" id="serverBadge">Offline</span>
+                        </div>
+                        <div class="server-details">
+                            <div class="server-detail-row">
+                                <span class="label">Endpoint</span>
+                                <span class="value">localhost:8443</span>
+                            </div>
+                            <div class="server-detail-row">
+                                <span class="label">Database</span>
+                                <span class="value" id="dbMode">—</span>
+                            </div>
+                            <div class="server-detail-row">
+                                <span class="label">Session</span>
+                                <span class="value" id="sessionStatus">None</span>
+                            </div>
+                            <div class="server-detail-row">
+                                <span class="label">Device ID</span>
+                                <span class="value" id="deviceIdDisplay">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ CHAT SCREEN ═══ -->
+                <div class="app-screen" id="chat-screen">
+                    <div class="chat-header">
+                        <h2>Lifeline AI</h2>
+                        <p>Private Health Companion • Zero-Knowledge</p>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-bubble system">End-to-end encrypted • No data stored</div>
+                        <div class="chat-bubble ai">
+                            <div class="ai-label">Lifeline AI</div>
+                            Hello! I'm your private health companion. I can analyze your biometric data and provide clinical-first guidance. How can I help you today?
+                        </div>
+                    </div>
+                    <div class="chat-input-bar">
+                        <input type="text" id="chatInput" placeholder="Ask about your health…" autocomplete="off">
+                        <button class="chat-send-btn" id="chatSendBtn" title="Send">↑</button>
+                    </div>
+                </div>
+
+                <!-- ═══ SYNC SCREEN ═══ -->
+                <div class="app-screen" id="sync-screen">
+                    <div class="sync-title">Encrypted Sync</div>
+                    <div class="sync-subtitle">Zero-knowledge E2EE document synchronization</div>
+
+                    <div class="sync-doc-card">
+                        <div class="sync-doc-header">
+                            <span class="sync-doc-name">📄 Health Journal</span>
+                            <span class="sync-doc-version" id="syncVersion">v0</span>
+                        </div>
+                        <div class="sync-doc-meta">
+                            <span>🔐 AES-256-GCM encrypted</span>
+                            <span>📝 Last sync: <span id="lastSyncTime">Never</span></span>
+                        </div>
+                    </div>
+
+                    <div class="sync-doc-card">
+                        <div class="sync-doc-header">
+                            <span class="sync-doc-name">💊 Medication Log</span>
+                            <span class="sync-doc-version">v0</span>
+                        </div>
+                        <div class="sync-doc-meta">
+                            <span>🔐 XChaCha20-Poly1305 encrypted</span>
+                            <span>📝 Last sync: Never</span>
+                        </div>
+                    </div>
+
+                    <button class="sync-action-btn" id="syncNowBtn">🔄 Sync Now</button>
+
+                    <div class="activity-log">
+                        <h3>Activity</h3>
+                        <div id="activityLog">
+                            <div class="log-entry">
+                                <div class="log-dot info"></div>
+                                <div class="log-text">
+                                    <strong>Ready to sync</strong>
+                                    <span class="time">Waiting for connection…</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ TAB BAR ═══ -->
+                <div class="tab-bar">
+                    <div class="tab-item active" data-tab="dashboard">
+                        <span class="tab-icon">🏠</span>
+                        <span class="tab-label">Health</span>
+                    </div>
+                    <div class="tab-item" data-tab="chat">
+                        <span class="tab-icon">🤖</span>
+                        <span class="tab-label">AI</span>
+                    </div>
+                    <div class="tab-item" data-tab="sync">
+                        <span class="tab-icon">☁️</span>
+                        <span class="tab-label">Sync</span>
+                    </div>
+                </div>
+
+                <!-- Home Indicator -->
+                <div class="home-indicator"></div>
+            </div>
+        </div>
+
+        <!-- ── Console Panel ───────────────────────────────────────────── -->
+        <div class="console-panel">
+            <div class="console-header">
+                <h3>🖥 API Console</h3>
+                <div class="console-tabs">
+                    <button class="console-tab active" data-console="requests">Requests</button>
+                    <button class="console-tab" data-console="websocket">WebSocket</button>
+                </div>
+            </div>
+            <div class="console-body" id="consoleBody"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         JAVASCRIPT ENGINE
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <script>
+    (() => {
+        'use strict';
+
+        // ── Configuration ────────────────────────────────────────────────────
+        const API_BASE = 'http://localhost:8443/api/v1';
+        const WS_URL = 'ws://localhost:8443/api/v1/stream';
+
+        // ── State ────────────────────────────────────────────────────────────
+        let state = {
+            deviceId: crypto.randomUUID(),
+            sessionToken: null,
+            challenge: null,
+            serverOnline: false,
+            currentTab: 'dashboard',
+            syncVersion: 0,
+            ws: null,
+        };
+
+        // ── DOM Refs ─────────────────────────────────────────────────────────
+        const $ = (sel) => document.querySelector(sel);
+        const $$ = (sel) => document.querySelectorAll(sel);
+
+        // ── Clock ────────────────────────────────────────────────────────────
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours();
+            const m = String(now.getMinutes()).padStart(2, '0');
+            $('#iosTime').textContent = `${h}:${m}`;
+
+            // Greeting
+            const hour = now.getHours();
+            if (hour < 12) $('#greetingText').textContent = 'Good morning';
+            else if (hour < 17) $('#greetingText').textContent = 'Good afternoon';
+            else $('#greetingText').textContent = 'Good evening';
+        }
+        setInterval(updateClock, 10000);
+        updateClock();
+
+        // ── Console Logger ───────────────────────────────────────────────────
+        function logConsole(type, method, path, status, data) {
+            const body = $('#consoleBody');
+            const now = new Date();
+            const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+
+            const line = document.createElement('div');
+            line.className = 'console-line';
+
+            if (type === 'request') {
+                const methodClass = method === 'GET' ? 'method-get' : method === 'POST' ? 'method-post' : 'method-ws';
+                line.innerHTML = `
+                    <span class="timestamp">${ts}</span>
+                    <span class="method ${methodClass}">${method}</span>
+                    <span class="path">${path}</span>
+                    ${status ? `<span class="status status-${status}">${status}</span>` : ''}
+                `;
+                if (data) {
+                    const dataLine = document.createElement('div');
+                    dataLine.className = 'console-line';
+                    dataLine.innerHTML = `<span class="timestamp">   </span><span class="response-data">→ ${truncate(JSON.stringify(data), 120)}</span>`;
+                    body.appendChild(line);
+                    body.appendChild(dataLine);
+                    body.scrollTop = body.scrollHeight;
+                    return;
+                }
+            } else {
+                line.className = `console-line ${type}`;
+                line.innerHTML = `<span class="timestamp">${ts}</span><span class="msg">${path}</span>`;
+            }
+
+            body.appendChild(line);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function truncate(str, len) {
+            return str.length > len ? str.substring(0, len) + '…' : str;
+        }
+
+        // ── API Helpers ──────────────────────────────────────────────────────
+        async function apiGet(path) {
+            const headers = {};
+            if (state.sessionToken) {
+                headers['Authorization'] = `Bearer ${state.sessionToken}`;
+                headers['X-Device-Id'] = state.deviceId;
+            }
+            const res = await fetch(`${API_BASE}${path}`, { headers });
+            const data = await res.json();
+            logConsole('request', 'GET', path, res.status, data);
+            return { status: res.status, data };
+        }
+
+        async function apiPost(path, body) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (state.sessionToken) {
+                headers['Authorization'] = `Bearer ${state.sessionToken}`;
+                headers['X-Device-Id'] = state.deviceId;
+            }
+            const res = await fetch(`${API_BASE}${path}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            logConsole('request', 'POST', path, res.status, data);
+            return { status: res.status, data };
+        }
+
+        // ── Dynamic Island ───────────────────────────────────────────────────
+        function showIsland(text, durationMs = 2000) {
+            const island = $('#dynamicIsland');
+            const content = $('#islandText');
+            content.textContent = text;
+            island.classList.add('active');
+            setTimeout(() => island.classList.remove('active'), durationMs);
+        }
+
+        // ── Tab Navigation ───────────────────────────────────────────────────
+        $$('.tab-item').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tab;
+                if (target === state.currentTab) return;
+
+                $$('.tab-item').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                $$('.app-screen').forEach(s => s.classList.remove('active'));
+                $(`#${target}-screen`).classList.add('active');
+                state.currentTab = target;
+            });
+        });
+
+        // ── Splash Boot Sequence ─────────────────────────────────────────────
+        async function bootSequence() {
+            const progress = $('#splashProgress');
+            const status = $('#splashStatus');
+
+            const steps = [
+                { pct: 10, text: 'Initializing Secure Enclave…', delay: 400 },
+                { pct: 25, text: 'Generating device keypair…', delay: 500 },
+                { pct: 40, text: 'Connecting to Antigravity Engine…', delay: 600 },
+                { pct: 55, text: 'Requesting attestation challenge…', delay: 800 },
+                { pct: 70, text: 'Verifying device attestation…', delay: 700 },
+                { pct: 85, text: 'Establishing encrypted session…', delay: 500 },
+                { pct: 95, text: 'Loading health data…', delay: 400 },
+                { pct: 100, text: 'Ready', delay: 300 },
+            ];
+
+            for (const step of steps) {
+                progress.style.width = step.pct + '%';
+                status.textContent = step.text;
+
+                // At 40% try to connect to the server
+                if (step.pct === 40) {
+                    await checkServer();
+                }
+
+                // At 55% get a challenge
+                if (step.pct === 55 && state.serverOnline) {
+                    await getChallenge();
+                }
+
+                // At 70% simulate attestation/registration
+                if (step.pct === 70 && state.serverOnline && state.challenge) {
+                    await simulateAttestation();
+                }
+
+                // At 85% fetch policy matrix
+                if (step.pct === 85 && state.serverOnline) {
+                    await fetchPolicyMatrix();
+                }
+
+                await sleep(step.delay);
+            }
+
+            // Transition to dashboard
+            await sleep(400);
+            $('#splash-screen').classList.remove('active');
+            $('#dashboard-screen').classList.add('active');
+            state.currentTab = 'dashboard';
+
+            // Animate health ring
+            setTimeout(() => {
+                const score = 87;
+                $('#healthScore').textContent = score;
+                const offset = 251.2 - (251.2 * score / 100);
+                $('#healthRing').style.strokeDashoffset = offset;
+            }, 300);
+
+            // Update device info
+            $('#deviceIdDisplay').textContent = state.deviceId.substring(0, 8) + '…';
+            if (state.sessionToken) {
+                $('#sessionStatus').textContent = 'Active ✓';
+                $('#sessionStatus').style.color = 'var(--success)';
+            }
+
+            showIsland('Secure Session Active', 3000);
+        }
+
+        // ── Server Check ─────────────────────────────────────────────────────
+        async function checkServer() {
+            try {
+                const res = await apiGet('/auth/challenge');
+                if (res.status === 200 && res.data.challenge) {
+                    state.serverOnline = true;
+                    state.challenge = res.data.challenge;
+                    $('#serverDot').classList.add('connected');
+                    $('#serverStatusText').textContent = 'Connected — MockDatabase';
+                    $('#serverBadge').textContent = 'Online';
+                    $('#serverBadge').classList.remove('offline');
+                    $('#dbMode').textContent = 'In-Memory Mock';
+                    logConsole('info', '', '✓ Server online — development mode with MockDatabase', '');
+                }
+            } catch (e) {
+                state.serverOnline = false;
+                $('#serverDot').classList.remove('connected');
+                $('#serverStatusText').textContent = 'Offline';
+                $('#serverBadge').textContent = 'Offline';
+                $('#serverBadge').classList.add('offline');
+                logConsole('error', '', '✗ Server unreachable at localhost:8443', '');
+            }
+        }
+
+        // ── Get Challenge ────────────────────────────────────────────────────
+        async function getChallenge() {
+            try {
+                const res = await apiGet('/auth/challenge');
+                if (res.status === 200) {
+                    state.challenge = res.data.challenge;
+                    addActivityLog('success', 'Challenge received', `Nonce: ${state.challenge.substring(0, 16)}…`);
+                }
+            } catch (e) {
+                logConsole('error', '', 'Failed to get challenge', '');
+            }
+        }
+
+        // ── Simulate Attestation ─────────────────────────────────────────────
+        // NOTE: Real attestation requires actual Apple hardware.
+        // In development mode, we demonstrate the API flow by calling the endpoint
+        // and showing the expected error (since we can't generate a real attestation
+        // object from a browser). This proves the server is handling requests correctly.
+        async function simulateAttestation() {
+            try {
+                const res = await apiPost('/auth/verify-attestation', {
+                    device_id: state.deviceId,
+                    key_id: btoa('simulated-key-id-' + state.deviceId.substring(0, 8)),
+                    attestation: btoa('simulated-attestation-object'),
+                    challenge: state.challenge,
+                });
+
+                if (res.status === 200) {
+                    state.sessionToken = res.data.token;
+                    addActivityLog('success', 'Device attested & registered', 'Session token issued');
+                } else {
+                    // Expected in dev mode — attestation CBOR won't parse from browser
+                    // Simulate a successful registration via the mock
+                    logConsole('warn', '', `Attestation demo: ${res.data?.error?.code || 'Expected error in browser'} — real attestation requires iOS device`, '');
+                    addActivityLog('warning', 'Attestation (demo mode)', 'Real attestation requires iOS hardware');
+
+                    // Since we can't do real attestation from a browser, let's demonstrate the full API
+                    // by continuing without a real session token.
+                    // The AI proxy will work in dev mode without auth.
+                    state.sessionToken = null;
+                }
+            } catch (e) {
+                logConsole('error', '', `Attestation error: ${e.message}`, '');
+            }
+        }
+
+        // ── Fetch Policy Matrix ──────────────────────────────────────────────
+        async function fetchPolicyMatrix() {
+            try {
+                const res = await apiGet('/ai/policy-matrix');
+                if (res.status === 200) {
+                    addActivityLog('success', 'Policy matrix loaded', `v${res.data.version}`);
+                }
+            } catch (e) {
+                logConsole('error', '', 'Failed to fetch policy matrix', '');
+            }
+        }
+
+        // ── AI Chat ──────────────────────────────────────────────────────────
+        async function sendChatMessage() {
+            const input = $('#chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+
+            // Add user bubble
+            addChatBubble('user', text);
+
+            // Show typing indicator
+            const typingId = addTypingIndicator();
+
+            try {
+                // First get a fresh challenge for the request
+                let challenge = null;
+                if (state.serverOnline) {
+                    try {
+                        const challengeRes = await apiGet('/auth/challenge');
+                        if (challengeRes.status === 200) {
+                            challenge = challengeRes.data.challenge;
+                        }
+                    } catch(e) {}
+                }
+
+                const res = await apiPost('/ai/proxy', {
+                    prompt: text,
+                    execution_token: challenge || 'demo-token',
+                });
+
+                removeTypingIndicator(typingId);
+
+                if (res.status === 200) {
+                    const aiText = res.data.content?.[0]?.text || res.data.content || 'I received your message.';
+                    addChatBubble('ai', aiText);
+                    showIsland('AI Response', 1500);
+                } else if (res.status === 401) {
+                    addChatBubble('ai', '🔒 Authentication required. In production, this endpoint is protected by Apple App Attest device attestation. The demo shows the full API flow.');
+                } else {
+                    addChatBubble('ai', `Server responded with status ${res.status}: ${res.data?.error?.message || 'Unknown error'}`);
+                }
+            } catch (e) {
+                removeTypingIndicator(typingId);
+                addChatBubble('ai', '⚠️ Could not reach the server. Make sure the Antigravity backend is running on localhost:8443.');
+                logConsole('error', '', `Chat error: ${e.message}`, '');
+            }
+        }
+
+        function addChatBubble(role, text) {
+            const container = $('#chatMessages');
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${role}`;
+            if (role === 'ai') {
+                bubble.innerHTML = `<div class="ai-label">Lifeline AI</div>${escapeHtml(text)}`;
+            } else {
+                bubble.textContent = text;
+            }
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addTypingIndicator() {
+            const container = $('#chatMessages');
+            const id = 'typing-' + Date.now();
+            const el = document.createElement('div');
+            el.className = 'chat-bubble ai';
+            el.id = id;
+            el.innerHTML = `<div class="ai-label">Lifeline AI</div><div class="typing-indicator"><span></span><span></span><span></span></div>`;
+            container.appendChild(el);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+
+        function removeTypingIndicator(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        // Chat input handlers
+        $('#chatSendBtn').addEventListener('click', sendChatMessage);
+        $('#chatInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+
+        // ── Sync ─────────────────────────────────────────────────────────────
+        $('#syncNowBtn').addEventListener('click', async () => {
+            const btn = $('#syncNowBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Syncing…';
+
+            try {
+                // Get a challenge
+                const challengeRes = await apiGet('/auth/challenge');
+                if (challengeRes.status !== 200) throw new Error('Challenge failed');
+
+                addActivityLog('info', 'Sync initiated', 'Requesting challenge nonce…');
+
+                // Simulate encrypted document sync
+                const documentId = '550e8400-e29b-41d4-a716-446655440000';
+                state.syncVersion++;
+
+                // Simulate encrypted blob
+                const fakeBlob = btoa(JSON.stringify({
+                    encrypted: true,
+                    timestamp: new Date().toISOString(),
+                    data: 'AES-256-GCM encrypted health journal data'
+                }));
+
+                const fakeIV = btoa('random-12b-iv');
+                const fakeTag = btoa('auth-tag-16bytes');
+                const fakeSig = btoa('ecdsa-p256-signature');
+
+                const syncRes = await apiPost('/sync/delta', {
+                    document_id: documentId,
+                    device_id: state.deviceId,
+                    version_sequence: state.syncVersion,
+                    encrypted_blob: fakeBlob,
+                    initialization_vector: fakeIV,
+                    auth_tag: fakeTag,
+                    client_signature: fakeSig,
+                });
+
+                if (syncRes.status === 200) {
+                    addActivityLog('success', 'Document synced', `Version ${state.syncVersion}`);
+                    $('#syncVersion').textContent = `v${state.syncVersion}`;
+                    $('#lastSyncTime').textContent = new Date().toLocaleTimeString();
+                    showIsland('Synced ✓', 2000);
+                } else if (syncRes.status === 401) {
+                    addActivityLog('warning', 'Auth required', 'Sync requires a valid session token from device attestation');
+                } else {
+                    addActivityLog('error', 'Sync failed', syncRes.data?.error?.message || 'Unknown error');
+                }
+            } catch (e) {
+                addActivityLog('error', 'Sync error', e.message);
+                logConsole('error', '', `Sync error: ${e.message}`, '');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🔄 Sync Now';
+        });
+
+        // ── Activity Log ─────────────────────────────────────────────────────
+        function addActivityLog(type, title, detail) {
+            const container = $('#activityLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const dotClass = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
+            entry.innerHTML = `
+                <div class="log-dot ${dotClass}"></div>
+                <div class="log-text">
+                    <strong>${escapeHtml(title)}</strong>
+                    <span class="time">${escapeHtml(detail)} • ${new Date().toLocaleTimeString()}</span>
+                </div>
+            `;
+            container.insertBefore(entry, container.firstChild);
+
+            // Keep only last 20 entries
+            while (container.children.length > 20) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        // ── Utilities ────────────────────────────────────────────────────────
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ── WebSocket Connection ─────────────────────────────────────────────
+        function connectWebSocket() {
+            if (!state.sessionToken) {
+                logConsole('warn', '', 'WebSocket: skipping — no session token (requires real attestation)', '');
+                return;
+            }
+            try {
+                state.ws = new WebSocket(`${WS_URL}?token=${state.sessionToken}`);
+                state.ws.onopen = () => {
+                    logConsole('info', '', '🔌 WebSocket connected', '');
+                    showIsland('Stream Active', 2000);
+                };
+                state.ws.onmessage = (e) => {
+                    logConsole('request', 'WS', `← ${truncate(e.data, 80)}`, '');
+                };
+                state.ws.onclose = () => {
+                    logConsole('warn', '', '🔌 WebSocket disconnected', '');
+                };
+                state.ws.onerror = () => {
+                    logConsole('error', '', '🔌 WebSocket error', '');
+                };
+            } catch (e) {
+                logConsole('error', '', `WebSocket error: ${e.message}`, '');
+            }
+        }
+
+        // ── Console Tab Switching ────────────────────────────────────────────
+        $$('.console-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                $$('.console-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
+        });
+
+        // ── Boot ─────────────────────────────────────────────────────────────
+        logConsole('info', '', '⚡ Antigravity iOS Simulator starting…', '');
+        logConsole('info', '', `📱 Device ID: ${state.deviceId}`, '');
+        bootSequence();
+    })();
+    </script>
+</body>
+</html>

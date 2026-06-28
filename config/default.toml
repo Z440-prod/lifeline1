@@ -1,0 +1,36 @@
+[server]
+host = "0.0.0.0"
+port = 8443
+
+[database]
+url = "postgres://antigravity:password@localhost:5432/lifeline"
+max_connections = 20
+
+[auth]
+# Replace with your Apple Developer Team ID before deployment.
+apple_team_id = "REPLACE_ME"
+# Replace with your actual app bundle identifier.
+apple_bundle_id = "com.yourcompany.lifeline"
+# Nonce validity window (seconds). Shorter = more secure, longer = more forgiving.
+nonce_ttl_seconds = 300
+# Session token lifetime after successful attestation/assertion.
+session_token_ttl_seconds = 3600
+# HMAC-SHA256 server secret for signing session tokens.
+# MUST be replaced with a cryptographically random string (≥ 32 bytes) in production.
+server_secret = "REPLACE_WITH_CRYPTOGRAPHICALLY_RANDOM_SECRET_MIN_32_BYTES"
+# "production" or "development" — controls expected AAGUID in attestation.
+environment = "development"
+
+[ai]
+anthropic_api_url = "https://api.anthropic.com/v1/messages"
+# Set via ANTIGRAVITY__AI__ANTHROPIC_API_KEY env var in production.
+anthropic_api_key = ""
+policy_matrix_version = "1.0.0"
+
+[rate_limit]
+# Sustained requests per second allowed per source IP.
+requests_per_second = 1
+# Maximum burst size — allows short spikes above the sustained rate.
+# Effectively allows up to 60 requests per minute with burst tolerance.
+burst_size = 60
+
