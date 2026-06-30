@@ -26,13 +26,18 @@ pub struct SyncDeltaRequest {
 /// Handler for `POST /api/v1/sync/delta`.
 /// Receives an encrypted document version, verifies the device signature,
 /// and stores the version using a SERIALIZABLE transaction.
+#[tracing::instrument(skip(state, payload), fields(device_id = %payload.device_id, document_id = %payload.document_id, version_sequence = payload.version_sequence))]
 pub async fn sync_delta_handler(
     State(state): State<Arc<AppState>>,
     Extension(verified_device): Extension<VerifiedDevice>,
     Json(payload): Json<SyncDeltaRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/sync/delta").increment(1);
+    let start_time = std::time::Instant::now();
+
     // 1. Enforce that the authenticated device ID matches the payload's device ID
     if verified_device.device_id != payload.device_id {
+        metrics::counter!("antigravity_api_errors_total", "endpoint" => "/sync/delta", "error" => "unauthorized").increment(1);
         return Err(AppError::Unauthorized(
             "Authenticated device ID does not match request device_id".to_owned(),
         ));
@@ -66,7 +71,6 @@ pub async fn sync_delta_handler(
         .ok_or(AppError::DeviceNotFound)?;
 
     // 4. Reconstruct the message over which the signature was generated
-    // Message = document_id (16 bytes) || version_sequence (8 bytes BE) || encrypted_blob || IV || auth_tag
     let mut signed_data = Vec::with_capacity(
         16 + 8 + encrypted_blob_bytes.len() + iv_bytes.len() + auth_tag_bytes.len(),
     );
@@ -97,7 +101,32 @@ pub async fn sync_delta_handler(
         created_at: chrono::Utc::now(),
     };
 
+    let db_start = std::time::Instant::now();
     state.db.upsert_sync_document(&doc).await?;
+    metrics::histogram!("antigravity_db_latency_seconds", "operation" => "upsert_sync_document")
+        .record(db_start.elapsed().as_secs_f64());
+
+    // 7. Write-through to the memory Cache
+    state.doc_cache.insert(doc.document_id, doc.clone());
+    metrics::counter!("antigravity_cache_updates_total", "operation" => "sync_delta").increment(1);
+
+    // 8. Record cryptographically chained Audit Log
+    let payload_hash = {
+        use ring::digest::{digest, SHA256};
+        digest(&SHA256, &doc.encrypted_blob).as_ref().to_vec()
+    };
+    state
+        .db
+        .insert_audit_log(
+            "WRITE_DOCUMENT",
+            verified_device.device_id,
+            doc.document_id,
+            &payload_hash,
+        )
+        .await?;
+
+    metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/sync/delta")
+        .record(start_time.elapsed().as_secs_f64());
 
     Ok(Json(json!({
         "document_id": doc.document_id,
@@ -108,19 +137,60 @@ pub async fn sync_delta_handler(
 
 /// Handler for `GET /api/v1/sync/document/:id`.
 /// Retrieves the latest encrypted version of a document.
+#[tracing::instrument(skip(state), fields(document_id = %document_id))]
 pub async fn get_document_handler(
     State(state): State<Arc<AppState>>,
-    Extension(_verified_device): Extension<VerifiedDevice>,
+    Extension(verified_device): Extension<VerifiedDevice>,
     Path(document_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let doc = state
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/sync/document/{id}")
+        .increment(1);
+    let start_time = std::time::Instant::now();
+
+    // 1. Cache-aside Lookup
+    metrics::counter!("antigravity_cache_requests_total", "endpoint" => "get_document")
+        .increment(1);
+    let doc = if let Some(cached_doc) = state.doc_cache.get(&document_id) {
+        metrics::counter!("antigravity_cache_hits_total", "endpoint" => "get_document")
+            .increment(1);
+        cached_doc
+    } else {
+        metrics::counter!("antigravity_cache_misses_total", "endpoint" => "get_document")
+            .increment(1);
+
+        let db_start = std::time::Instant::now();
+        let db_doc = state
+            .db
+            .get_latest_document(document_id)
+            .await?
+            .ok_or_else(|| AppError::BadRequest("Document not found".to_owned()))?;
+        metrics::histogram!("antigravity_db_latency_seconds", "operation" => "get_latest_document")
+            .record(db_start.elapsed().as_secs_f64());
+
+        // Pop cache with retrieved document
+        state.doc_cache.insert(document_id, db_doc.clone());
+        db_doc
+    };
+
+    // 2. Log compliance Audit Trail
+    let payload_hash = {
+        use ring::digest::{digest, SHA256};
+        digest(&SHA256, &doc.encrypted_blob).as_ref().to_vec()
+    };
+    state
         .db
-        .get_latest_document(document_id)
-        .await?
-        .ok_or_else(|| AppError::BadRequest("Document not found".to_owned()))?;
+        .insert_audit_log(
+            "READ_DOCUMENT",
+            verified_device.device_id,
+            document_id,
+            &payload_hash,
+        )
+        .await?;
 
     let engine = base64::prelude::BASE64_STANDARD;
     use base64::Engine;
+
+    metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/sync/document/{id}").record(start_time.elapsed().as_secs_f64());
 
     // Convert bytes back to base64 for JSON response
     Ok(Json(json!({
@@ -137,12 +207,30 @@ pub async fn get_document_handler(
 
 /// Handler for `GET /api/v1/sync/document/:id/history`.
 /// Retrieves the full version history of a document (all versions, ascending).
+#[tracing::instrument(skip(state), fields(document_id = %document_id))]
 pub async fn get_document_history_handler(
     State(state): State<Arc<AppState>>,
-    Extension(_verified_device): Extension<VerifiedDevice>,
+    Extension(verified_device): Extension<VerifiedDevice>,
     Path(document_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/sync/document/{id}/history").increment(1);
+    let start_time = std::time::Instant::now();
+
+    let db_start = std::time::Instant::now();
     let docs = state.db.get_document_history(document_id).await?;
+    metrics::histogram!("antigravity_db_latency_seconds", "operation" => "get_document_history")
+        .record(db_start.elapsed().as_secs_f64());
+
+    // Audit log history read action
+    state
+        .db
+        .insert_audit_log(
+            "READ_DOCUMENT_HISTORY",
+            verified_device.device_id,
+            document_id,
+            &[],
+        )
+        .await?;
 
     let engine = base64::prelude::BASE64_STANDARD;
     use base64::Engine;
@@ -162,6 +250,8 @@ pub async fn get_document_history_handler(
             })
         })
         .collect();
+
+    metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/sync/document/{id}/history").record(start_time.elapsed().as_secs_f64());
 
     Ok(Json(json!({
         "document_id": document_id,
