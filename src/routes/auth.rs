@@ -33,19 +33,27 @@ pub struct AssertRequest {
 
 /// Handler for `GET /api/v1/auth/challenge`.
 /// Generates a single-use cryptographically random challenge.
+#[tracing::instrument(skip(state))]
 pub async fn challenge_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/auth/challenge")
+        .increment(1);
     let challenge = state.nonce_cache.generate_nonce()?;
     Ok(Json(json!({ "challenge": challenge })))
 }
 
 /// Handler for `POST /api/v1/auth/verify-attestation`.
 /// Cryptographically verifies Apple App Attest attestation and registers the device.
+#[tracing::instrument(skip(state, payload), fields(device_id = %payload.device_id))]
 pub async fn verify_attestation_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<VerifyAttestationRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/auth/verify-attestation")
+        .increment(1);
+    let start_time = std::time::Instant::now();
+
     // 1. Consume the nonce from cache to enforce single-use replay protection
     state.nonce_cache.verify_and_consume(&payload.challenge)?;
 
@@ -64,7 +72,10 @@ pub async fn verify_attestation_handler(
         sign_counter: 0,
         registered_at: chrono::Utc::now(),
     };
+    let db_start = std::time::Instant::now();
     state.db.insert_device(&new_device).await?;
+    metrics::histogram!("antigravity_db_latency_seconds", "operation" => "insert_device")
+        .record(db_start.elapsed().as_secs_f64());
 
     // 4. Generate a session token for post-attestation API access
     let token = crate::crypto::session::create_session_token(
@@ -72,6 +83,14 @@ pub async fn verify_attestation_handler(
         payload.device_id,
         state.config.auth.session_token_ttl_seconds,
     )?;
+
+    // 5. Audit log registration event
+    state
+        .db
+        .insert_audit_log("REGISTER_DEVICE", payload.device_id, payload.device_id, &[])
+        .await?;
+
+    metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/auth/verify-attestation").record(start_time.elapsed().as_secs_f64());
 
     Ok(Json(json!({
         "status": "verified",
@@ -81,19 +100,26 @@ pub async fn verify_attestation_handler(
 
 /// Handler for `POST /api/v1/auth/assert`.
 /// Performs login/session refresh by verifying client assertion token.
+#[tracing::instrument(skip(state, payload), fields(device_id = %payload.device_id))]
 pub async fn assert_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<AssertRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/auth/assert").increment(1);
+    let start_time = std::time::Instant::now();
+
     // 1. Consume the challenge nonce from the cache
     state.nonce_cache.verify_and_consume(&payload.challenge)?;
 
     // 2. Fetch the registered device from database
+    let db_start = std::time::Instant::now();
     let device = state
         .db
         .get_device(payload.device_id)
         .await?
         .ok_or(AppError::DeviceNotFound)?;
+    metrics::histogram!("antigravity_db_latency_seconds", "operation" => "get_device")
+        .record(db_start.elapsed().as_secs_f64());
 
     // 3. Cryptographically verify assertion signature and counter
     let verified = crate::crypto::assertion::verify_assertion(
@@ -106,10 +132,13 @@ pub async fn assert_handler(
     )?;
 
     // 4. Persist updated sign counter
+    let db_start = std::time::Instant::now();
     state
         .db
         .update_counter(payload.device_id, verified.new_counter)
         .await?;
+    metrics::histogram!("antigravity_db_latency_seconds", "operation" => "update_counter")
+        .record(db_start.elapsed().as_secs_f64());
 
     // 5. Issue a new session token
     let token = crate::crypto::session::create_session_token(
@@ -117,6 +146,20 @@ pub async fn assert_handler(
         payload.device_id,
         state.config.auth.session_token_ttl_seconds,
     )?;
+
+    // 6. Audit log assertion/login event
+    state
+        .db
+        .insert_audit_log(
+            "VERIFY_ASSERTION",
+            payload.device_id,
+            payload.device_id,
+            &[],
+        )
+        .await?;
+
+    metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/auth/assert")
+        .record(start_time.elapsed().as_secs_f64());
 
     Ok(Json(json!({
         "status": "valid",
