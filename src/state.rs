@@ -16,4 +16,6 @@ pub struct AppState {
     /// HMAC-SHA256 key derived from `config.auth.server_secret`.
     /// Used to sign and verify server-issued session tokens.
     pub hmac_key: hmac::Key,
+    /// In-memory TTL/size cache for E2EE Sync Documents (cache-aside read optimizer)
+    pub doc_cache: moka::sync::Cache<uuid::Uuid, crate::models::sync_document::SyncDocument>,
 }
