@@ -2,16 +2,11 @@ use anyhow::Context;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 
-mod config;
-mod crypto;
-mod db;
-mod errors;
-mod middleware;
-mod models;
-mod routes;
-mod state;
-
-use state::AppState;
+use antigravity::config;
+use antigravity::crypto;
+use antigravity::db;
+use antigravity::routes;
+use antigravity::state::AppState;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -109,6 +104,12 @@ async fn main() -> anyhow::Result<()> {
         .build()
         .context("Failed to build HTTP client")?;
 
+    // 8.5 Initialize In-Process E2EE Document Cache (cache-aside)
+    let doc_cache = moka::sync::Cache::builder()
+        .max_capacity(10_000)
+        .time_to_idle(std::time::Duration::from_secs(600))
+        .build();
+
     // 9. Assemble Shared Application State
     let app_state = Arc::new(AppState {
         db,
@@ -116,6 +117,7 @@ async fn main() -> anyhow::Result<()> {
         config: config.clone(),
         http_client,
         hmac_key,
+        doc_cache,
     });
 
     // 10. Build router with all submodules nested under `/api/v1`
