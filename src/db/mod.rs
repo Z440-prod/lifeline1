@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use uuid::Uuid;
 
+pub mod audit;
 pub mod devices;
 pub mod sync;
 
@@ -29,6 +30,13 @@ pub trait Database: Send + Sync {
         document_id: Uuid,
     ) -> Result<Option<SyncDocument>, AppError>;
     async fn get_document_history(&self, document_id: Uuid) -> Result<Vec<SyncDocument>, AppError>;
+    async fn insert_audit_log(
+        &self,
+        action: &str,
+        actor_id: Uuid,
+        target_id: Uuid,
+        payload_hash: &[u8],
+    ) -> Result<(), AppError>;
 }
 
 /// Postgres implementation of the Database trait.
@@ -39,6 +47,58 @@ pub struct PostgresDatabase {
 impl PostgresDatabase {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
+    }
+
+    async fn try_insert_audit_log(
+        &self,
+        action: &str,
+        actor_id: Uuid,
+        target_id: Uuid,
+        payload_hash: &[u8],
+    ) -> Result<(), AppError> {
+        let mut tx = self.pool.begin().await?;
+
+        // Use SERIALIZABLE isolation to guarantee signature chain linearity.
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+            .execute(&mut *tx)
+            .await?;
+
+        let prev_signature: Option<Vec<u8>> = sqlx::query_scalar(
+            "SELECT signature FROM audit_logs ORDER BY event_time DESC, id DESC LIMIT 1",
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        let prev_sig = prev_signature.unwrap_or_else(|| vec![0u8; 32]);
+        let id = Uuid::new_v4();
+        let event_time = chrono::Utc::now();
+        let signature = audit::compute_signature(
+            id,
+            event_time,
+            action,
+            actor_id,
+            target_id,
+            payload_hash,
+            &prev_sig,
+        );
+
+        sqlx::query(
+            "INSERT INTO audit_logs (id, event_time, action, actor_id, target_id, payload_hash, prev_signature, signature) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+        )
+        .bind(id)
+        .bind(event_time)
+        .bind(action)
+        .bind(actor_id)
+        .bind(target_id)
+        .bind(payload_hash)
+        .bind(prev_sig)
+        .bind(signature)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(())
     }
 }
 
@@ -70,12 +130,45 @@ impl Database for PostgresDatabase {
     async fn get_document_history(&self, document_id: Uuid) -> Result<Vec<SyncDocument>, AppError> {
         sync::get_document_history(&self.pool, document_id).await
     }
+
+    async fn insert_audit_log(
+        &self,
+        action: &str,
+        actor_id: Uuid,
+        target_id: Uuid,
+        payload_hash: &[u8],
+    ) -> Result<(), AppError> {
+        let mut attempts = 0;
+        const MAX_ATTEMPTS: u32 = 5;
+
+        loop {
+            attempts += 1;
+            match self
+                .try_insert_audit_log(action, actor_id, target_id, payload_hash)
+                .await
+            {
+                Ok(()) => return Ok(()),
+                Err(AppError::SerializationConflict) if attempts < MAX_ATTEMPTS => {
+                    tracing::warn!(
+                        action = action,
+                        actor_id = %actor_id,
+                        attempt = attempts,
+                        "Postgres serialization conflict on audit log. Retrying..."
+                    );
+                    tokio::time::sleep(std::time::Duration::from_millis(5 * attempts as u64)).await;
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
 }
 
 /// In-memory thread-safe Mock database for offline development and local debugging.
 pub struct MockDatabase {
     devices: Mutex<HashMap<Uuid, AttestedDevice>>,
     documents: Mutex<HashMap<Uuid, Vec<SyncDocument>>>,
+    audit_logs: Mutex<Vec<audit::AuditLogEntry>>,
 }
 
 impl MockDatabase {
@@ -83,7 +176,19 @@ impl MockDatabase {
         Self {
             devices: Mutex::new(HashMap::new()),
             documents: Mutex::new(HashMap::new()),
+            audit_logs: Mutex::new(Vec::new()),
         }
+    }
+
+    pub fn get_audit_logs(&self) -> Vec<audit::AuditLogEntry> {
+        let guard = self.audit_logs.lock().unwrap();
+        guard.clone()
+    }
+}
+
+impl Default for MockDatabase {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -135,5 +240,43 @@ impl Database for MockDatabase {
     async fn get_document_history(&self, document_id: Uuid) -> Result<Vec<SyncDocument>, AppError> {
         let guard = self.documents.lock().unwrap();
         Ok(guard.get(&document_id).cloned().unwrap_or_default())
+    }
+
+    async fn insert_audit_log(
+        &self,
+        action: &str,
+        actor_id: Uuid,
+        target_id: Uuid,
+        payload_hash: &[u8],
+    ) -> Result<(), AppError> {
+        let mut guard = self.audit_logs.lock().unwrap();
+        let prev_sig = guard
+            .last()
+            .map(|entry| entry.signature.clone())
+            .unwrap_or_else(|| vec![0u8; 32]);
+
+        let id = Uuid::new_v4();
+        let event_time = chrono::Utc::now();
+        let signature = audit::compute_signature(
+            id,
+            event_time,
+            action,
+            actor_id,
+            target_id,
+            payload_hash,
+            &prev_sig,
+        );
+
+        guard.push(audit::AuditLogEntry {
+            id,
+            event_time,
+            action: action.to_owned(),
+            actor_id,
+            target_id,
+            payload_hash: payload_hash.to_vec(),
+            prev_signature: prev_sig,
+            signature,
+        });
+        Ok(())
     }
 }
