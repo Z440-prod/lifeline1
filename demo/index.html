@@ -4,438 +4,361 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="color-scheme" content="light dark">
-    <title>Lifeline — Private Health Companion</title>
+    <title>Lifeline — Your Health, Drawn by Hand</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
     <style>
         /* ═══════════════════════════════════════════════════════════════════════
-           LIFELINE · LIQUID GLASS DESIGN SYSTEM  (iOS 26 / 27)
+           LIFELINE · "DATA HUMANISM" DESIGN SYSTEM
            ───────────────────────────────────────────────────────────────────────
-           A minimalist health dashboard (blueprint "Variant A") rendered in
-           Apple's Liquid Glass material: translucent, blurred surfaces over a
-           calm color wash, adaptive to light/dark, and gracefully degrading
-           under Reduce Transparency / Reduce Motion. Everything is tokenized so
-           margins, radii, type and materials stay consistent across screens.
+           An art style borrowed from Giorgia Lupi's Data Humanism (of "Dear
+           Data" fame): personal biometrics rendered as a hand-kept, annotated
+           data-portrait rather than a sterile dashboard. Warm paper ground,
+           ink pigments, dotted orbits, humanist serif + handwritten captions.
+           The signature element is the daily "Vital Constellation". Everything
+           around it stays quiet so the drawing is the hero, not clutter.
            ═══════════════════════════════════════════════════════════════════════ */
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            /* Type scale — Dynamic-Type-friendly via clamp() */
-            --fs-hero: clamp(1.5rem, 1.35rem + 1vw, 1.75rem);
-            --fs-title: clamp(1.15rem, 1.05rem + 0.6vw, 1.3rem);
+            --fs-hero: clamp(1.55rem, 1.35rem + 1vw, 1.9rem);
+            --fs-title: clamp(1.1rem, 1rem + 0.5vw, 1.28rem);
             --fs-body: 0.875rem;
             --fs-small: 0.75rem;
             --fs-micro: 0.625rem;
+            --sp-2: 10px; --sp-3: 14px; --sp-4: 18px; --sp-5: 24px;
 
-            /* Spacing / radii — one consistent ladder */
-            --sp-1: 6px; --sp-2: 10px; --sp-3: 14px; --sp-4: 18px; --sp-5: 24px;
-            --r-sm: 14px; --r-md: 20px; --r-lg: 28px; --r-pill: 999px;
+            /* Stage (dev chrome) */
+            --stage: #17140f;
+            --stage-ink: rgba(244,239,230,0.9);
+            --stage-dim: rgba(244,239,230,0.48);
+            --stage-faint: rgba(244,239,230,0.28);
+            --stage-border: rgba(244,239,230,0.1);
+            --stage-panel: rgba(244,239,230,0.05);
 
-            /* Stage (dev chrome around the phone) */
-            --stage: #0a0b0f;
-            --stage-panel: rgba(255,255,255,0.055);
-            --stage-border: rgba(255,255,255,0.1);
-            --stage-ink: rgba(255,255,255,0.9);
-            --stage-ink-dim: rgba(255,255,255,0.48);
-            --stage-ink-faint: rgba(255,255,255,0.3);
+            /* Paper (product) — LIGHT */
+            --paper: #f4efe4;
+            --paper-2: #ede6d7;
+            --card: #fbf8f1;
+            --ink: #211b12;
+            --ink-2: rgba(33,27,18,0.62);
+            --ink-3: rgba(33,27,18,0.4);
+            --rule: rgba(33,27,18,0.14);
+            --rule-soft: rgba(33,27,18,0.08);
 
-            /* Health category accents (Apple Health palette) */
-            --red-1:#ff6482; --red-2:#ff2d55;
-            --orange-1:#ffb340; --orange-2:#ff9500;
-            --green-1:#5ce68a; --green-2:#30d158;
-            --teal-1:#54d6d6; --teal-2:#00c7be;
-            --indigo-1:#b18cff; --indigo-2:#7d5cff;
-            --blue-1:#5cb8ff; --blue-2:#0a84ff;
-            --pink-1:#ff7ab8; --pink-2:#ff2d92;
+            /* Pigments (categorical inks) */
+            --cardio: #cf4a2e;    /* vermilion — heart */
+            --sleep: #2f5aa8;     /* indigo — sleep */
+            --activity: #1e7d5a;  /* viridian — movement */
+            --energy: #c68a1c;    /* ochre — energy */
+            --recovery: #7c3f6d;  /* plum — recovery/HRV */
+            --accent: #b0431f;    /* primary action */
 
-            /* Product surface — LIGHT */
-            --bg-a:#f3f5f9; --bg-b:#eef1f7;
-            --glass-hi: rgba(255,255,255,0.66);
-            --glass-lo: rgba(255,255,255,0.42);
-            --glass-brd: rgba(255,255,255,0.75);
-            --glass-shadow: rgba(28,30,45,0.16);
-            --ink:#101216;
-            --ink-dim: rgba(16,18,22,0.6);
-            --ink-faint: rgba(16,18,22,0.4);
-            --hair: rgba(16,18,22,0.08);
-            --accent-1: var(--teal-1); --accent-2: var(--teal-2);
-            --accent-soft: rgba(0,199,190,0.14);
-
-            --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
-            --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+            --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+            --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+            --font-hand: 'Caveat', 'Inter', cursive;
             --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-            --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --blur: 20px;
             --phone-w: 390px;
             --phone-h: 822px;
         }
-
-        /* Product surface — DARK (Liquid Glass adapts to appearance) */
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-a:#0c0e13; --bg-b:#0a0c10;
-                --glass-hi: rgba(70,76,92,0.5);
-                --glass-lo: rgba(48,53,66,0.36);
-                --glass-brd: rgba(255,255,255,0.14);
-                --glass-shadow: rgba(0,0,0,0.5);
-                --ink:#f2f4f8;
-                --ink-dim: rgba(242,244,248,0.62);
-                --ink-faint: rgba(242,244,248,0.4);
-                --hair: rgba(255,255,255,0.1);
+                --paper: #16130d;
+                --paper-2: #1d1810;
+                --card: #211b12;
+                --ink: #f1e9d8;
+                --ink-2: rgba(241,233,216,0.64);
+                --ink-3: rgba(241,233,216,0.42);
+                --rule: rgba(241,233,216,0.16);
+                --rule-soft: rgba(241,233,216,0.09);
+                --cardio: #e8674c; --sleep: #6f9be6; --activity: #46c495;
+                --energy: #e3b048; --recovery: #c07bab; --accent: #e2704a;
             }
         }
 
         html { color-scheme: light dark; }
         body {
-            font-family: var(--font-ui);
-            background: var(--stage);
-            color: var(--stage-ink);
-            min-height: 100vh;
-            display: flex; flex-direction: column; align-items: center;
-            -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeLegibility;
+            font-family: var(--font-ui); background: var(--stage); color: var(--stage-ink);
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+            -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
         }
         button, input { font-family: inherit; }
         .tnum { font-variant-numeric: tabular-nums; }
-        ::selection { background: var(--accent-soft); }
+        .hand { font-family: var(--font-hand); }
+        ::selection { background: rgba(176,67,31,0.22); }
+        @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.001ms!important; transition-duration:.001ms!important; } }
 
-        /* ── Liquid Glass material primitive ─────────────────────────────────── */
-        .glass {
-            background: linear-gradient(160deg, var(--glass-hi), var(--glass-lo));
-            -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
-            backdrop-filter: blur(var(--blur)) saturate(180%);
-            border: 1px solid var(--glass-brd);
-            border-radius: var(--r-md);
-            box-shadow: 0 14px 34px -14px var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.5);
-        }
-        /* Accessibility: honor Reduce Transparency — drop blur for solid fills */
-        @media (prefers-reduced-transparency: reduce) {
-            .glass, .stage-panel, .chat-input-bar input, .provider-toggle {
-                -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
-                background: Canvas !important; color: CanvasText;
-            }
-            .page-header, .console-panel { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
-        }
-
-        /* ═══════════ PAGE HEADER (stage) ═══════════ */
-        .page-header {
-            position: sticky; top: 0; z-index: 100; width: 100%;
-            padding: var(--sp-4) var(--sp-5);
-            display: flex; align-items: center; justify-content: space-between;
-            background: rgba(10,11,15,0.72);
-            -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%);
-            border-bottom: 1px solid var(--stage-border);
-        }
+        /* ── Stage header ── */
+        .page-header { position: sticky; top: 0; z-index: 100; width: 100%; padding: 18px 26px; display: flex; align-items: center; justify-content: space-between; background: rgba(23,20,15,0.8); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-bottom: 1px solid var(--stage-border); }
         .brand { display: flex; align-items: center; gap: 11px; }
-        .brand .mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(155deg, var(--teal-1), var(--teal-2)); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px -2px rgba(0,199,190,0.5); flex-shrink: 0; }
-        .brand .mark svg { width: 16px; height: 16px; color: #04201e; }
-        .brand .wordmark { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; }
-        .brand .tagline { font-size: var(--fs-small); font-weight: 500; letter-spacing: 0.6px; color: var(--stage-ink-faint); margin-left: 8px; text-transform: uppercase; display: none; }
+        .brand .mark { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .brand .mark svg { width: 16px; height: 16px; color: #fff; }
+        .brand .wordmark { font-family: var(--font-serif); font-size: 1.2rem; font-weight: 600; letter-spacing: 0.01em; }
+        .brand .tagline { font-family: var(--font-hand); font-size: 1.05rem; color: var(--stage-faint); margin-left: 8px; display: none; }
         @media (min-width: 760px) { .brand .tagline { display: inline; } }
-        .server-status { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: var(--fs-small); color: var(--stage-ink-dim); }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff453a; flex-shrink: 0; }
-        .status-dot.connected { background: #30d158; box-shadow: 0 0 8px rgba(48,209,88,0.7); animation: pulse-dot 2.6s ease-in-out infinite; }
+        .server-status { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--stage-dim); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #d0483e; flex-shrink: 0; }
+        .status-dot.connected { background: #1e7d5a; box-shadow: 0 0 8px rgba(30,125,90,0.7); animation: pulse-dot 2.6s ease-in-out infinite; }
         @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:.4;} }
 
-        /* Stage backdrop glow */
-        .stage-mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-        .stage-mesh::before, .stage-mesh::after { content:''; position:absolute; border-radius:50%; filter: blur(100px); opacity:.3; }
-        .stage-mesh::before { width:620px; height:620px; top:-200px; left:-160px; background: radial-gradient(circle, var(--teal-2), transparent 70%); }
-        .stage-mesh::after { width:600px; height:600px; bottom:-220px; right:-140px; background: radial-gradient(circle, var(--indigo-2), transparent 70%); }
+        .stage-mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; background:
+            radial-gradient(600px 500px at 15% 0%, rgba(176,67,31,0.14), transparent 70%),
+            radial-gradient(600px 500px at 85% 100%, rgba(47,90,168,0.12), transparent 70%); }
 
-        /* ═══════════ LAYOUT ═══════════ */
         .simulator-container { position: relative; z-index: 2; display: flex; align-items: flex-start; gap: 26px; padding: 44px 40px; width: 100%; max-width: 1220px; justify-content: center; }
         .device-column { display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
-        .device-label { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--stage-ink-faint); letter-spacing: 0.4px; padding: 0 4px; }
+        .device-label { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 10.5px; color: var(--stage-faint); letter-spacing: .4px; padding: 0 4px; }
 
-        .iphone-frame {
-            width: calc(var(--phone-w) + 16px); height: calc(var(--phone-h) + 16px);
-            background: linear-gradient(160deg, #2b2d33, #101116);
-            border-radius: 50px; padding: 8px; position: relative;
-            box-shadow: 0 40px 90px -24px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.06);
-        }
-        .iphone-screen { width: var(--phone-w); height: var(--phone-h); border-radius: 43px; overflow: hidden; position: relative; background: var(--bg-b); }
+        .iphone-frame { width: calc(var(--phone-w) + 16px); height: calc(var(--phone-h) + 16px); background: linear-gradient(160deg,#3a352c,#141109); border-radius: 50px; padding: 8px; position: relative; box-shadow: 0 40px 90px -24px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.05); }
+        .iphone-screen { width: var(--phone-w); height: var(--phone-h); border-radius: 43px; overflow: hidden; position: relative; background: var(--paper); }
 
-        /* Product color wash — subtle, refracted by the glass above it */
-        .product-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: linear-gradient(180deg, var(--bg-a), var(--bg-b)); }
-        .product-mesh span { position: absolute; border-radius: 50%; filter: blur(64px); opacity: 0.5; }
-        .product-mesh .m1 { width: 300px; height: 300px; top: -110px; left: -80px; background: radial-gradient(circle, var(--teal-1), transparent 72%); }
-        .product-mesh .m2 { width: 260px; height: 260px; top: -40px; right: -100px; background: radial-gradient(circle, var(--blue-1), transparent 72%); opacity: 0.4; }
-        .product-mesh .m3 { width: 300px; height: 300px; bottom: 60px; right: -120px; background: radial-gradient(circle, var(--indigo-1), transparent 72%); opacity: 0.4; }
-        .product-mesh .m4 { width: 260px; height: 260px; bottom: -80px; left: -70px; background: radial-gradient(circle, var(--pink-1), transparent 72%); opacity: 0.32; }
+        /* Paper grain */
+        .paper-grain { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .5;
+            background-image: radial-gradient(rgba(33,27,18,0.035) 1px, transparent 1px); background-size: 3px 3px; }
+        @media (prefers-color-scheme: dark) { .paper-grain { background-image: radial-gradient(rgba(241,233,216,0.03) 1px, transparent 1px); } }
 
-        .dynamic-island { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 108px; height: 30px; background: #000; border-radius: 16px; z-index: 60; display: flex; align-items: center; justify-content: center; transition: width .4s var(--spring), height .4s var(--spring); }
-        .dynamic-island.active { width: 210px; height: 36px; }
-        .dynamic-island .island-content { display: none; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: var(--fs-micro); color: #2fe0d0; font-weight: 600; }
+        .dynamic-island { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 108px; height: 30px; background: #000; border-radius: 16px; z-index: 60; display: flex; align-items: center; justify-content: center; transition: width .38s var(--ease); }
+        .dynamic-island.active { width: 214px; height: 36px; }
+        .dynamic-island .island-content { display: none; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 10.5px; color: #e8b04a; font-weight: 500; }
         .dynamic-island.active .island-content { display: flex; }
-        .dynamic-island svg { width: 12px; height: 12px; flex-shrink: 0; }
-
-        .ios-status-bar { position: absolute; top: 0; left: 0; right: 0; height: 48px; z-index: 55; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 26px 6px; font-size: 0.94rem; font-weight: 600; color: var(--ink); }
+        .dynamic-island svg { width: 12px; height: 12px; }
+        .ios-status-bar { position: absolute; top: 0; left: 0; right: 0; height: 48px; z-index: 55; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 26px 6px; font-size: .94rem; font-weight: 600; color: var(--ink); }
         .ios-status-bar .icons { display: flex; gap: 6px; align-items: center; }
         .ios-status-bar svg { width: 15px; height: 15px; }
-        .home-indicator { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; background: color-mix(in srgb, var(--ink) 28%, transparent); border-radius: 2px; z-index: 60; }
+        .home-indicator { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; background: color-mix(in srgb, var(--ink) 26%, transparent); border-radius: 2px; z-index: 60; }
 
-        /* ═══════════ SCREENS ═══════════ */
+        /* Screens */
         .app-screen { position: absolute; inset: 0; display: none; flex-direction: column; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; z-index: 1; -webkit-overflow-scrolling: touch; }
         .app-screen::-webkit-scrollbar { display: none; }
         .app-screen.active { display: flex; }
-        .screen-pad { padding: 56px 16px calc(104px + env(safe-area-inset-bottom)); position: relative; z-index: 1; }
+        .screen-pad { padding: 56px 20px calc(104px + env(safe-area-inset-bottom)); position: relative; z-index: 1; }
 
-        /* Scroll-edge effect: a soft top scrim fades in as content scrolls under the status bar */
-        .scroll-edge { position: absolute; top: 0; left: 0; right: 0; height: 54px; z-index: 40; pointer-events: none; opacity: 0; transition: opacity .2s var(--ease);
-            background: linear-gradient(180deg, var(--bg-a), transparent);
-            -webkit-mask: linear-gradient(180deg, #000 40%, transparent); mask: linear-gradient(180deg, #000 40%, transparent); }
-        .app-screen.scrolled .scroll-edge { opacity: 0.92; }
+        /* Journal header + hairline rules */
+        .journal-kicker { font-family: var(--font-hand); font-size: 1.15rem; color: var(--ink-3); }
+        .journal-title { font-family: var(--font-serif); font-size: var(--fs-hero); font-weight: 600; letter-spacing: -0.01em; color: var(--ink); line-height: 1.1; }
+        .journal-date { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-3); letter-spacing: .5px; text-transform: uppercase; margin-top: 6px; }
+        .rule { height: 1px; background: var(--rule); margin: 20px 0; border: none; }
+        .rule.dotted { height: 0; border-top: 1.5px dotted var(--rule); background: none; }
+        .section-label { font-family: var(--font-serif); font-size: 1rem; font-weight: 600; color: var(--ink); margin: 6px 0 4px; display: flex; align-items: baseline; gap: 8px; }
+        .section-label .n { font-family: var(--font-hand); font-size: 1.1rem; color: var(--accent); }
+        .section-note { font-family: var(--font-hand); font-size: 1.05rem; color: var(--ink-3); margin-bottom: 12px; line-height: 1.15; }
 
-        /* Buttons */
-        .btn-primary { width: 100%; padding: 15px; border-radius: var(--r-pill); border: none; background: linear-gradient(135deg, var(--teal-1), var(--teal-2)); color: #04201e; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 12px 26px -10px rgba(0,199,190,0.55); transition: transform .15s var(--spring), box-shadow .15s var(--ease); }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 16px 32px -10px rgba(0,199,190,0.65); }
-        .btn-primary:active { transform: scale(0.98); }
-        .btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
-        .btn-glass { width: 100%; padding: 13px; border-radius: var(--r-pill); background: var(--glass-lo); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); border: 1px solid var(--glass-brd); color: var(--ink); font-size: var(--fs-body); font-weight: 600; cursor: pointer; transition: background .15s var(--ease); }
-        .btn-glass:hover { background: var(--glass-hi); }
-
-        /* Icon chips */
-        .icon-chip { width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px -2px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.35); }
-        .icon-chip svg { width: 18px; height: 18px; color: #fff; }
-        .icon-chip.sm { width: 28px; height: 28px; border-radius: 8px; }
-        .icon-chip.sm svg { width: 14px; height: 14px; }
-        .icon-chip.red{background:linear-gradient(155deg,var(--red-1),var(--red-2));}
-        .icon-chip.orange{background:linear-gradient(155deg,var(--orange-1),var(--orange-2));}
-        .icon-chip.green{background:linear-gradient(155deg,var(--green-1),var(--green-2));}
-        .icon-chip.teal{background:linear-gradient(155deg,var(--teal-1),var(--teal-2));}
-        .icon-chip.indigo{background:linear-gradient(155deg,var(--indigo-1),var(--indigo-2));}
-        .icon-chip.blue{background:linear-gradient(155deg,var(--blue-1),var(--blue-2));}
-        .icon-chip.pink{background:linear-gradient(155deg,var(--pink-1),var(--pink-2));}
-        .icon-chip.gray{background:linear-gradient(155deg,#aeb4c0,#7b8290);}
+        /* ── Buttons ── */
+        .btn-primary { width: 100%; padding: 15px; border-radius: 999px; border: none; background: var(--accent); color: #fdf7ee; font-size: .95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .15s var(--ease), opacity .15s; }
+        .btn-primary:hover { transform: translateY(-1px); opacity: .93; }
+        .btn-primary:active { transform: scale(.98); }
+        .btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+        .btn-outline { width: 100%; padding: 13px; border-radius: 999px; background: transparent; border: 1.5px solid var(--rule); color: var(--ink-2); font-size: var(--fs-body); font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s; }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 
         /* ── Onboarding ── */
-        #onboarding-screen { align-items: center; justify-content: space-between; padding: calc(64px + env(safe-area-inset-top)) 26px calc(36px + env(safe-area-inset-bottom)); text-align: center; }
-        .onboarding-icon { width: 90px; height: 90px; border-radius: 26px; display: flex; align-items: center; justify-content: center; margin: 0 auto 26px; box-shadow: 0 20px 40px -14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4); }
-        .onboarding-icon svg { width: 42px; height: 42px; color: #fff; }
+        #onboarding-screen { align-items: center; justify-content: space-between; padding: calc(66px + env(safe-area-inset-top)) 28px calc(36px + env(safe-area-inset-bottom)); text-align: center; }
+        .ob-emblem { width: 120px; height: 120px; margin: 0 auto 24px; }
         .onboarding-slide { display: none; flex-direction: column; align-items: center; }
-        .onboarding-slide.active { display: flex; animation: fade-up .35s var(--ease); }
-        @keyframes fade-up { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none;} }
-        .onboarding-title { font-size: var(--fs-hero); font-weight: 800; line-height: 1.24; letter-spacing: -0.02em; margin-bottom: 12px; color: var(--ink); }
-        .onboarding-title em { font-style: normal; background: linear-gradient(135deg, var(--teal-2), var(--blue-2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-        .onboarding-copy { font-size: 0.92rem; color: var(--ink-dim); line-height: 1.6; max-width: 288px; margin: 0 auto; }
-        /* Permissions list inside a slide */
-        .perm-list { width: 100%; max-width: 300px; margin: 22px auto 0; display: flex; flex-direction: column; gap: 8px; }
-        .perm-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; }
+        .onboarding-slide.active { display: flex; animation: fade-up .4s var(--ease); }
+        @keyframes fade-up { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:none;} }
+        .onboarding-title { font-family: var(--font-serif); font-size: var(--fs-hero); font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; margin-bottom: 12px; color: var(--ink); }
+        .onboarding-title em { font-style: italic; color: var(--accent); }
+        .onboarding-copy { font-size: 0.92rem; color: var(--ink-2); line-height: 1.6; max-width: 290px; margin: 0 auto; }
+        .perm-list { width: 100%; max-width: 300px; margin: 22px auto 0; display: flex; flex-direction: column; gap: 0; }
+        .perm-row { display: flex; align-items: center; gap: 12px; padding: 13px 4px; text-align: left; border-bottom: 1px dotted var(--rule); }
+        .perm-row:last-child { border-bottom: none; }
+        .perm-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
         .perm-row .pt { flex: 1; }
-        .perm-row .pt h5 { font-size: var(--fs-body); font-weight: 700; color: var(--ink); }
-        .perm-row .pt p { font-size: var(--fs-micro); color: var(--ink-faint); margin-top: 1px; }
+        .perm-row .pt h5 { font-family: var(--font-serif); font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+        .perm-row .pt p { font-family: var(--font-hand); font-size: 0.95rem; color: var(--ink-3); }
         .onboarding-dots { display: flex; gap: 7px; margin: 28px 0 0; justify-content: center; }
-        .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--hair); transition: all .3s var(--spring); }
-        .onboarding-dots span.active { background: var(--teal-2); width: 20px; border-radius: 3px; }
+        .onboarding-dots span { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--rule); transition: all .3s var(--ease); }
+        .onboarding-dots span.active { background: var(--accent); border-color: var(--accent); }
         .onboarding-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
 
         /* ── Splash ── */
         #splash-screen { align-items: center; justify-content: center; }
-        .splash-mark { width: 74px; height: 74px; border-radius: 22px; background: linear-gradient(155deg, var(--teal-1), var(--teal-2)); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; box-shadow: 0 20px 44px -12px rgba(0,199,190,0.5); }
-        .splash-mark svg { width: 34px; height: 34px; color: #04201e; }
-        .splash-title { font-size: var(--fs-title); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; color: var(--ink); }
-        .splash-subtitle { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); letter-spacing: 1px; text-transform: uppercase; }
-        .splash-progress { margin-top: 36px; width: 180px; height: 4px; background: var(--hair); overflow: hidden; border-radius: 2px; }
-        .splash-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--teal-2), var(--blue-2)); transition: width .25s var(--ease); }
-        .splash-status-text { margin-top: 14px; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); min-height: 16px; }
+        .splash-mark { width: 84px; height: 84px; margin-bottom: 22px; }
+        .splash-title { font-family: var(--font-serif); font-size: var(--fs-title); font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+        .splash-subtitle { font-family: var(--font-hand); font-size: 1.05rem; color: var(--ink-3); }
+        .splash-progress { margin-top: 34px; width: 180px; height: 2px; background: var(--rule); overflow: hidden; }
+        .splash-progress-bar { height: 100%; width: 0%; background: var(--accent); transition: width .25s var(--ease); }
+        .splash-status-text { margin-top: 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); min-height: 16px; }
 
-        /* ── Common ── */
-        .eyebrow { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px; }
-        .screen-title { font-size: var(--fs-hero); font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
-        .dashboard-greeting { font-size: var(--fs-body); font-weight: 600; color: var(--ink-dim); margin-bottom: 2px; }
-        .panel { padding: var(--sp-4); margin-bottom: 12px; }
-        .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
-        .panel-header h4 { font-size: var(--fs-small); font-weight: 700; color: var(--ink); }
-        .panel-header .meta { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); }
-        .section-label { font-size: var(--fs-small); font-weight: 700; color: var(--ink-dim); letter-spacing: 0.2px; margin: 4px 2px 10px; }
+        /* ── Vital Constellation (the signature drawing) ── */
+        .constellation-wrap { position: relative; width: 100%; margin: 4px 0 10px; }
+        .constellation-wrap svg { width: 100%; height: auto; display: block; overflow: visible; }
+        .const-center-age { font-family: var(--font-serif); font-weight: 600; }
+        .const-node-anim { opacity: 0; animation: node-pop .5s var(--ease) forwards; }
+        @keyframes node-pop { from { opacity: 0; transform: scale(0.2); } to { opacity: 1; transform: scale(1); } }
+        .const-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 4px; }
+        .const-legend .li { display: flex; align-items: center; gap: 6px; font-family: var(--font-hand); font-size: 0.98rem; color: var(--ink-2); }
+        .const-legend .sw { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+        .const-caption { font-family: var(--font-hand); font-size: 1.05rem; color: var(--ink-2); text-align: center; margin-top: 2px; line-height: 1.2; }
+        .const-caption b { color: var(--accent); font-weight: 600; }
 
-        /* Health score ring */
-        .score-row { display: flex; align-items: center; gap: 18px; }
-        .ring-container { position: relative; width: 92px; height: 92px; flex-shrink: 0; }
-        .ring-container svg { transform: rotate(-90deg); width: 92px; height: 92px; }
-        .ring-container circle { fill: none; stroke-linecap: round; }
-        .ring-bg { stroke: var(--hair); }
-        .ring-progress { transition: stroke-dashoffset 1.2s var(--ease); }
-        .ring-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 1.4rem; font-weight: 800; color: var(--ink); }
-        .score-info h3 { font-size: var(--fs-title); font-weight: 800; margin-bottom: 4px; color: var(--ink); }
-        .score-info p { font-size: var(--fs-small); color: var(--ink-dim); line-height: 1.5; }
+        /* Readiness arc */
+        .readiness-row { display: flex; align-items: center; gap: 16px; }
+        .readiness-arc { width: 96px; height: 96px; flex-shrink: 0; }
+        .readiness-text { font-family: var(--font-serif); font-weight: 600; }
+        .readiness-info h4 { font-family: var(--font-serif); font-size: var(--fs-title); font-weight: 600; color: var(--ink); }
+        .readiness-info .lbl { font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: .5px; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
+        .readiness-info .driver { font-family: var(--font-hand); font-size: 1.05rem; color: var(--ink-2); margin-top: 8px; line-height: 1.15; }
 
-        /* Behavioral-feedback trend chart */
-        .trend-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--sp-2); }
-        .trend-head .val { font-size: var(--fs-title); font-weight: 800; color: var(--ink); }
-        .trend-head .delta { font-family: var(--font-mono); font-size: var(--fs-small); font-weight: 600; color: var(--green-2); }
-        .trend-chart { width: 100%; height: 70px; display: block; }
-        .trend-area { fill: url(#trendFill); }
-        .trend-line { fill: none; stroke: var(--teal-2); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 320; stroke-dashoffset: 320; }
-        .app-screen.dash-in .trend-line { animation: draw 1.1s var(--ease) forwards; }
-        @keyframes draw { to { stroke-dashoffset: 0; } }
-        .trend-days { display: flex; justify-content: space-between; margin-top: 6px; font-family: var(--font-mono); font-size: 0.5rem; color: var(--ink-faint); letter-spacing: 0.3px; }
+        /* Correlation — "what's moving your score" */
+        .corr-row { display: grid; grid-template-columns: 108px 1fr 30px; align-items: center; gap: 10px; padding: 7px 0; }
+        .corr-row .name { font-size: var(--fs-small); color: var(--ink); }
+        .corr-bar { height: 9px; background: var(--rule-soft); border-radius: 999px; overflow: hidden; }
+        .corr-bar > i { display: block; height: 100%; border-radius: 999px; }
+        .corr-row .pct { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-3); text-align: right; }
+        .corr-row.top .name { font-weight: 700; }
 
-        /* Streak + achievements */
-        .streak-banner { display: flex; align-items: center; gap: 14px; padding: 15px 16px; margin-bottom: 12px; }
-        .streak-count { font-size: var(--fs-title); font-weight: 800; color: var(--ink); }
-        .streak-label { font-size: var(--fs-small); color: var(--ink-dim); }
-        .achv-strip { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; margin-bottom: 8px; scrollbar-width: none; }
-        .achv-strip::-webkit-scrollbar { display: none; }
-        .achv { flex: 0 0 auto; width: 92px; padding: 14px 10px; text-align: center; border-radius: var(--r-sm); }
-        .achv .icon-chip { margin: 0 auto 8px; }
-        .achv .t { font-size: var(--fs-micro); font-weight: 700; color: var(--ink); line-height: 1.2; }
-        .achv .s { font-size: 0.56rem; color: var(--ink-faint); margin-top: 2px; }
-        .achv.locked { opacity: 0.5; }
+        /* Circadian ribbon */
+        .circadian svg { width: 100%; height: auto; display: block; overflow: visible; }
+        .circadian .clabel { font-family: var(--font-hand); font-size: 12px; }
 
-        /* Challenges */
-        .challenge-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--hair); }
+        /* Streak + challenges */
+        .streak-line { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+        .streak-emblem { width: 40px; height: 40px; flex-shrink: 0; }
+        .streak-count { font-family: var(--font-serif); font-size: var(--fs-title); font-weight: 600; color: var(--ink); }
+        .streak-label { font-family: var(--font-hand); font-size: 1rem; color: var(--ink-3); }
+        .challenge-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px dotted var(--rule); }
         .challenge-row:last-child { border-bottom: none; }
-        .challenge-check { width: 24px; height: 24px; border-radius: 50%; border: 1.75px solid color-mix(in srgb, var(--ink) 20%, transparent); flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s var(--spring); }
-        .challenge-check.done { background: linear-gradient(155deg, var(--green-1), var(--green-2)); border-color: transparent; box-shadow: 0 3px 8px -2px rgba(48,209,88,0.55); }
-        .challenge-check svg { width: 13px; height: 13px; color: #fff; opacity: 0; transition: opacity .15s; }
+        .challenge-check { width: 22px; height: 22px; border-radius: 50%; border: 1.75px solid var(--rule); flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s var(--ease); }
+        .challenge-check.done { background: var(--activity); border-color: var(--activity); }
+        .challenge-check svg { width: 12px; height: 12px; color: var(--card); opacity: 0; transition: opacity .15s; }
         .challenge-check.done svg { opacity: 1; }
-        .challenge-text { flex: 1; font-size: var(--fs-body); color: var(--ink); font-weight: 500; }
-        .challenge-text.done { color: var(--ink-faint); text-decoration: line-through; }
-        .challenge-pts { font-family: var(--font-mono); font-size: var(--fs-small); font-weight: 600; color: var(--orange-2); }
+        .challenge-text { flex: 1; font-size: var(--fs-body); color: var(--ink); }
+        .challenge-text.done { color: var(--ink-3); text-decoration: line-through; }
+        .challenge-pts { font-family: var(--font-mono); font-size: var(--fs-small); color: var(--energy); }
 
-        /* Metric tiles */
-        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-        .metric-tile { padding: 16px; }
-        .metric-tile .metric-top { margin-bottom: 12px; }
-        .metric-value { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 2px; color: var(--ink); }
-        .metric-label { font-size: var(--fs-micro); font-weight: 600; color: var(--ink-dim); letter-spacing: 0.2px; text-transform: uppercase; }
-        .metric-trend { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600; margin-top: 8px; }
-        .trend-up { color: var(--green-2); } .trend-down { color: var(--red-2); }
+        .kv-row { display: flex; justify-content: space-between; align-items: center; font-size: var(--fs-small); padding: 6px 0; }
+        .kv-row .label { color: var(--ink-2); }
+        .kv-row .value { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink); }
+        .badge { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 500; letter-spacing: .3px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--rule); }
+        .badge.good { color: var(--activity); border-color: color-mix(in srgb, var(--activity) 40%, transparent); }
+        .badge.bad { color: var(--cardio); border-color: color-mix(in srgb, var(--cardio) 40%, transparent); }
+        .badge.warn { color: var(--energy); border-color: color-mix(in srgb, var(--energy) 40%, transparent); }
 
-        .badge { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.3px; padding: 4px 10px; border-radius: var(--r-pill); }
-        .badge.good { background: rgba(48,209,88,0.16); color: #1f8a3b; }
-        .badge.warn { background: rgba(255,149,0,0.16); color: #a9640a; }
-        .badge.bad { background: rgba(255,69,58,0.16); color: #c8261e; }
-        .badge.neutral { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-faint); }
-        @media (prefers-color-scheme: dark) { .badge.good{color:#5ce68a;} .badge.warn{color:#ffb340;} .badge.bad{color:#ff6b62;} }
-
-        .server-details { display: flex; flex-direction: column; gap: 10px; }
-        .server-detail-row { display: flex; justify-content: space-between; align-items: center; font-size: var(--fs-small); }
-        .server-detail-row .label { color: var(--ink-dim); font-weight: 500; }
-        .server-detail-row .value { font-family: var(--font-mono); font-weight: 600; font-size: var(--fs-micro); color: var(--ink); }
-
-        /* AI chat */
+        /* ── Coach (AI) ── */
         #chat-screen { padding: 56px 0 calc(104px + env(safe-area-inset-bottom)); position: relative; z-index: 1; }
-        .chat-header { padding: 0 18px 14px; }
-        .chat-header h2 { font-size: var(--fs-title); font-weight: 800; color: var(--ink); }
-        .chat-header p { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); margin-top: 3px; }
-        .chat-messages { flex: 1; padding: 8px 18px 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-        .chat-bubble { max-width: 86%; padding: 12px 16px; border-radius: var(--r-md); font-size: var(--fs-body); line-height: 1.55; animation: bubble-in .22s var(--spring); }
-        @keyframes bubble-in { from{opacity:0; transform: translateY(6px) scale(.98);} to{opacity:1; transform:none;} }
-        .chat-bubble.user { align-self: flex-end; background: linear-gradient(135deg, var(--teal-1), var(--teal-2)); color: #04201e; font-weight: 500; border-bottom-right-radius: 6px; box-shadow: 0 8px 18px -8px rgba(0,199,190,0.5); }
-        .chat-bubble.ai { align-self: flex-start; border-bottom-left-radius: 6px; color: var(--ink); }
-        .chat-bubble.ai .ai-label { font-family: var(--font-mono); font-size: 0.6rem; font-weight: 600; color: var(--teal-2); margin-bottom: 5px; letter-spacing: 0.6px; }
-        .chat-bubble.system { align-self: center; color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--fs-micro); padding: 4px; }
-        .chat-input-bar { padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); display: flex; gap: 8px; position: relative; z-index: 2; }
-        .chat-input-bar input { flex: 1; background: var(--glass-lo); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); border: 1px solid var(--glass-brd); border-radius: var(--r-pill); padding: 12px 16px; color: var(--ink); font-size: var(--fs-body); outline: none; transition: border-color .15s; }
-        .chat-input-bar input:focus { border-color: var(--teal-2); }
-        .chat-input-bar input::placeholder { color: var(--ink-faint); }
-        .chat-send-btn { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--teal-1), var(--teal-2)); border: none; color: #04201e; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 8px 18px -6px rgba(0,199,190,0.55); transition: transform .15s var(--spring); }
+        .chat-header { padding: 0 20px 14px; border-bottom: 1px dotted var(--rule); }
+        .chat-header h2 { font-family: var(--font-serif); font-size: var(--fs-title); font-weight: 600; color: var(--ink); }
+        .chat-header p { font-family: var(--font-hand); font-size: 1rem; color: var(--ink-3); margin-top: 2px; }
+        .chat-messages { flex: 1; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+        .chat-bubble { max-width: 86%; font-size: var(--fs-body); line-height: 1.55; animation: fade-up .22s var(--ease); }
+        .chat-bubble.user { align-self: flex-end; background: var(--accent); color: #fdf7ee; padding: 11px 15px; border-radius: 16px 16px 4px 16px; }
+        .chat-bubble.ai { align-self: flex-start; color: var(--ink); padding-left: 14px; border-left: 2px solid var(--recovery); }
+        .chat-bubble.ai .ai-label { font-family: var(--font-mono); font-size: 9.5px; font-weight: 500; letter-spacing: .6px; color: var(--recovery); margin-bottom: 5px; }
+        .chat-bubble.system { align-self: center; color: var(--ink-3); font-family: var(--font-hand); font-size: 1rem; }
+        .chat-input-bar { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); display: flex; gap: 8px; }
+        .chat-input-bar input { flex: 1; background: var(--card); border: 1px solid var(--rule); border-radius: 999px; padding: 12px 16px; color: var(--ink); font-size: var(--fs-body); outline: none; transition: border-color .15s; }
+        .chat-input-bar input:focus { border-color: var(--accent); }
+        .chat-input-bar input::placeholder { color: var(--ink-3); }
+        .chat-send-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); border: none; color: #fdf7ee; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform .15s var(--ease); }
         .chat-send-btn:hover { transform: scale(1.06); }
-        .chat-send-btn:active { transform: scale(0.94); }
         .chat-send-btn svg { width: 18px; height: 18px; }
-        .typing-indicator { display: flex; gap: 4px; padding: 4px 0; }
-        .typing-indicator span { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-faint); animation: typing-bounce 1.2s ease-in-out infinite; }
+        .typing-indicator { display: flex; gap: 4px; }
+        .typing-indicator span { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-3); animation: typing-bounce 1.2s ease-in-out infinite; }
         .typing-indicator span:nth-child(2){animation-delay:.15s;} .typing-indicator span:nth-child(3){animation-delay:.3s;}
         @keyframes typing-bounce { 0%,60%,100%{opacity:.3;} 30%{opacity:1;} }
 
-        /* Vault */
-        .segmented { display: flex; padding: 4px; margin-bottom: 16px; border-radius: var(--r-pill); }
-        .segmented button { flex: 1; padding: 9px; border: none; background: transparent; color: var(--ink-dim); font-size: var(--fs-small); font-weight: 700; border-radius: var(--r-pill); cursor: pointer; transition: all .2s var(--ease); }
-        .segmented button.active { background: var(--glass-hi); color: var(--ink); box-shadow: 0 4px 10px -2px rgba(0,0,0,0.12); }
+        /* ── Vault ── */
+        .segmented { display: flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; margin-bottom: 16px; }
+        .segmented button { flex: 1; padding: 9px; border: none; background: transparent; color: var(--ink-2); font-size: var(--fs-small); font-weight: 600; border-radius: 999px; cursor: pointer; transition: all .2s var(--ease); }
+        .segmented button.active { background: var(--ink); color: var(--paper); }
         .vault-pane { display: none; } .vault-pane.active { display: block; }
-        .doc-card { padding: 15px 16px; margin-bottom: 10px; }
-        .doc-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .doc-name { display: flex; align-items: center; gap: 10px; font-size: var(--fs-body); font-weight: 700; color: var(--ink); }
-        .doc-version { font-family: var(--font-mono); font-size: var(--fs-small); color: var(--teal-2); font-weight: 600; }
-        .doc-meta { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); display: flex; flex-direction: column; gap: 4px; padding-left: 44px; }
-        .action-btn { width: 100%; padding: 15px; border-radius: var(--r-pill); background: linear-gradient(135deg, var(--teal-1), var(--teal-2)); border: none; color: #04201e; font-size: var(--fs-body); font-weight: 700; cursor: pointer; margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 12px 26px -10px rgba(0,199,190,0.5); transition: transform .15s var(--spring); }
-        .action-btn:hover { transform: translateY(-1px); } .action-btn:active { transform: scale(0.98); }
+        .doc-card { padding: 14px 0; border-bottom: 1px dotted var(--rule); }
+        .doc-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .doc-name { display: flex; align-items: center; gap: 9px; font-family: var(--font-serif); font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+        .doc-name .pigment { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+        .doc-version { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--accent); }
+        .doc-meta { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-3); display: flex; flex-direction: column; gap: 3px; padding-left: 19px; }
+        /* Biomarker reference-range strip */
+        .biomarker { padding-left: 19px; margin-top: 10px; }
+        .biomarker .bm-head { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--fs-small); }
+        .biomarker .bm-name { color: var(--ink); font-weight: 600; }
+        .biomarker .bm-val { font-family: var(--font-mono); font-size: var(--fs-small); }
+        .biomarker .bm-track { position: relative; height: 12px; margin-top: 7px; border-radius: 999px; overflow: visible; }
+        .biomarker .bm-band { position: absolute; top: 3px; height: 6px; border-radius: 999px; }
+        .biomarker .bm-marker { position: absolute; top: -1px; width: 3px; height: 14px; border-radius: 2px; background: var(--ink); transform: translateX(-50%); }
+        .biomarker .bm-flag { font-family: var(--font-hand); font-size: 0.95rem; margin-top: 5px; }
+
+        .action-btn { width: 100%; padding: 15px; border-radius: 999px; background: var(--accent); border: none; color: #fdf7ee; font-size: var(--fs-body); font-weight: 600; cursor: pointer; margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .15s var(--ease); }
+        .action-btn:hover { transform: translateY(-1px); } .action-btn:active { transform: scale(.98); }
         .action-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
         .action-btn svg { width: 16px; height: 16px; }
-        .empty-state { text-align: center; padding: 34px 14px; }
-        .empty-state .icon-chip { margin: 0 auto 14px; }
-        .empty-state p { font-size: var(--fs-small); line-height: 1.55; color: var(--ink-dim); }
-        .activity-log { margin-top: 20px; }
-        .activity-log h3 { font-size: var(--fs-small); font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px; padding: 0 2px; }
-        .log-entry { display: flex; align-items: flex-start; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--hair); animation: slide-in .18s var(--ease); }
-        @keyframes slide-in { from{opacity:0; transform: translateX(-4px);} to{opacity:1; transform:none;} }
+        .empty-state { text-align: center; padding: 30px 14px; }
+        .empty-state p { font-family: var(--font-hand); font-size: 1.15rem; line-height: 1.35; color: var(--ink-3); }
+        .activity-log { margin-top: 18px; }
+        .activity-log h3 { font-family: var(--font-serif); font-size: 1rem; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+        .log-entry { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px dotted var(--rule); animation: fade-up .18s var(--ease); }
         .log-entry:last-child { border-bottom: none; }
         .log-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
-        .log-dot.success{background:var(--green-2);} .log-dot.error{background:var(--red-2);} .log-dot.info{background:var(--teal-2);} .log-dot.warning{background:var(--orange-2);}
-        .log-text { font-size: var(--fs-small); line-height: 1.45; color: var(--ink-dim); }
-        .log-text strong { color: var(--ink); font-weight: 700; }
-        .log-text .time { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); display: block; margin-top: 2px; }
+        .log-dot.success{background:var(--activity);} .log-dot.error{background:var(--cardio);} .log-dot.info{background:var(--sleep);} .log-dot.warning{background:var(--energy);}
+        .log-text { font-size: var(--fs-small); line-height: 1.45; color: var(--ink-2); }
+        .log-text strong { color: var(--ink); font-weight: 600; }
+        .log-text .time { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-3); display: block; margin-top: 2px; }
 
-        /* Connect */
-        .provider-card { padding: 15px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; }
-        .provider-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 6px 14px -4px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.35); }
-        .provider-icon svg { width: 22px; height: 22px; color: #fff; }
+        /* ── Connect ── */
+        .provider-card { padding: 15px 0; border-bottom: 1px dotted var(--rule); display: flex; align-items: center; gap: 14px; }
+        .provider-mark { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .provider-mark svg { width: 20px; height: 20px; color: var(--card); }
         .provider-info { flex: 1; min-width: 0; }
-        .provider-info h4 { font-size: var(--fs-body); font-weight: 700; margin-bottom: 3px; color: var(--ink); }
-        .provider-info p { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); }
-        .provider-toggle { padding: 9px 16px; border-radius: var(--r-pill); border: 1px solid var(--glass-brd); background: var(--glass-lo); color: var(--ink-dim); font-size: var(--fs-small); font-weight: 700; cursor: pointer; flex-shrink: 0; transition: all .15s var(--ease); }
-        .provider-toggle.connected { background: linear-gradient(135deg, var(--green-1), var(--green-2)); border-color: transparent; color: #04220f; box-shadow: 0 6px 14px -6px rgba(48,209,88,0.6); }
-        .provider-toggle:hover { border-color: var(--teal-2); color: var(--teal-2); }
-        .provider-toggle.connected:hover { color: #04220f; opacity: .9; }
-        .whoop-metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 2px; }
-        .whoop-metric { background: var(--glass-lo); border-radius: var(--r-sm); padding: 12px 8px; text-align: center; }
-        .whoop-metric .v { font-size: 1.05rem; font-weight: 800; color: var(--pink-2); }
-        .whoop-metric .l { font-size: 0.56rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; }
-        .zk-banner { display: flex; align-items: center; gap: 12px; padding: 15px 16px; margin-bottom: 12px; }
-        .zk-banner .icon-chip { margin: 0; }
-        .zk-banner p { font-size: var(--fs-small); line-height: 1.5; color: var(--ink-dim); }
-        .zk-banner strong { color: var(--ink); }
+        .provider-info h4 { font-family: var(--font-serif); font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+        .provider-info p { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-3); margin-top: 2px; }
+        .provider-toggle { padding: 8px 15px; border-radius: 999px; border: 1.5px solid var(--rule); background: transparent; color: var(--ink-2); font-size: var(--fs-small); font-weight: 600; cursor: pointer; flex-shrink: 0; transition: all .15s var(--ease); }
+        .provider-toggle.connected { background: var(--activity); border-color: var(--activity); color: #fbf8f1; }
+        .provider-toggle:hover { border-color: var(--accent); color: var(--accent); }
+        .provider-toggle.connected:hover { opacity: .9; color: #fbf8f1; }
+        .whoop-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 12px; padding-left: 54px; }
+        .whoop-metric .v { font-family: var(--font-serif); font-size: 1.15rem; font-weight: 600; color: var(--recovery); }
+        .whoop-metric .l { font-family: var(--font-hand); font-size: .95rem; color: var(--ink-3); }
+        .zk-note { font-family: var(--font-hand); font-size: 1.05rem; color: var(--ink-2); line-height: 1.35; margin-top: 16px; padding-left: 16px; border-left: 2px solid var(--activity); }
+        .zk-note b { color: var(--ink); }
 
-        /* You */
-        .screentime-ring-row { display: flex; align-items: center; gap: 18px; }
-        .blocked-apps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-        .blocked-app { display: flex; align-items: center; gap: 7px; padding: 7px 11px 7px 8px; border-radius: var(--r-pill); background: var(--glass-lo); border: 1px solid var(--hair); font-size: var(--fs-small); font-weight: 600; color: var(--ink); }
-        .blocked-app .dotimg { width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; }
-        .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+        /* ── You ── */
+        .blocker-row { display: flex; align-items: center; gap: 16px; }
+        .blocker-ring { width: 78px; height: 78px; flex-shrink: 0; }
+        .blocked-apps { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+        .blocked-app { display: flex; align-items: center; gap: 7px; padding: 6px 12px 6px 8px; border-radius: 999px; border: 1px solid var(--rule); font-size: var(--fs-small); color: var(--ink); }
+        .blocked-app .d { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; }
+        .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px dotted var(--rule); }
         .settings-row:last-child { border-bottom: none; }
-        .settings-row-label { display: flex; align-items: center; gap: 12px; font-size: var(--fs-body); font-weight: 500; color: var(--ink); }
-        .settings-row .value { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); }
-        .toggle { width: 44px; height: 27px; border-radius: 14px; background: color-mix(in srgb, var(--ink) 16%, transparent); position: relative; cursor: pointer; flex-shrink: 0; transition: background .25s var(--ease); }
-        .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 23px; height: 23px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); transition: transform .25s var(--spring); }
-        .toggle.on { background: var(--green-2); }
-        .toggle.on::after { transform: translateX(17px); }
+        .settings-row-label { display: flex; align-items: center; gap: 12px; font-size: var(--fs-body); color: var(--ink); }
+        .settings-row-label .d { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .settings-row .value { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-3); }
+        .toggle { width: 44px; height: 26px; border-radius: 13px; background: var(--rule); position: relative; cursor: pointer; flex-shrink: 0; transition: background .25s var(--ease); }
+        .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: var(--card); box-shadow: 0 1px 4px rgba(0,0,0,.3); transition: transform .25s var(--ease); }
+        .toggle.on { background: var(--activity); }
+        .toggle.on::after { transform: translateX(18px); }
 
-        /* Tab bar — floating glass pill */
-        .tab-bar { position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); left: 14px; right: 14px; height: 66px; border-radius: var(--r-pill); display: flex; align-items: stretch; justify-content: space-around; z-index: 50; transition: opacity .25s var(--ease), transform .25s var(--spring); }
+        /* Tab bar — paper strip */
+        .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; height: calc(72px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper) 88%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-top: 1px solid var(--rule); display: flex; align-items: stretch; justify-content: space-around; z-index: 50; transition: opacity .25s var(--ease), transform .25s var(--ease); }
         #onboarding-screen.active ~ .tab-bar, #splash-screen.active ~ .tab-bar { opacity: 0; transform: translateY(14px); pointer-events: none; }
-        .tab-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; flex: 1; position: relative; -webkit-tap-highlight-color: transparent; }
-        .tab-item svg { width: 21px; height: 21px; color: var(--ink-faint); transition: color .15s, transform .2s var(--spring); }
-        .tab-item.active svg { color: var(--teal-2); transform: translateY(-1px) scale(1.05); }
-        .tab-item .tab-label { font-size: 0.56rem; font-weight: 600; color: var(--ink-faint); transition: color .15s; }
-        .tab-item.active .tab-label { color: var(--teal-2); font-weight: 700; }
+        .tab-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; flex: 1; -webkit-tap-highlight-color: transparent; padding-top: 8px; }
+        .tab-item svg { width: 20px; height: 20px; color: var(--ink-3); transition: color .15s, transform .2s var(--ease); }
+        .tab-item.active svg { color: var(--accent); transform: translateY(-1px); }
+        .tab-item .tab-label { font-family: var(--font-hand); font-size: .95rem; color: var(--ink-3); transition: color .15s; line-height: 1; }
+        .tab-item.active .tab-label { color: var(--accent); }
 
-        /* ═══════════ CONSOLE (stage) ═══════════ */
-        .console-panel { width: 420px; height: calc(var(--phone-h) + 16px); background: var(--stage-panel); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); border: 1px solid var(--stage-border); border-radius: var(--r-lg); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+        /* ── Console (stage) ── */
+        .console-panel { width: 420px; height: calc(var(--phone-h) + 16px); background: var(--stage-panel); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); border: 1px solid var(--stage-border); border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
         .console-header { padding: 16px 18px; border-bottom: 1px solid var(--stage-border); display: flex; align-items: center; justify-content: space-between; }
         .console-header .title-group { display: flex; align-items: center; gap: 8px; }
-        .console-header h3 { font-size: var(--fs-small); font-weight: 700; letter-spacing: 0.7px; color: var(--stage-ink-dim); text-transform: uppercase; }
-        .console-header svg { width: 15px; height: 15px; color: var(--stage-ink-faint); }
+        .console-header h3 { font-size: 11px; font-weight: 700; letter-spacing: .7px; color: var(--stage-dim); text-transform: uppercase; }
+        .console-header svg { width: 15px; height: 15px; color: var(--stage-faint); }
         .console-tabs { display: flex; gap: 2px; }
-        .console-tab { padding: 6px 13px; border-radius: var(--r-pill); font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600; cursor: pointer; color: var(--stage-ink-faint); background: transparent; border: none; transition: all .15s; }
-        .console-tab.active { background: rgba(255,255,255,0.12); color: #fff; }
-        .console-body { flex: 1; overflow-y: auto; padding: 14px 18px; font-family: var(--font-mono); font-size: var(--fs-small); line-height: 1.9; scrollbar-width: thin; }
-        .console-line { display: flex; gap: 9px; padding: 1px 0; animation: console-in .15s; }
-        @keyframes console-in { from{opacity:0;} to{opacity:1;} }
-        .console-line .timestamp { color: var(--stage-ink-faint); white-space: nowrap; flex-shrink: 0; }
+        .console-tab { padding: 6px 13px; border-radius: 999px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; cursor: pointer; color: var(--stage-faint); background: transparent; border: none; }
+        .console-tab.active { background: rgba(244,239,230,0.12); color: #f4efe6; }
+        .console-body { flex: 1; overflow-y: auto; padding: 14px 18px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.9; scrollbar-width: thin; }
+        .console-line { display: flex; gap: 9px; padding: 1px 0; }
+        .console-line .timestamp { color: var(--stage-faint); white-space: nowrap; flex-shrink: 0; }
         .console-line .method { font-weight: 700; flex-shrink: 0; }
-        .method-get{color:#64d2ff;} .method-post{color:#ff9f0a;} .method-delete{color:#ff453a;} .method-ws{color:var(--stage-ink-faint);}
-        .console-line .path { color: var(--stage-ink-dim); word-break: break-all; }
+        .method-get{color:#6f9be6;} .method-post{color:#e3b048;} .method-delete{color:#e8674c;} .method-ws{color:var(--stage-faint);}
+        .console-line .path { color: var(--stage-dim); word-break: break-all; }
         .console-line .status { font-weight: 700; flex-shrink: 0; margin-left: auto; padding-left: 8px; }
-        .status-200,.status-201{color:#30d158;} .status-400,.status-401,.status-500{color:#ff453a;} .status-409{color:#ff9f0a;}
-        .console-line.info .msg{color:#64d2ff;} .console-line.error .msg{color:#ff453a;} .console-line.warn .msg{color:#ff9f0a;}
-        .console-line .response-data { color: var(--stage-ink-faint); word-break: break-all; }
+        .status-200,.status-201{color:#46c495;} .status-400,.status-401,.status-500{color:#e8674c;} .status-409{color:#e3b048;}
+        .console-line.info .msg{color:#6f9be6;} .console-line.error .msg{color:#e8674c;} .console-line.warn .msg{color:#e3b048;}
+        .console-line .response-data { color: var(--stage-faint); word-break: break-all; }
 
         @media (max-width: 940px) {
             .simulator-container { flex-direction: column; align-items: center; padding: 24px 16px; }
@@ -450,7 +373,7 @@
         <div class="brand">
             <div class="mark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div>
             <span class="wordmark">Lifeline</span>
-            <span class="tagline">Private Health Companion</span>
+            <span class="tagline">your health, drawn by hand</span>
         </div>
         <div class="server-status"><div class="status-dot" id="serverDot"></div><span id="serverStatusText" class="tnum">connecting…</span></div>
     </header>
@@ -460,7 +383,7 @@
             <div class="device-label"><span>iOS Simulator</span><span id="deviceIdLabel" class="tnum">—</span></div>
             <div class="iphone-frame">
                 <div class="iphone-screen">
-                    <div class="product-mesh" aria-hidden="true"><span class="m1"></span><span class="m2"></span><span class="m3"></span><span class="m4"></span></div>
+                    <div class="paper-grain" aria-hidden="true"></div>
 
                     <div class="ios-status-bar">
                         <span class="time tnum" id="iosTime">09:41</span>
@@ -469,7 +392,6 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="3"/><path d="M22 10v4" stroke-linecap="round"/></svg>
                         </span>
                     </div>
-
                     <div class="dynamic-island" id="dynamicIsland">
                         <div class="island-content" id="islandContent">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg>
@@ -481,23 +403,40 @@
                     <div class="app-screen active" id="onboarding-screen">
                         <div>
                             <div class="onboarding-slide active" data-slide="0">
-                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--teal-1),var(--teal-2));box-shadow:0 20px 40px -14px rgba(0,199,190,.5),inset 0 1px 0 rgba(255,255,255,.4);"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div>
-                                <div class="onboarding-title">A private companion for a <em>longer</em>, richer life</div>
-                                <div class="onboarding-copy">Lifeline turns daily habits into lasting change — with zero-knowledge encryption, so only you ever see your data.</div>
+                                <svg class="ob-emblem" viewBox="0 0 120 120" fill="none">
+                                    <circle cx="60" cy="60" r="46" stroke="var(--rule)" stroke-width="1" stroke-dasharray="2 4"/>
+                                    <circle cx="60" cy="60" r="30" stroke="var(--rule)" stroke-width="1" stroke-dasharray="2 4"/>
+                                    <circle cx="60" cy="60" r="9" fill="var(--accent)"/>
+                                    <circle cx="97" cy="52" r="6" fill="var(--cardio)"/>
+                                    <circle cx="34" cy="90" r="5" fill="var(--sleep)"/>
+                                    <circle cx="86" cy="94" r="7" fill="var(--activity)"/>
+                                    <circle cx="24" cy="44" r="4" fill="var(--energy)"/>
+                                    <line x1="60" y1="60" x2="97" y2="52" stroke="var(--rule)"/><line x1="60" y1="60" x2="34" y2="90" stroke="var(--rule)"/><line x1="60" y1="60" x2="86" y2="94" stroke="var(--rule)"/><line x1="60" y1="60" x2="24" y2="44" stroke="var(--rule)"/>
+                                </svg>
+                                <div class="onboarding-title">Your body, as a <em>portrait</em></div>
+                                <div class="onboarding-copy">Lifeline draws your day as a one-of-a-kind data constellation — every signal a hand-placed mark. No two days look the same.</div>
                             </div>
                             <div class="onboarding-slide" data-slide="1">
-                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--blue-1),var(--blue-2));box-shadow:0 20px 40px -14px rgba(10,132,255,.5),inset 0 1px 0 rgba(255,255,255,.4);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l2 7 4-14 2 7h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-                                <div class="onboarding-title">See <em>cause and effect</em>, clearly</div>
-                                <div class="onboarding-copy">Behavioral feedback loops map your daily choices to real trends — so progress feels obvious, and streaks keep you going.</div>
+                                <svg class="ob-emblem" viewBox="0 0 120 120" fill="none">
+                                    <path d="M20 80 Q40 40 60 62 T100 40" stroke="var(--sleep)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                                    <circle cx="20" cy="80" r="4" fill="var(--cardio)"/><circle cx="60" cy="62" r="4" fill="var(--activity)"/><circle cx="100" cy="40" r="4" fill="var(--energy)"/>
+                                    <line x1="10" y1="100" x2="110" y2="100" stroke="var(--rule)" stroke-dasharray="2 3"/>
+                                </svg>
+                                <div class="onboarding-title">See <em>cause &amp; effect</em>, honestly</div>
+                                <div class="onboarding-copy">A biological "Lifeline Age", a cross-source readiness score, and a plain answer to one question: what is actually moving your health?</div>
                             </div>
                             <div class="onboarding-slide" data-slide="2">
-                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--indigo-1),var(--indigo-2));box-shadow:0 20px 40px -14px rgba(125,92,255,.5),inset 0 1px 0 rgba(255,255,255,.4);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg></div>
-                                <div class="onboarding-title">Grant a few <em>permissions</em></div>
-                                <div class="onboarding-copy">Everything stays on-device unless you choose to sync it. Turn on what helps; change it anytime.</div>
+                                <svg class="ob-emblem" viewBox="0 0 120 120" fill="none">
+                                    <rect x="42" y="34" width="36" height="52" rx="6" stroke="var(--ink-2)" stroke-width="2"/>
+                                    <path d="M52 34 v-6 a8 8 0 0 1 16 0 v6" stroke="var(--ink-2)" stroke-width="2"/>
+                                    <circle cx="60" cy="60" r="5" fill="var(--activity)"/>
+                                </svg>
+                                <div class="onboarding-title">Private by <em>construction</em></div>
+                                <div class="onboarding-copy">Everything is computed on your device from an open rulebook. The server ships the math; it never sees your numbers.</div>
                                 <div class="perm-list">
-                                    <div class="perm-row glass"><div class="icon-chip sm red"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div><div class="pt"><h5>Health data</h5><p>Read vitals on-device</p></div><div class="toggle on"></div></div>
-                                    <div class="perm-row glass"><div class="icon-chip sm orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div><div class="pt"><h5>Notifications</h5><p>Reminders &amp; streaks</p></div><div class="toggle on"></div></div>
-                                    <div class="perm-row glass"><div class="icon-chip sm indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2" stroke-linecap="round"/></svg></div><div class="pt"><h5>Screen Time</h5><p>Auto-lock social apps</p></div><div class="toggle"></div></div>
+                                    <div class="perm-row"><span class="perm-dot" style="background:var(--cardio)"></span><div class="pt"><h5>Health data</h5><p>read vitals on-device</p></div><div class="toggle on"></div></div>
+                                    <div class="perm-row"><span class="perm-dot" style="background:var(--energy)"></span><div class="pt"><h5>Notifications</h5><p>reminders &amp; streaks</p></div><div class="toggle on"></div></div>
+                                    <div class="perm-row"><span class="perm-dot" style="background:var(--recovery)"></span><div class="pt"><h5>Screen Time</h5><p>auto-lock social apps</p></div><div class="toggle"></div></div>
                                 </div>
                             </div>
                         </div>
@@ -505,100 +444,94 @@
                             <div class="onboarding-dots" id="onboardingDots"><span class="active"></span><span></span><span></span></div>
                             <div class="onboarding-actions">
                                 <button class="btn-primary" id="onboardingNextBtn">Continue</button>
-                                <button class="btn-glass" id="onboardingSkipBtn">Skip</button>
+                                <button class="btn-outline" id="onboardingSkipBtn">Skip</button>
                             </div>
                         </div>
                     </div>
 
                     <!-- ═══ SPLASH ═══ -->
                     <div class="app-screen" id="splash-screen">
-                        <div class="splash-mark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div>
+                        <svg class="splash-mark" viewBox="0 0 120 120" fill="none">
+                            <circle cx="60" cy="60" r="44" stroke="var(--rule)" stroke-width="1" stroke-dasharray="2 4"/>
+                            <circle cx="60" cy="60" r="8" fill="var(--accent)"/>
+                            <circle cx="96" cy="54" r="5" fill="var(--cardio)"/><circle cx="36" cy="88" r="5" fill="var(--sleep)"/><circle cx="84" cy="92" r="6" fill="var(--activity)"/>
+                        </svg>
                         <div class="splash-title">Lifeline</div>
-                        <div class="splash-subtitle">Establishing secure session</div>
+                        <div class="splash-subtitle">drawing your portrait…</div>
                         <div class="splash-progress"><div class="splash-progress-bar" id="splashProgress"></div></div>
                         <div class="splash-status-text tnum" id="splashStatus">Initializing secure enclave…</div>
                     </div>
 
-                    <!-- ═══ DASHBOARD ═══ -->
+                    <!-- ═══ PORTRAIT (dashboard) ═══ -->
                     <div class="app-screen" id="dashboard-screen">
-                        <div class="scroll-edge"></div>
                         <div class="screen-pad">
-                            <div class="dashboard-greeting" id="greetingText">Good morning</div>
-                            <div class="screen-title">Today</div>
-                            <div style="height:18px;"></div>
+                            <div class="journal-kicker" id="greetingText">Good morning</div>
+                            <div class="journal-title">Today's Portrait</div>
+                            <div class="journal-date" id="portraitDate">—</div>
 
-                            <div class="panel glass">
-                                <div class="score-row">
-                                    <div class="ring-container">
-                                        <svg viewBox="0 0 92 92">
-                                            <circle class="ring-bg" cx="46" cy="46" r="39" stroke-width="7"/>
-                                            <circle class="ring-progress" cx="46" cy="46" r="39" stroke-width="7" stroke="url(#scoreGrad)" stroke-dasharray="245" stroke-dashoffset="245" id="healthRing"/>
-                                            <defs><linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#54d6d6"/><stop offset="100%" stop-color="#00c7be"/></linearGradient></defs>
-                                        </svg>
-                                        <div class="ring-center-text tnum" id="healthScore">—</div>
-                                    </div>
-                                    <div class="score-info"><h3>Health Score</h3><p>Composite index from on-device signals</p></div>
+                            <hr class="rule dotted" style="margin:16px 0 6px;">
+
+                            <!-- Signature: Vital Constellation -->
+                            <div class="constellation-wrap"><div id="constellation"></div></div>
+                            <div class="const-caption" id="constCaption">—</div>
+                            <div class="const-legend" id="constLegend"></div>
+
+                            <hr class="rule dotted">
+
+                            <!-- Readiness -->
+                            <div class="section-label"><span class="n">i.</span> Readiness today</div>
+                            <div class="section-note">fused from every source you've connected</div>
+                            <div class="readiness-row">
+                                <div id="readinessArc"></div>
+                                <div class="readiness-info">
+                                    <h4><span id="readinessVal" class="tnum">—</span> <span class="lbl" id="readinessLabel" style="display:inline">—</span></h4>
+                                    <div class="driver" id="readinessDriver">—</div>
                                 </div>
                             </div>
 
-                            <div class="panel glass">
-                                <div class="panel-header"><h4>7-Day Trend</h4><span class="meta">Behavioral feedback</span></div>
-                                <div class="trend-head"><span class="val tnum">+6 pts</span><span class="delta tnum">▲ improving</span></div>
-                                <svg class="trend-chart" viewBox="0 0 300 70" preserveAspectRatio="none">
-                                    <defs><linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00c7be" stop-opacity="0.28"/><stop offset="100%" stop-color="#00c7be" stop-opacity="0"/></linearGradient></defs>
-                                    <path class="trend-area" d="M0,52 L44,44 L88,48 L132,34 L176,30 L220,20 L300,14 L300,70 L0,70 Z"/>
-                                    <path class="trend-line" d="M0,52 L44,44 L88,48 L132,34 L176,30 L220,20 L300,14"/>
-                                </svg>
-                                <div class="trend-days"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span></div>
-                            </div>
+                            <hr class="rule dotted">
 
-                            <div class="streak-banner glass">
-                                <div class="icon-chip orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div>
-                                <div style="flex:1;"><div class="streak-count tnum" id="streakCount">12-day streak</div><div class="streak-label">Longest run yet — keep it alive today</div></div>
-                            </div>
+                            <!-- What's moving your score -->
+                            <div class="section-label"><span class="n">ii.</span> What's moving your score</div>
+                            <div class="section-note">behavioral feedback, ranked by pull</div>
+                            <div id="correlationList"></div>
 
-                            <div class="section-label">Milestones</div>
-                            <div class="achv-strip">
-                                <div class="achv glass"><div class="icon-chip orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div><div class="t">7-Day Streak</div><div class="s">Unlocked</div></div>
-                                <div class="achv glass"><div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l2 7 4-14 2 7h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="t">10k Steps</div><div class="s">Unlocked</div></div>
-                                <div class="achv glass"><div class="icon-chip indigo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></div><div class="t">Sleep Pro</div><div class="s">Unlocked</div></div>
-                                <div class="achv glass locked"><div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div class="t">30-Day Club</div><div class="s">18 to go</div></div>
-                            </div>
+                            <hr class="rule dotted">
 
-                            <div class="panel glass">
-                                <div class="panel-header"><h4>Today's Challenges</h4><span class="meta tnum" id="challengeProgress">0/3</span></div>
-                                <div id="challengeList">
-                                    <div class="challenge-row" data-pts="10"><div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="challenge-text">10-minute morning walk</div><div class="challenge-pts">+10</div></div>
-                                    <div class="challenge-row" data-pts="15"><div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="challenge-text">Log today's medication</div><div class="challenge-pts">+15</div></div>
-                                    <div class="challenge-row" data-pts="10"><div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="challenge-text">Wind down 60 min before bed</div><div class="challenge-pts">+10</div></div>
-                                </div>
-                            </div>
+                            <!-- Circadian window -->
+                            <div class="section-label"><span class="n">iii.</span> Your body clock</div>
+                            <div class="section-note" id="circadianNote">—</div>
+                            <div class="circadian" id="circadianRibbon"></div>
 
-                            <div class="metrics-grid">
-                                <div class="metric-tile glass"><div class="metric-top"><div class="icon-chip red"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div></div><div class="metric-value tnum">72</div><div class="metric-label">Heart Rate</div><div class="metric-trend trend-down tnum">▼ 3 bpm</div></div>
-                                <div class="metric-tile glass"><div class="metric-top"><div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 8 4-16 2 8h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="metric-value tnum">8,247</div><div class="metric-label">Steps</div><div class="metric-trend trend-up tnum">▲ 12%</div></div>
-                                <div class="metric-tile glass"><div class="metric-top"><div class="icon-chip indigo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></div></div><div class="metric-value tnum">7:24</div><div class="metric-label">Sleep</div><div class="metric-trend trend-up tnum">▲ 18 min</div></div>
-                                <div class="metric-tile glass"><div class="metric-top"><div class="icon-chip orange"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div></div><div class="metric-value tnum">486</div><div class="metric-label">Calories</div><div class="metric-trend trend-up tnum">▲ 8%</div></div>
-                            </div>
+                            <hr class="rule dotted">
 
-                            <div class="panel glass">
-                                <div class="panel-header"><h4>Backend Link</h4><span class="badge neutral" id="serverBadge">OFFLINE</span></div>
-                                <div class="server-details">
-                                    <div class="server-detail-row"><span class="label">Endpoint</span><span class="value">localhost:8443</span></div>
-                                    <div class="server-detail-row"><span class="label">Database</span><span class="value" id="dbMode">—</span></div>
-                                    <div class="server-detail-row"><span class="label">Session</span><span class="value" id="sessionStatus">none</span></div>
-                                    <div class="server-detail-row"><span class="label">Device ID</span><span class="value tnum" id="deviceIdDisplay">—</span></div>
-                                </div>
+                            <!-- Streak + challenges -->
+                            <div class="streak-line">
+                                <svg class="streak-emblem" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="17" stroke="var(--energy)" stroke-width="2" stroke-dasharray="3 3"/><path d="M20 11c1 3-3 4-3 7a3 3 0 0 0 6 0c0-1-.7-1.8-.7-1.8s2 1.3 2 3.3a4.3 4.3 0 0 1-8.6 0c0-4 3.3-5.3 4.3-8.5z" fill="var(--energy)"/></svg>
+                                <div style="flex:1;"><div class="streak-count tnum" id="streakCount">12-day streak</div><div class="streak-label">longest run yet — keep it alive today</div></div>
                             </div>
+                            <div id="challengeList" style="margin-top:4px;">
+                                <div class="challenge-row" data-pts="10"><div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="challenge-text">10-minute morning walk</div><div class="challenge-pts">+10</div></div>
+                                <div class="challenge-row" data-pts="15"><div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="challenge-text">Log today's medication</div><div class="challenge-pts">+15</div></div>
+                                <div class="challenge-row" data-pts="10"><div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="challenge-text">Wind down 60 min before bed</div><div class="challenge-pts">+10</div></div>
+                            </div>
+                            <div class="kv-row" style="margin-top:8px;"><span class="label hand" style="font-size:1rem;">today's challenges</span><span class="value tnum" id="challengeProgress">0/3</span></div>
+
+                            <hr class="rule dotted">
+                            <div class="section-label"><span class="n">iv.</span> Engine</div>
+                            <div class="kv-row"><span class="label">Backend</span><span class="badge" id="serverBadge">offline</span></div>
+                            <div class="kv-row"><span class="label">Database</span><span class="value" id="dbMode">—</span></div>
+                            <div class="kv-row"><span class="label">Session</span><span class="value" id="sessionStatus">none</span></div>
+                            <div class="kv-row"><span class="label">Device</span><span class="value tnum" id="deviceIdDisplay">—</span></div>
                         </div>
                     </div>
 
-                    <!-- ═══ AI CHAT ═══ -->
+                    <!-- ═══ COACH ═══ -->
                     <div class="app-screen" id="chat-screen">
-                        <div class="chat-header"><h2>Lifeline AI</h2><p>PRIVATE HEALTH COMPANION · ZERO-KNOWLEDGE</p></div>
+                        <div class="chat-header"><h2>Lifeline Coach</h2><p>clinical-first · zero-knowledge · on your side</p></div>
                         <div class="chat-messages" id="chatMessages">
-                            <div class="chat-bubble system">End-to-end encrypted — no data retained</div>
-                            <div class="chat-bubble ai glass"><div class="ai-label">LIFELINE AI</div>Hello — I'm your private health companion. I can analyze biometric data and provide clinical-first guidance. How can I help?</div>
+                            <div class="chat-bubble system">end-to-end encrypted — nothing retained</div>
+                            <div class="chat-bubble ai"><div class="ai-label">LIFELINE COACH</div>Hello — I read your portrait, not your identity. Ask me what a signal means, or what one change would move your Lifeline Age the most.</div>
                         </div>
                         <div class="chat-input-bar">
                             <input type="text" id="chatInput" placeholder="Ask about your health…" autocomplete="off">
@@ -608,87 +541,76 @@
 
                     <!-- ═══ VAULT ═══ -->
                     <div class="app-screen" id="vault-screen">
-                        <div class="scroll-edge"></div>
                         <div class="screen-pad">
-                            <div class="screen-title">Your Vault</div>
-                            <div class="eyebrow" style="margin-top:6px;">ZERO-KNOWLEDGE E2EE STORAGE</div>
-                            <div style="height:16px;"></div>
-                            <div class="segmented glass"><button class="active" data-vault="sync">Journal</button><button data-vault="labs">Lab Results</button></div>
+                            <div class="journal-title">The Vault</div>
+                            <div class="journal-date">ZERO-KNOWLEDGE · E2EE</div>
+                            <hr class="rule dotted" style="margin:14px 0 16px;">
+                            <div class="segmented"><button class="active" data-vault="sync">Journal</button><button data-vault="labs">Biomarkers</button></div>
                             <div class="vault-pane active" id="vault-sync">
-                                <div class="doc-card glass"><div class="doc-card-header"><span class="doc-name"><div class="icon-chip pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Health Journal</span><span class="doc-version tnum" id="syncVersion">v0</span></div><div class="doc-meta"><span>AES-256-GCM · encrypted on-device</span><span>last sync: <span id="lastSyncTime">never</span></span></div></div>
-                                <div class="doc-card glass"><div class="doc-card-header"><span class="doc-name"><div class="icon-chip blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Medication Log</span><span class="doc-version tnum">v0</span></div><div class="doc-meta"><span>XChaCha20-Poly1305 · encrypted on-device</span><span>last sync: never</span></div></div>
+                                <div class="doc-card"><div class="doc-card-header"><span class="doc-name"><span class="pigment" style="background:var(--recovery)"></span>Health Journal</span><span class="doc-version tnum" id="syncVersion">v0</span></div><div class="doc-meta"><span>AES-256-GCM · encrypted on-device</span><span>last sync: <span id="lastSyncTime">never</span></span></div></div>
+                                <div class="doc-card"><div class="doc-card-header"><span class="doc-name"><span class="pigment" style="background:var(--sleep)"></span>Medication Log</span><span class="doc-version tnum">v0</span></div><div class="doc-meta"><span>XChaCha20-Poly1305 · encrypted on-device</span><span>last sync: never</span></div></div>
                                 <button class="action-btn" id="syncNowBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" stroke-linecap="round" stroke-linejoin="round"/></svg>Sync now</button>
                             </div>
                             <div class="vault-pane" id="vault-labs">
-                                <div id="labResultsList">
-                                    <div class="empty-state glass"><div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div><p>No lab results yet.<br>Upload a PDF or photo from your doctor — it's encrypted on-device before it ever leaves your phone.</p></div>
-                                </div>
+                                <div class="section-note" style="margin-bottom:14px;">doctor's labs, decrypted on-device &amp; laid against reference ranges</div>
+                                <div id="labResultsList"><div class="empty-state"><p>No labs yet.<br>Upload a panel from your doctor — it's encrypted before it ever leaves your phone, then plotted against its healthy range here.</p></div></div>
                                 <button class="action-btn" id="uploadLabBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0-12l4 4m-4-4L8 7M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round" stroke-linejoin="round"/></svg>Upload lab results</button>
                             </div>
-                            <div class="activity-log"><h3>Activity</h3><div class="panel glass" id="activityLog" style="padding:6px 14px;"><div class="log-entry"><div class="log-dot info"></div><div class="log-text"><strong>Ready to sync</strong><span class="time">waiting for connection…</span></div></div></div></div>
+                            <div class="activity-log"><h3>Activity</h3><div id="activityLog"><div class="log-entry"><div class="log-dot info"></div><div class="log-text"><strong>Ready to sync</strong><span class="time">waiting for connection…</span></div></div></div></div>
                         </div>
                     </div>
 
                     <!-- ═══ CONNECT ═══ -->
                     <div class="app-screen" id="connect-screen">
-                        <div class="scroll-edge"></div>
                         <div class="screen-pad">
-                            <div class="screen-title">Connect</div>
-                            <div class="eyebrow" style="margin-top:6px;">BRING YOUR OWN HEALTH DATA</div>
-                            <div style="height:16px;"></div>
-                            <div class="provider-card glass"><div class="provider-icon" style="background:linear-gradient(155deg,#3a3a3c,#1c1c1e);"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div><div class="provider-info"><h4>Apple Health</h4><p id="appleHealthStatus">not connected</p></div><button class="provider-toggle" id="appleHealthToggle" data-provider="apple_health">Connect</button></div>
-                            <div class="provider-card glass"><div class="provider-icon blue" style="background:linear-gradient(155deg,var(--blue-1),var(--blue-2));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div><div class="provider-info"><h4>Google Health</h4><p id="googleHealthStatus">not connected</p></div><button class="provider-toggle" id="googleHealthToggle" data-provider="google_health">Connect</button></div>
-                            <div class="provider-card glass"><div class="provider-icon" style="background:linear-gradient(155deg,var(--pink-1),var(--pink-2));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 4v2m0 12v2"/></svg></div><div class="provider-info"><h4>Whoop</h4><p id="whoopStatus">not connected</p></div><button class="provider-toggle" id="whoopToggle" data-provider="whoop">Connect</button></div>
-                            <div class="panel glass" id="whoopMetricsPanel" style="display:none;"><div class="panel-header"><h4>Whoop Recovery</h4><span class="meta">MOCK</span></div><div class="whoop-metrics-grid"><div class="whoop-metric"><div class="v tnum" id="whoopRecovery">—</div><div class="l">Recovery</div></div><div class="whoop-metric"><div class="v tnum" id="whoopStrain">—</div><div class="l">Strain</div></div><div class="whoop-metric"><div class="v tnum" id="whoopHrv">—</div><div class="l">HRV ms</div></div></div></div>
-                            <div class="zk-banner glass"><div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg></div><p><strong>Apple &amp; Google Health</strong> are read on-device only — nothing leaves your phone. <strong>Whoop</strong> uses OAuth2; your token is encrypted at rest and never touches your other devices.</p></div>
+                            <div class="journal-title">Sources</div>
+                            <div class="journal-date">BRING YOUR OWN DATA</div>
+                            <hr class="rule dotted" style="margin:14px 0 8px;">
+                            <div class="provider-card"><div class="provider-mark" style="background:var(--ink)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div><div class="provider-info"><h4>Apple Health</h4><p id="appleHealthStatus">not connected</p></div><button class="provider-toggle" id="appleHealthToggle" data-provider="apple_health">Connect</button></div>
+                            <div class="provider-card"><div class="provider-mark" style="background:var(--sleep)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div><div class="provider-info"><h4>Google Health</h4><p id="googleHealthStatus">not connected</p></div><button class="provider-toggle" id="googleHealthToggle" data-provider="google_health">Connect</button></div>
+                            <div class="provider-card"><div class="provider-mark" style="background:var(--recovery)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 4v2m0 12v2"/></svg></div><div class="provider-info"><h4>Whoop</h4><p id="whoopStatus">not connected</p></div><button class="provider-toggle" id="whoopToggle" data-provider="whoop">Connect</button></div>
+                            <div id="whoopMetricsPanel" style="display:none;"><div class="whoop-grid"><div class="whoop-metric"><div class="v tnum" id="whoopRecovery">—</div><div class="l">recovery</div></div><div class="whoop-metric"><div class="v tnum" id="whoopStrain">—</div><div class="l">strain</div></div><div class="whoop-metric"><div class="v tnum" id="whoopHrv">—</div><div class="l">hrv ms</div></div></div></div>
+                            <div class="zk-note"><b>Apple &amp; Google Health</b> are read on-device only. <b>Whoop</b> uses OAuth2; its token is encrypted at rest and never leaves the server for your other devices. Lifeline fuses all of them into one readiness — without ever seeing the raw numbers.</div>
                         </div>
                     </div>
 
                     <!-- ═══ YOU ═══ -->
                     <div class="app-screen" id="you-screen">
-                        <div class="scroll-edge"></div>
                         <div class="screen-pad">
-                            <div class="screen-title">You</div>
-                            <div style="height:16px;"></div>
-                            <div class="panel glass">
-                                <div class="panel-header"><h4>Social Hard-Blocker</h4><span class="badge good" id="screenTimeBadge">ACTIVE</span></div>
-                                <div class="screentime-ring-row">
-                                    <div class="ring-container" style="width:74px;height:74px;">
-                                        <svg viewBox="0 0 74 74" style="width:74px;height:74px;"><circle class="ring-bg" cx="37" cy="37" r="31" stroke-width="6"/><circle cx="37" cy="37" r="31" stroke-width="6" fill="none" stroke="url(#stGrad)" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="68"/><defs><linearGradient id="stGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#b18cff"/><stop offset="100%" stop-color="#7d5cff"/></linearGradient></defs></svg>
-                                        <div class="ring-center-text tnum" style="font-size:0.85rem;">65%</div>
-                                    </div>
-                                    <div style="flex:1;"><p style="font-size:var(--fs-small); color:var(--ink-dim); line-height:1.5;">39 of 60 daily minutes used. At your limit, Lifeline closes these apps automatically.</p></div>
-                                </div>
-                                <div class="blocked-apps">
-                                    <div class="blocked-app"><span class="dotimg" style="background:linear-gradient(135deg,#feda75,#d62976 55%,#4f5bd5);"></span>Instagram</div>
-                                    <div class="blocked-app"><span class="dotimg" style="background:#000;"></span>TikTok</div>
-                                    <div class="blocked-app"><span class="dotimg" style="background:#000;"></span>X</div>
-                                    <div class="blocked-app"><span class="dotimg" style="background:#1877f2;"></span>Facebook</div>
-                                </div>
+                            <div class="journal-title">You</div>
+                            <hr class="rule dotted" style="margin:14px 0 16px;">
+                            <div class="section-label"><span class="n">*</span> Social Hard-Blocker <span class="badge good" id="screenTimeBadge" style="margin-left:auto">active</span></div>
+                            <div class="blocker-row" style="margin-top:8px;">
+                                <svg class="blocker-ring" viewBox="0 0 78 78" fill="none"><circle cx="39" cy="39" r="32" stroke="var(--rule)" stroke-width="5"/><circle cx="39" cy="39" r="32" stroke="var(--recovery)" stroke-width="5" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="70" transform="rotate(-90 39 39)"/><text x="39" y="44" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">65%</text></svg>
+                                <div style="flex:1;"><div class="hand" style="font-size:1.1rem; color:var(--ink-2); line-height:1.25;">39 of 60 daily minutes spent. At your limit, Lifeline closes these apps for you.</div></div>
                             </div>
-                            <div class="panel glass">
-                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2" stroke-linecap="round"/></svg></div>Auto-lock social apps</div><div class="toggle on" id="screenTimeToggle"></div></div>
-                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>Streak reminders</div><div class="toggle on" id="remindersToggle"></div></div>
-                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>Daily digest</div><div class="toggle" id="digestToggle"></div></div>
+                            <div class="blocked-apps">
+                                <div class="blocked-app"><span class="d" style="background:linear-gradient(135deg,#feda75,#d62976 55%,#4f5bd5)"></span>Instagram</div>
+                                <div class="blocked-app"><span class="d" style="background:#111"></span>TikTok</div>
+                                <div class="blocked-app"><span class="d" style="background:#111"></span>X</div>
+                                <div class="blocked-app"><span class="d" style="background:#1877f2"></span>Facebook</div>
                             </div>
-                            <div class="panel glass">
-                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>Privacy &amp; Security</div><span class="value">Zero-knowledge</span></div>
-                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div>Connected Accounts</div><span class="value tnum" id="connectedCount">0 connected</span></div>
-                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Lab Results</div><span class="value tnum" id="settingsLabCount">0 uploaded</span></div>
-                            </div>
-                            <button class="btn-glass" id="restartOnboardingBtn">Replay onboarding</button>
+                            <hr class="rule dotted">
+                            <div class="settings-row"><div class="settings-row-label"><span class="d" style="background:var(--recovery)"></span>Auto-lock social apps</div><div class="toggle on" id="screenTimeToggle"></div></div>
+                            <div class="settings-row"><div class="settings-row-label"><span class="d" style="background:var(--energy)"></span>Streak reminders</div><div class="toggle on" id="remindersToggle"></div></div>
+                            <div class="settings-row"><div class="settings-row-label"><span class="d" style="background:var(--sleep)"></span>Daily digest</div><div class="toggle" id="digestToggle"></div></div>
+                            <hr class="rule dotted">
+                            <div class="settings-row"><div class="settings-row-label"><span class="d" style="background:var(--activity)"></span>Privacy &amp; Security</div><span class="value">zero-knowledge</span></div>
+                            <div class="settings-row"><div class="settings-row-label"><span class="d" style="background:var(--sleep)"></span>Connected sources</div><span class="value tnum" id="connectedCount">0 connected</span></div>
+                            <div class="settings-row"><div class="settings-row-label"><span class="d" style="background:var(--cardio)"></span>Lab panels</div><span class="value tnum" id="settingsLabCount">0 uploaded</span></div>
+                            <div style="height:18px;"></div>
+                            <button class="btn-outline" id="restartOnboardingBtn">Replay onboarding</button>
                         </div>
                     </div>
 
                     <!-- ═══ TAB BAR ═══ -->
-                    <div class="tab-bar glass">
-                        <div class="tab-item active" data-tab="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 7 4-14 2 7h6" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="tab-label">Today</span></div>
-                        <div class="tab-item" data-tab="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M7.6 17l3-3.5M16.4 17l-3-3.5"/></svg><span class="tab-label">AI</span></div>
-                        <div class="tab-item" data-tab="vault"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M9 4v16" stroke-linecap="round"/></svg><span class="tab-label">Vault</span></div>
-                        <div class="tab-item" data-tab="connect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg><span class="tab-label">Connect</span></div>
-                        <div class="tab-item" data-tab="you"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" stroke-linecap="round"/></svg><span class="tab-label">You</span></div>
+                    <div class="tab-bar">
+                        <div class="tab-item active" data-tab="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/><circle cx="18.5" cy="9" r="1.6" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="1.6" fill="currentColor" stroke="none"/></svg><span class="tab-label">Portrait</span></div>
+                        <div class="tab-item" data-tab="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z"/></svg><span class="tab-label">Coach</span></div>
+                        <div class="tab-item" data-tab="vault"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16" stroke-linecap="round"/></svg><span class="tab-label">Vault</span></div>
+                        <div class="tab-item" data-tab="connect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg><span class="tab-label">Sources</span></div>
+                        <div class="tab-item" data-tab="you"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" stroke-linecap="round"/></svg><span class="tab-label">You</span></div>
                     </div>
-
                     <div class="home-indicator"></div>
                 </div>
             </div>
@@ -708,39 +630,37 @@
         'use strict';
         const API_BASE = 'http://localhost:8443/api/v1';
         const WS_URL = 'ws://localhost:8443/api/v1/stream';
-        let state = { deviceId: crypto.randomUUID(), sessionToken: null, challenge: null, serverOnline: false, currentTab: 'dashboard', syncVersion: 0, labCount: 0, connections: {}, ws: null };
-        const $ = (sel) => document.querySelector(sel);
-        const $$ = (sel) => document.querySelectorAll(sel);
+        const $ = (s) => document.querySelector(s);
+        const $$ = (s) => document.querySelectorAll(s);
+
+        // Fixed demo signals (a browser has no real HealthKit; these stand in for
+        // on-device plaintext the insights engine computes over).
+        const SIGNALS = { chrono_age: 34, resting_heart_rate: 72, hrv_ms: 62, sleep_hours: 7.4, daily_steps: 8247, sleep_performance: 88, prior_strain: 11.4, sleep_midpoint: 3.5 };
+
+        let state = { deviceId: crypto.randomUUID(), sessionToken: null, challenge: null, serverOnline: false, currentTab: 'dashboard', syncVersion: 0, labCount: 0, connections: {}, insights: null, ws: null };
 
         function updateClock() {
-            const now = new Date();
-            $('#iosTime').textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            const hour = now.getHours();
-            $('#greetingText').textContent = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+            const n = new Date();
+            $('#iosTime').textContent = `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+            const h = n.getHours();
+            $('#greetingText').textContent = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+            $('#portraitDate').textContent = n.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' }).toUpperCase();
         }
         setInterval(updateClock, 10000); updateClock();
 
+        // ── Console ──
         function logConsole(type, method, path, status, data) {
-            const body = $('#consoleBody');
-            const now = new Date();
-            const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-            const line = document.createElement('div');
-            line.className = 'console-line';
+            const body = $('#consoleBody'); const n = new Date();
+            const ts = `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;
+            const line = document.createElement('div'); line.className = 'console-line';
             if (type === 'request') {
                 const mc = method === 'GET' ? 'method-get' : method === 'DELETE' ? 'method-delete' : method === 'POST' ? 'method-post' : 'method-ws';
                 line.innerHTML = `<span class="timestamp tnum">${ts}</span><span class="method ${mc}">${method}</span><span class="path">${path}</span>${status ? `<span class="status status-${status} tnum">${status}</span>` : ''}`;
-                if (data) {
-                    const d = document.createElement('div'); d.className = 'console-line';
-                    d.innerHTML = `<span class="timestamp">   </span><span class="response-data">→ ${truncate(JSON.stringify(data), 120)}</span>`;
-                    body.appendChild(line); body.appendChild(d); body.scrollTop = body.scrollHeight; return;
-                }
-            } else {
-                line.className = `console-line ${type}`;
-                line.innerHTML = `<span class="timestamp tnum">${ts}</span><span class="msg">${path}</span>`;
-            }
+                if (data) { const d = document.createElement('div'); d.className='console-line'; d.innerHTML=`<span class="timestamp">   </span><span class="response-data">→ ${truncate(JSON.stringify(data),120)}</span>`; body.appendChild(line); body.appendChild(d); body.scrollTop=body.scrollHeight; return; }
+            } else { line.className = `console-line ${type}`; line.innerHTML = `<span class="timestamp tnum">${ts}</span><span class="msg">${path}</span>`; }
             body.appendChild(line); body.scrollTop = body.scrollHeight;
         }
-        function truncate(str, len) { return str.length > len ? str.substring(0, len) + '…' : str; }
+        function truncate(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }
 
         async function apiRequest(method, path, body) {
             const headers = {};
@@ -752,75 +672,268 @@
             logConsole('request', method, path, res.status, data);
             return { status: res.status, data };
         }
-        const apiGet = (path) => apiRequest('GET', path);
-        const apiPost = (path, body) => apiRequest('POST', path, body ?? {});
-        const apiDelete = (path) => apiRequest('DELETE', path);
+        const apiGet = (p) => apiRequest('GET', p);
+        const apiPost = (p, b) => apiRequest('POST', p, b ?? {});
+        const apiDelete = (p) => apiRequest('DELETE', p);
 
-        function showIsland(text, ms = 1800) { const i = $('#dynamicIsland'); $('#islandText').textContent = text; i.classList.add('active'); setTimeout(() => i.classList.remove('active'), ms); }
+        function showIsland(t, ms = 1800) { const i = $('#dynamicIsland'); $('#islandText').textContent = t; i.classList.add('active'); setTimeout(() => i.classList.remove('active'), ms); }
 
-        // Onboarding
-        let onboardingIndex = 0;
-        const onboardingSlides = $$('.onboarding-slide');
-        const onboardingDots = $$('#onboardingDots span');
-        function showOnboardingSlide(i) {
-            onboardingSlides.forEach((s, idx) => s.classList.toggle('active', idx === i));
-            onboardingDots.forEach((d, idx) => d.classList.toggle('active', idx === i));
-            onboardingIndex = i;
-            $('#onboardingNextBtn').textContent = i === onboardingSlides.length - 1 ? 'Begin Secure Setup' : 'Continue';
+        // ═══════════ INSIGHTS ENGINE (client-side, from server rulebook) ═══════════
+        const PIGMENT = { cardio:'var(--cardio)', sleep:'var(--sleep)', activity:'var(--activity)', energy:'var(--energy)', recovery:'var(--recovery)' };
+
+        function bandLookup(bands, v) { for (const b of bands) if (v <= b.max) return b.years; return bands[bands.length-1].years; }
+
+        function computeLifelineAge(cfg) {
+            const s = cfg.biological_age.signals;
+            let off = 0;
+            off += bandLookup(s.resting_heart_rate.bands, SIGNALS.resting_heart_rate);
+            off += bandLookup(s.hrv_ms.bands, SIGNALS.hrv_ms);
+            off += bandLookup(s.sleep_hours.bands, SIGNALS.sleep_hours);
+            off += bandLookup(s.daily_steps.bands, SIGNALS.daily_steps);
+            const clamp = cfg.biological_age.clamp_years;
+            off = Math.max(-clamp, Math.min(clamp, off));
+            return { age: Math.round((SIGNALS.chrono_age + off) * 10) / 10, offset: Math.round(off * 10) / 10 };
         }
-        function finishOnboarding() { $('#onboarding-screen').classList.remove('active'); $('#splash-screen').classList.add('active'); bootSequence(); }
-        $('#onboardingNextBtn').addEventListener('click', () => { onboardingIndex < onboardingSlides.length - 1 ? showOnboardingSlide(onboardingIndex + 1) : finishOnboarding(); });
-        $('#onboardingSkipBtn').addEventListener('click', finishOnboarding);
-        $('#restartOnboardingBtn').addEventListener('click', () => { $$('.app-screen').forEach(s => s.classList.remove('active')); $('#onboarding-screen').classList.add('active'); showOnboardingSlide(0); });
 
-        // Tab nav
-        $$('.tab-item').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const target = tab.dataset.tab;
-                if (target === state.currentTab) return;
-                $$('.tab-item').forEach(t => t.classList.remove('active')); tab.classList.add('active');
-                $$('.app-screen').forEach(s => s.classList.remove('active')); $(`#${target}-screen`).classList.add('active');
-                state.currentTab = target;
-                if (target === 'vault') refreshLabResults();
-                if (target === 'connect') refreshIntegrations();
-            });
-        });
-
-        // Scroll-edge effect (iOS 26): fade a top scrim as content scrolls under the status bar
-        $$('.app-screen').forEach(screen => {
-            screen.addEventListener('scroll', () => { screen.classList.toggle('scrolled', screen.scrollTop > 8); }, { passive: true });
-        });
-
-        async function bootSequence() {
-            const progress = $('#splashProgress'); const status = $('#splashStatus');
-            const steps = [
-                { pct: 10, text: 'Initializing secure enclave…', delay: 300 },
-                { pct: 25, text: 'Generating device keypair…', delay: 350 },
-                { pct: 40, text: 'Connecting to Lifeline Engine…', delay: 450 },
-                { pct: 55, text: 'Requesting attestation challenge…', delay: 550 },
-                { pct: 70, text: 'Verifying device attestation…', delay: 500 },
-                { pct: 85, text: 'Establishing encrypted session…', delay: 400 },
-                { pct: 95, text: 'Loading your vitals…', delay: 300 },
-                { pct: 100, text: 'Ready', delay: 250 },
-            ];
-            for (const step of steps) {
-                progress.style.width = step.pct + '%'; status.textContent = step.text;
-                if (step.pct === 40) await checkServer();
-                if (step.pct === 55 && state.serverOnline) await getChallenge();
-                if (step.pct === 70 && state.serverOnline && state.challenge) await simulateAttestation();
-                if (step.pct === 85 && state.serverOnline) await fetchPolicyMatrix();
-                await sleep(step.delay);
+        function scoreComponent(c, v) {
+            let t = (v - c.poor_at) / (c.good_at - c.poor_at);
+            if (c.invert) t = (c.poor_at - v) / (c.poor_at - c.good_at);
+            return Math.max(0, Math.min(1, t));
+        }
+        function computeReadiness(cfg) {
+            const comp = cfg.readiness.components;
+            // Only include components we have a value for (fusion over connected sources).
+            const vals = {
+                hrv: SIGNALS.hrv_ms,
+                resting_heart_rate: SIGNALS.resting_heart_rate,
+                sleep_performance: SIGNALS.sleep_performance,
+                prior_strain: state.connections.whoop?.status === 'connected' ? SIGNALS.prior_strain : null,
+            };
+            let sum = 0, wsum = 0, worst = null;
+            for (const [k, c] of Object.entries(comp)) {
+                if (vals[k] == null) continue;
+                const sc = scoreComponent(c, vals[k]);
+                sum += sc * c.weight; wsum += c.weight;
+                if (worst === null || sc < worst.sc) worst = { k, sc };
             }
-            await sleep(300);
+            const score = wsum ? Math.round((sum / wsum) * 100) : 0;
+            const label = (cfg.readiness.labels.find(l => score >= l.min) || {}).text || '—';
+            const driverName = { hrv:'HRV', resting_heart_rate:'resting heart rate', sleep_performance:'sleep', prior_strain:'yesterday\'s strain' }[worst?.k] || 'recovery';
+            return { score, label, driver: worst && worst.sc < 0.6 ? `held back by ${driverName}` : `${driverName} is your strongest signal` };
+        }
+
+        function computeCorrelation(cfg) {
+            return Object.entries(cfg.correlation.habits)
+                .map(([k, v]) => ({ key: k, name: k.replace(/_/g,' '), prior: v.prior }))
+                .sort((a, b) => b.prior - a.prior);
+        }
+
+        function chronotypeFromMidpoint(mid) { return mid < 3 ? 'lark' : mid > 4.5 ? 'owl' : 'neutral'; }
+
+        // ── Renderers ──
+        function renderConstellation(cfg) {
+            const la = computeLifelineAge(cfg);
+            const cx = 150, cy = 150;
+            // node = {label, pigment, value, optimal deviation 0..1 (0=optimal), magnitude 0..1, improving}
+            const nodes = [
+                { label:'heart', pigment:'cardio', dev: 0.5, mag: 0.72, improving:false, angle:-90 },
+                { label:'HRV', pigment:'recovery', dev: 0.25, mag: 0.8, improving:true, angle:-30 },
+                { label:'sleep', pigment:'sleep', dev: 0.2, mag: 0.7, improving:true, angle:30 },
+                { label:'steps', pigment:'activity', dev: 0.35, mag: 0.65, improving:true, angle:90 },
+                { label:'energy', pigment:'energy', dev: 0.3, mag: 0.55, improving:true, angle:150 },
+                { label:'readiness', pigment:'recovery', dev: 0.32, mag: 0.68, improving:true, angle:210 },
+            ];
+            const rings = [50, 92, 128];
+            let svg = `<svg viewBox="0 0 300 300" role="img" aria-label="Vital constellation">`;
+            rings.forEach(r => { svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--rule)" stroke-width="1" stroke-dasharray="2 5"/>`; });
+            // connectors + nodes
+            nodes.forEach((n, i) => {
+                const rad = 46 + n.dev * 82;
+                const a = n.angle * Math.PI / 180;
+                const x = cx + rad * Math.cos(a), y = cy + rad * Math.sin(a);
+                const size = 5 + n.mag * 12;
+                svg += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--rule)" stroke-width="1"/>`;
+                if (n.improving) svg += `<circle class="const-node-anim" style="animation-delay:${i*90}ms; transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${size.toFixed(1)}" fill="${PIGMENT[n.pigment]}"/>`;
+                else svg += `<circle class="const-node-anim" style="animation-delay:${i*90}ms; transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${size.toFixed(1)}" fill="none" stroke="${PIGMENT[n.pigment]}" stroke-width="2.5"/>`;
+                const lx = cx + (rad + size + 9) * Math.cos(a), ly = cy + (rad + size + 9) * Math.sin(a);
+                svg += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="var(--font-hand)" font-size="14" fill="var(--ink-2)">${n.label}</text>`;
+            });
+            // center
+            svg += `<circle cx="${cx}" cy="${cy}" r="34" fill="var(--card)" stroke="var(--accent)" stroke-width="1.5"/>`;
+            svg += `<text x="${cx}" y="${cy-4}" text-anchor="middle" class="const-center-age" font-size="30" fill="var(--ink)">${la.age}</text>`;
+            svg += `<text x="${cx}" y="${cy+16}" text-anchor="middle" font-family="var(--font-hand)" font-size="13" fill="var(--ink-3)">Lifeline Age</text>`;
+            svg += `</svg>`;
+            $('#constellation').innerHTML = svg;
+
+            const yrs = Math.abs(la.offset);
+            const dir = la.offset < 0 ? 'younger' : la.offset > 0 ? 'older' : 'exactly your age';
+            $('#constCaption').innerHTML = la.offset === 0
+                ? `Your body reads <b>exactly your age</b> today.`
+                : `Your body reads <b>${yrs} ${yrs===1?'year':'years'} ${dir}</b> than your ${SIGNALS.chrono_age}.`;
+
+            $('#constLegend').innerHTML = [
+                ['size = how strong the signal is'],
+                ['distance from centre = how far from ideal'],
+                ['filled = improving · ring = slipping'],
+            ].map(([t]) => `<span class="li"><span class="sw" style="background:var(--ink-3)"></span>${t}</span>`).join('');
+        }
+
+        function renderReadiness(cfg) {
+            const r = computeReadiness(cfg);
+            const C = 2 * Math.PI * 40;
+            const off = C * (1 - r.score / 100);
+            $('#readinessArc').innerHTML = `<svg class="readiness-arc" viewBox="0 0 96 96"><circle cx="48" cy="48" r="40" fill="none" stroke="var(--rule)" stroke-width="6"/><circle cx="48" cy="48" r="40" fill="none" stroke="var(--recovery)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 48 48)" style="transition:stroke-dashoffset 1.1s var(--ease)"/><text x="48" y="53" text-anchor="middle" class="readiness-text" font-size="24" fill="var(--ink)">${r.score}</text></svg>`;
+            $('#readinessVal').textContent = r.score;
+            $('#readinessLabel').textContent = r.label;
+            $('#readinessDriver').textContent = r.driver;
+        }
+
+        function renderCorrelation(cfg) {
+            const list = computeCorrelation(cfg);
+            const max = list[0].prior;
+            $('#correlationList').innerHTML = list.map((h, i) => {
+                const pct = Math.round((h.prior / max) * 100);
+                const pig = ['recovery','activity','sleep','energy'][i % 4];
+                return `<div class="corr-row ${i===0?'top':''}"><span class="name">${h.name}${i===0?' ✦':''}</span><span class="corr-bar"><i style="width:${pct}%;background:${PIGMENT[pig]}"></i></span><span class="pct tnum">${Math.round(h.prior*100)}</span></div>`;
+            }).join('');
+        }
+
+        function renderCircadian(cfg) {
+            const ct = chronotypeFromMidpoint(SIGNALS.sleep_midpoint);
+            const w = cfg.circadian.chronotypes[ct];
+            $('#circadianNote').textContent = `${ct} chronotype · shifted to your sleep midpoint`;
+            const toMin = (hhmm) => { const [h,m] = hhmm.split(':').map(Number); return h*60+m; };
+            const marks = [
+                { t: w.peak_focus, label:'focus', pig:'activity' },
+                { t: w.last_caffeine, label:'last coffee', pig:'energy' },
+                { t: w.wind_down, label:'wind down', pig:'recovery' },
+            ];
+            const W = 300, H = 64, pad = 10, trackY = 30;
+            let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+            svg += `<line x1="${pad}" y1="${trackY}" x2="${W-pad}" y2="${trackY}" stroke="var(--rule)" stroke-width="2"/>`;
+            [0,6,12,18,24].forEach(h => { const x = pad + (h/24)*(W-2*pad); svg += `<line x1="${x}" y1="${trackY-3}" x2="${x}" y2="${trackY+3}" stroke="var(--rule)"/><text x="${x}" y="${trackY+18}" text-anchor="middle" font-family="var(--font-mono)" font-size="8" fill="var(--ink-3)">${String(h).padStart(2,'0')}</text>`; });
+            marks.forEach(m => {
+                const x = pad + (toMin(m.t)/1440)*(W-2*pad);
+                svg += `<circle cx="${x.toFixed(1)}" cy="${trackY}" r="5" fill="${PIGMENT[m.pig]}"/>`;
+                svg += `<text x="${x.toFixed(1)}" y="${trackY-11}" text-anchor="middle" class="clabel" fill="var(--ink-2)">${m.label}</text>`;
+            });
+            svg += `</svg>`;
+            $('#circadianRibbon').innerHTML = svg;
+        }
+
+        function renderInsights() { if (!state.insights) return; const cfg = state.insights; renderConstellation(cfg); renderReadiness(cfg); renderCorrelation(cfg); renderCircadian(cfg); }
+
+        // ── Biomarker plotting (Vault) ──
+        // Maps a lab panel title → a representative biomarker + sample value so the
+        // reference-range strip (from insights config) can be drawn.
+        const LAB_TO_BIOMARKER = {
+            'Lipid Panel': { key:'ldl_cholesterol', name:'LDL cholesterol', value: 118 },
+            'Complete Blood Count': { key:'hba1c', name:'HbA1c', value: 5.3 },
+            'Metabolic Panel': { key:'fasting_glucose', name:'Fasting glucose', value: 92 },
+            'Thyroid Panel (TSH)': { key:'tsh', name:'TSH', value: 2.1 },
+            'Vitamin D, 25-Hydroxy': { key:'vitamin_d', name:'Vitamin D', value: 33 },
+        };
+        function biomarkerStrip(title) {
+            const map = LAB_TO_BIOMARKER[title];
+            if (!map || !state.insights) return '';
+            const range = state.insights.biomarkers[map.key];
+            if (!range) return '';
+            // Build a 0..scaleMax axis; place optimal band + marker.
+            let scaleMax, bands = [], flag = '', flagColor = 'var(--activity)';
+            const v = map.value;
+            if (map.key === 'ldl_cholesterol') {
+                scaleMax = 200;
+                bands = [ [0, range.optimal_max, 'var(--activity)'], [range.optimal_max, range.high_min, 'var(--energy)'], [range.high_min, scaleMax, 'var(--cardio)'] ];
+                flag = v <= range.optimal_max ? 'in optimal range' : v < range.high_min ? 'borderline — watch it' : 'high — discuss with your doctor';
+                flagColor = v <= range.optimal_max ? 'var(--activity)' : v < range.high_min ? 'var(--energy)' : 'var(--cardio)';
+            } else if (map.key === 'vitamin_d') {
+                scaleMax = 80;
+                bands = [ [0, range.deficient_max, 'var(--cardio)'], [range.deficient_max, range.optimal_min, 'var(--energy)'], [range.optimal_min, scaleMax, 'var(--activity)'] ];
+                flag = v >= range.optimal_min ? 'optimal' : v > range.deficient_max ? 'below optimal — consider sun/supplement' : 'deficient';
+                flagColor = v >= range.optimal_min ? 'var(--activity)' : v > range.deficient_max ? 'var(--energy)' : 'var(--cardio)';
+            } else if (map.key === 'hba1c') {
+                scaleMax = 8;
+                bands = [ [0, range.optimal_max, 'var(--activity)'], [range.optimal_max, range.diabetic_min, 'var(--energy)'], [range.diabetic_min, scaleMax, 'var(--cardio)'] ];
+                flag = v <= range.optimal_max ? 'optimal' : v < range.diabetic_min ? 'watch — prediabetic band' : 'elevated';
+                flagColor = v <= range.optimal_max ? 'var(--activity)' : v < range.diabetic_min ? 'var(--energy)' : 'var(--cardio)';
+            } else if (map.key === 'fasting_glucose') {
+                scaleMax = 140;
+                bands = [ [0, range.optimal_max, 'var(--activity)'], [range.optimal_max, range.diabetic_min, 'var(--energy)'], [range.diabetic_min, scaleMax, 'var(--cardio)'] ];
+                flag = v <= range.optimal_max ? 'optimal' : v < range.diabetic_min ? 'watch — prediabetic band' : 'elevated';
+                flagColor = v <= range.optimal_max ? 'var(--activity)' : v < range.diabetic_min ? 'var(--energy)' : 'var(--cardio)';
+            } else { // tsh
+                scaleMax = 6;
+                bands = [ [0, range.optimal_min, 'var(--energy)'], [range.optimal_min, range.optimal_max, 'var(--activity)'], [range.optimal_max, scaleMax, 'var(--energy)'] ];
+                flag = (v >= range.optimal_min && v <= range.optimal_max) ? 'in optimal range' : 'outside optimal — recheck';
+                flagColor = (v >= range.optimal_min && v <= range.optimal_max) ? 'var(--activity)' : 'var(--energy)';
+            }
+            const pct = (x) => Math.max(0, Math.min(100, (x / scaleMax) * 100));
+            const bandHtml = bands.map(([a,b,c]) => `<span class="bm-band" style="left:${pct(a)}%;width:${pct(b)-pct(a)}%;background:${c};opacity:.28"></span>`).join('');
+            return `<div class="biomarker">
+                <div class="bm-head"><span class="bm-name">${map.name}</span><span class="bm-val" style="color:${flagColor}">${v} ${range.unit}</span></div>
+                <div class="bm-track">${bandHtml}<span class="bm-marker" style="left:${pct(v)}%"></span></div>
+                <div class="bm-flag" style="color:${flagColor}">${flag}</div>
+            </div>`;
+        }
+
+        // ── Onboarding ──
+        let obIndex = 0;
+        const obSlides = $$('.onboarding-slide'); const obDots = $$('#onboardingDots span');
+        function showSlide(i) { obSlides.forEach((s,x)=>s.classList.toggle('active',x===i)); obDots.forEach((d,x)=>d.classList.toggle('active',x===i)); obIndex=i; $('#onboardingNextBtn').textContent = i===obSlides.length-1 ? 'Begin Secure Setup' : 'Continue'; }
+        function finishOnboarding() { $('#onboarding-screen').classList.remove('active'); $('#splash-screen').classList.add('active'); bootSequence(); }
+        $('#onboardingNextBtn').addEventListener('click', () => { obIndex < obSlides.length-1 ? showSlide(obIndex+1) : finishOnboarding(); });
+        $('#onboardingSkipBtn').addEventListener('click', finishOnboarding);
+        $('#restartOnboardingBtn').addEventListener('click', () => { $$('.app-screen').forEach(s=>s.classList.remove('active')); $('#onboarding-screen').classList.add('active'); showSlide(0); });
+
+        // ── Tabs ──
+        $$('.tab-item').forEach(tab => { tab.addEventListener('click', () => {
+            const t = tab.dataset.tab; if (t === state.currentTab) return;
+            $$('.tab-item').forEach(x=>x.classList.remove('active')); tab.classList.add('active');
+            $$('.app-screen').forEach(s=>s.classList.remove('active')); $(`#${t}-screen`).classList.add('active');
+            state.currentTab = t;
+            if (t === 'vault') refreshLabResults();
+            if (t === 'connect') refreshIntegrations();
+            if (t === 'dashboard') renderInsights();
+        }); });
+
+        // ── Boot ──
+        async function bootSequence() {
+            const bar = $('#splashProgress'), st = $('#splashStatus');
+            const steps = [
+                { pct: 12, text: 'Initializing secure enclave…', delay: 300 },
+                { pct: 28, text: 'Generating device keypair…', delay: 350 },
+                { pct: 44, text: 'Connecting to Lifeline Engine…', delay: 450 },
+                { pct: 58, text: 'Requesting attestation challenge…', delay: 520 },
+                { pct: 72, text: 'Verifying device attestation…', delay: 500 },
+                { pct: 84, text: 'Fetching insights rulebook…', delay: 420 },
+                { pct: 95, text: 'Drawing your portrait…', delay: 320 },
+                { pct: 100, text: 'Ready', delay: 240 },
+            ];
+            for (const s of steps) {
+                bar.style.width = s.pct + '%'; st.textContent = s.text;
+                if (s.pct === 44) await checkServer();
+                if (s.pct === 58 && state.serverOnline) await getChallenge();
+                if (s.pct === 72 && state.serverOnline && state.challenge) await simulateAttestation();
+                if (s.pct === 84) await fetchInsightsConfig();
+                await sleep(s.delay);
+            }
+            await sleep(280);
             $('#splash-screen').classList.remove('active');
-            const dash = $('#dashboard-screen');
-            dash.classList.add('active', 'dash-in');
+            $('#dashboard-screen').classList.add('active');
             state.currentTab = 'dashboard';
-            setTimeout(() => { const score = 87; $('#healthScore').textContent = score; const c = 245; $('#healthRing').style.strokeDashoffset = c - (c * score / 100); }, 200);
-            $('#deviceIdDisplay').textContent = state.deviceId.substring(0, 8) + '…';
-            $('#deviceIdLabel').textContent = state.deviceId.substring(0, 8);
-            if (state.sessionToken) { $('#sessionStatus').textContent = 'active'; $('#sessionStatus').style.color = '#30d158'; showIsland('Session active', 2400); }
-            else { showIsland('Demo mode', 2400); }
+            renderInsights();
+            $('#deviceIdDisplay').textContent = state.deviceId.slice(0,8) + '…';
+            $('#deviceIdLabel').textContent = state.deviceId.slice(0,8);
+            if (state.sessionToken) { $('#sessionStatus').textContent='active'; $('#sessionStatus').style.color='var(--activity)'; showIsland('Session active', 2400); }
+            else showIsland('Demo mode', 2400);
+        }
+
+        async function fetchInsightsConfig() {
+            try {
+                const res = await apiGet('/insights/config');
+                if (res.status === 200) { state.insights = res.data; addActivityLog('success', 'Insights rulebook loaded', `on-device engine v${res.data.version}`); }
+            } catch (e) { logConsole('error','','Failed to load insights config',''); }
+            if (!state.insights) state.insights = FALLBACK_INSIGHTS; // offline: still draw the portrait
         }
 
         async function checkServer() {
@@ -829,194 +942,166 @@
                 if (res.status === 200 && res.data.challenge) {
                     state.serverOnline = true; state.challenge = res.data.challenge;
                     $('#serverDot').classList.add('connected'); $('#serverStatusText').textContent = 'connected — mockdatabase';
-                    $('#serverBadge').textContent = 'ONLINE'; $('#serverBadge').className = 'badge good'; $('#dbMode').textContent = 'in-memory mock';
-                    logConsole('info', '', 'Server online — development mode with MockDatabase', '');
+                    $('#serverBadge').textContent = 'online'; $('#serverBadge').className = 'badge good'; $('#dbMode').textContent = 'in-memory mock';
+                    logConsole('info','','Server online — development mode with MockDatabase','');
                 }
             } catch (e) {
-                state.serverOnline = false; $('#serverDot').classList.remove('connected'); $('#serverStatusText').textContent = 'offline';
-                $('#serverBadge').textContent = 'OFFLINE'; $('#serverBadge').className = 'badge bad';
-                logConsole('error', '', 'Server unreachable at localhost:8443', '');
+                state.serverOnline = false; $('#serverDot').classList.remove('connected'); $('#serverStatusText').textContent='offline';
+                $('#serverBadge').textContent='offline'; $('#serverBadge').className='badge bad';
+                logConsole('error','','Server unreachable at localhost:8443','');
             }
         }
-        async function getChallenge() {
-            try { const res = await apiGet('/auth/challenge'); if (res.status === 200) { state.challenge = res.data.challenge; addActivityLog('success', 'Challenge received', `nonce: ${state.challenge.substring(0, 16)}…`); } }
-            catch (e) { logConsole('error', '', 'Failed to get challenge', ''); }
-        }
-        // NOTE: real attestation needs Apple hardware; a browser can't forge one, so dev mode shows the expected error.
+        async function getChallenge() { try { const r = await apiGet('/auth/challenge'); if (r.status===200){ state.challenge=r.data.challenge; addActivityLog('success','Challenge received',`nonce: ${state.challenge.slice(0,16)}…`);} } catch(e){ logConsole('error','','Failed to get challenge',''); } }
         async function simulateAttestation() {
             try {
-                const res = await apiPost('/auth/verify-attestation', { device_id: state.deviceId, key_id: btoa('simulated-key-id-' + state.deviceId.substring(0, 8)), attestation: btoa('simulated-attestation-object'), challenge: state.challenge });
-                if (res.status === 200) { state.sessionToken = res.data.token; addActivityLog('success', 'Device attested & registered', 'Session token issued'); }
-                else { logConsole('warn', '', `Attestation demo: ${res.data?.error?.code || 'expected error in browser'} — real attestation requires iOS hardware`, ''); addActivityLog('warning', 'Attestation (demo mode)', 'Real attestation requires iOS hardware'); state.sessionToken = null; }
-            } catch (e) { logConsole('error', '', `Attestation error: ${e.message}`, ''); }
-        }
-        async function fetchPolicyMatrix() {
-            try { const res = await apiGet('/ai/policy-matrix'); if (res.status === 200) addActivityLog('success', 'Policy matrix loaded', `v${res.data.version}`); }
-            catch (e) { logConsole('error', '', 'Failed to fetch policy matrix', ''); }
+                const r = await apiPost('/auth/verify-attestation', { device_id: state.deviceId, key_id: btoa('sim-key-'+state.deviceId.slice(0,8)), attestation: btoa('sim-attestation'), challenge: state.challenge });
+                if (r.status===200) { state.sessionToken=r.data.token; addActivityLog('success','Device attested & registered','session token issued'); }
+                else { logConsole('warn','',`Attestation demo: ${r.data?.error?.code||'expected error in browser'} — real attestation requires iOS hardware`,''); addActivityLog('warning','Attestation (demo mode)','real attestation requires iOS hardware'); state.sessionToken=null; }
+            } catch(e){ logConsole('error','',`Attestation error: ${e.message}`,''); }
         }
 
-        // AI chat
+        // ── Coach ──
         async function sendChatMessage() {
-            const input = $('#chatInput'); const text = input.value.trim(); if (!text) return; input.value = '';
-            addChatBubble('user', text); const typingId = addTypingIndicator();
+            const input = $('#chatInput'); const text = input.value.trim(); if (!text) return; input.value='';
+            addChatBubble('user', text); const tid = addTyping();
             try {
-                let challenge = null;
-                if (state.serverOnline) { try { const c = await apiGet('/auth/challenge'); if (c.status === 200) challenge = c.data.challenge; } catch (e) {} }
-                const res = await apiPost('/ai/proxy', { prompt: text, execution_token: challenge || 'demo-token' });
-                removeTypingIndicator(typingId);
-                if (res.status === 200) { const aiText = res.data.content?.[0]?.text || res.data.content || 'I received your message.'; addChatBubble('ai', aiText); showIsland('AI response', 1400); }
-                else if (res.status === 401) { addChatBubble('ai', 'Authentication required. In production this endpoint is protected by Apple App Attest device attestation — this demo shows the full API flow.'); }
-                else { addChatBubble('ai', `Server responded with status ${res.status}: ${res.data?.error?.message || 'unknown error'}`); }
-            } catch (e) { removeTypingIndicator(typingId); addChatBubble('ai', 'Could not reach the server. Make sure the Lifeline backend is running on localhost:8443.'); logConsole('error', '', `Chat error: ${e.message}`, ''); }
+                let ch = null; if (state.serverOnline) { try { const c = await apiGet('/auth/challenge'); if (c.status===200) ch=c.data.challenge; } catch(e){} }
+                const r = await apiPost('/ai/proxy', { prompt: text, execution_token: ch || 'demo-token' });
+                removeTyping(tid);
+                if (r.status===200) { addChatBubble('ai', r.data.content?.[0]?.text || r.data.content || 'I received your message.'); showIsland('Coach replied', 1400); }
+                else if (r.status===401) addChatBubble('ai', 'Authentication required. In production this endpoint is protected by Apple App Attest — this demo shows the full flow.');
+                else addChatBubble('ai', `Server responded ${r.status}: ${r.data?.error?.message || 'unknown error'}`);
+            } catch(e){ removeTyping(tid); addChatBubble('ai','Could not reach the server. Make sure the Lifeline backend is running on localhost:8443.'); logConsole('error','',`Chat error: ${e.message}`,''); }
         }
-        function addChatBubble(role, text) {
-            const c = $('#chatMessages'); const b = document.createElement('div');
-            b.className = `chat-bubble ${role}` + (role === 'ai' ? ' glass' : '');
-            if (role === 'ai') b.innerHTML = `<div class="ai-label">LIFELINE AI</div>${escapeHtml(text)}`; else b.textContent = text;
-            c.appendChild(b); c.scrollTop = c.scrollHeight;
-        }
-        function addTypingIndicator() {
-            const c = $('#chatMessages'); const id = 'typing-' + Date.now(); const el = document.createElement('div');
-            el.className = 'chat-bubble ai glass'; el.id = id;
-            el.innerHTML = `<div class="ai-label">LIFELINE AI</div><div class="typing-indicator"><span></span><span></span><span></span></div>`;
-            c.appendChild(el); c.scrollTop = c.scrollHeight; return id;
-        }
-        function removeTypingIndicator(id) { const el = document.getElementById(id); if (el) el.remove(); }
+        function addChatBubble(role, text) { const c=$('#chatMessages'); const b=document.createElement('div'); b.className=`chat-bubble ${role}`; b.innerHTML = role==='ai' ? `<div class="ai-label">LIFELINE COACH</div>${escapeHtml(text)}` : escapeHtml(text); c.appendChild(b); c.scrollTop=c.scrollHeight; }
+        function addTyping() { const c=$('#chatMessages'); const id='t'+Date.now(); const el=document.createElement('div'); el.className='chat-bubble ai'; el.id=id; el.innerHTML=`<div class="ai-label">LIFELINE COACH</div><div class="typing-indicator"><span></span><span></span><span></span></div>`; c.appendChild(el); c.scrollTop=c.scrollHeight; return id; }
+        function removeTyping(id) { const el=document.getElementById(id); if (el) el.remove(); }
         $('#chatSendBtn').addEventListener('click', sendChatMessage);
-        $('#chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
+        $('#chatInput').addEventListener('keydown', e => { if (e.key==='Enter') sendChatMessage(); });
 
-        // Vault: sync
+        // ── Vault sync ──
         $('#syncNowBtn').addEventListener('click', async () => {
-            const btn = $('#syncNowBtn'); btn.disabled = true;
+            const btn=$('#syncNowBtn'); btn.disabled=true;
             try {
-                const c = await apiGet('/auth/challenge'); if (c.status !== 200) throw new Error('Challenge failed');
-                addActivityLog('info', 'Sync initiated', 'Requesting challenge nonce…');
-                const documentId = '550e8400-e29b-41d4-a716-446655440000'; state.syncVersion++;
-                const fakeBlob = btoa(JSON.stringify({ encrypted: true, timestamp: new Date().toISOString(), data: 'AES-256-GCM encrypted health journal data' }));
-                const r = await apiPost('/sync/delta', { document_id: documentId, device_id: state.deviceId, version_sequence: state.syncVersion, encrypted_blob: fakeBlob, initialization_vector: btoa('random-12b-iv'), auth_tag: btoa('auth-tag-16bytes'), client_signature: btoa('ecdsa-p256-signature'), document_type: 'health_journal' });
-                if (r.status === 200) { addActivityLog('success', 'Document synced', `version ${state.syncVersion}`); $('#syncVersion').textContent = `v${state.syncVersion}`; $('#lastSyncTime').textContent = new Date().toLocaleTimeString(); showIsland('Synced', 1600); }
-                else if (r.status === 401) { addActivityLog('warning', 'Auth required', 'Sync requires a valid session token from device attestation'); }
-                else { addActivityLog('error', 'Sync failed', r.data?.error?.message || 'unknown error'); }
-            } catch (e) { addActivityLog('error', 'Sync error', e.message); logConsole('error', '', `Sync error: ${e.message}`, ''); }
-            btn.disabled = false;
+                const c = await apiGet('/auth/challenge'); if (c.status!==200) throw new Error('Challenge failed');
+                addActivityLog('info','Sync initiated','requesting challenge nonce…');
+                state.syncVersion++;
+                const blob = btoa(JSON.stringify({ encrypted:true, ts:new Date().toISOString() }));
+                const r = await apiPost('/sync/delta', { document_id:'550e8400-e29b-41d4-a716-446655440000', device_id:state.deviceId, version_sequence:state.syncVersion, encrypted_blob:blob, initialization_vector:btoa('random-12b-iv'), auth_tag:btoa('auth-tag-16bytes'), client_signature:btoa('ecdsa-p256-signature'), document_type:'health_journal' });
+                if (r.status===200){ addActivityLog('success','Document synced',`version ${state.syncVersion}`); $('#syncVersion').textContent=`v${state.syncVersion}`; $('#lastSyncTime').textContent=new Date().toLocaleTimeString(); showIsland('Synced',1600); }
+                else if (r.status===401) addActivityLog('warning','Auth required','sync needs a valid session token from device attestation');
+                else addActivityLog('error','Sync failed', r.data?.error?.message || 'unknown error');
+            } catch(e){ addActivityLog('error','Sync error', e.message); }
+            btn.disabled=false;
         });
+        $$('.segmented button').forEach(b => b.addEventListener('click', () => { $$('.segmented button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); $$('.vault-pane').forEach(p=>p.classList.remove('active')); $(`#vault-${b.dataset.vault}`).classList.add('active'); }));
 
-        // Vault: segmented control
-        $$('.segmented button').forEach(btn => { btn.addEventListener('click', () => { $$('.segmented button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); $$('.vault-pane').forEach(p => p.classList.remove('active')); $(`#vault-${btn.dataset.vault}`).classList.add('active'); }); });
-
-        // Vault: lab results
-        const LAB_TITLES = ['Lipid Panel', 'Complete Blood Count', 'Metabolic Panel', 'Thyroid Panel (TSH)', 'Vitamin D, 25-Hydroxy'];
-        const LAB_LABS = ['Quest Diagnostics', 'LabCorp', 'City Health Partners', 'Mercy Medical Lab'];
-        let uploadedLabTitles = {};
+        const LAB_TITLES = Object.keys(LAB_TO_BIOMARKER);
+        const LAB_LABS = ['Quest Diagnostics','LabCorp','City Health Partners','Mercy Medical Lab'];
+        let labMeta = {};
         $('#uploadLabBtn').addEventListener('click', async () => {
-            const btn = $('#uploadLabBtn'); btn.disabled = true;
+            const btn=$('#uploadLabBtn'); btn.disabled=true;
             try {
-                if (!state.serverOnline) { addActivityLog('error', 'Upload failed', 'Server unreachable'); return; }
-                const c = await apiGet('/auth/challenge'); if (c.status !== 200) throw new Error('Challenge failed');
-                const documentId = crypto.randomUUID();
-                const title = LAB_TITLES[Math.floor(Math.random() * LAB_TITLES.length)];
-                const lab = LAB_LABS[Math.floor(Math.random() * LAB_LABS.length)];
-                uploadedLabTitles[documentId] = { title, lab };
-                const fakeBlob = btoa(JSON.stringify({ encrypted: true, source: 'doctor_upload', timestamp: new Date().toISOString() }));
-                const res = await apiPost('/sync/delta', { document_id: documentId, device_id: state.deviceId, version_sequence: 1, encrypted_blob: fakeBlob, initialization_vector: btoa('random-12b-iv2'), auth_tag: btoa('auth-tag-16bytes2'), client_signature: btoa('ecdsa-p256-signature2'), document_type: 'lab_result' });
-                if (res.status === 200) { addActivityLog('success', 'Lab result uploaded', `${title} · encrypted on-device`); showIsland('Uploaded', 1600); await refreshLabResults(); }
-                else if (res.status === 401) { addActivityLog('warning', 'Auth required', 'Uploading requires a valid session token from device attestation'); }
-                else { addActivityLog('error', 'Upload failed', res.data?.error?.message || 'unknown error'); }
-            } catch (e) { addActivityLog('error', 'Upload error', e.message); }
-            btn.disabled = false;
+                if (!state.serverOnline) { addActivityLog('error','Upload failed','server unreachable'); return; }
+                const c = await apiGet('/auth/challenge'); if (c.status!==200) throw new Error('Challenge failed');
+                const id = crypto.randomUUID();
+                const title = LAB_TITLES[Math.floor(Math.random()*LAB_TITLES.length)];
+                const lab = LAB_LABS[Math.floor(Math.random()*LAB_LABS.length)];
+                labMeta[id] = { title, lab };
+                const blob = btoa(JSON.stringify({ encrypted:true, source:'doctor_upload', ts:new Date().toISOString() }));
+                const r = await apiPost('/sync/delta', { document_id:id, device_id:state.deviceId, version_sequence:1, encrypted_blob:blob, initialization_vector:btoa('random-12b-iv2'), auth_tag:btoa('auth-tag-16bytes2'), client_signature:btoa('ecdsa-p256-signature2'), document_type:'lab_result' });
+                if (r.status===200){ addActivityLog('success','Lab panel uploaded',`${title} · plotted vs range`); showIsland('Uploaded',1600); await refreshLabResults(); }
+                else if (r.status===401) addActivityLog('warning','Auth required','uploading needs a valid session token from device attestation');
+                else addActivityLog('error','Upload failed', r.data?.error?.message || 'unknown error');
+            } catch(e){ addActivityLog('error','Upload error', e.message); }
+            btn.disabled=false;
         });
         async function refreshLabResults() {
             if (!state.serverOnline) return;
-            const res = await apiGet('/sync/documents/lab_result'); if (res.status !== 200) return;
+            const res = await apiGet('/sync/documents/lab_result'); if (res.status!==200) return;
             const docs = res.data.documents || []; state.labCount = docs.length; $('#settingsLabCount').textContent = `${docs.length} uploaded`;
             const list = $('#labResultsList');
-            if (docs.length === 0) { list.innerHTML = `<div class="empty-state glass"><div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div><p>No lab results yet.<br>Upload a PDF or photo from your doctor — it's encrypted on-device before it ever leaves your phone.</p></div>`; return; }
+            if (!docs.length) { list.innerHTML = `<div class="empty-state"><p>No labs yet.<br>Upload a panel from your doctor — it's encrypted before it ever leaves your phone, then plotted against its healthy range here.</p></div>`; return; }
             list.innerHTML = docs.map(doc => {
-                const meta = uploadedLabTitles[doc.document_id] || { title: 'Lab Result', lab: 'External Lab' };
+                const meta = labMeta[doc.document_id] || { title:'Lab Result', lab:'External Lab' };
                 const date = new Date(doc.created_at).toLocaleDateString();
-                return `<div class="doc-card glass"><div class="doc-card-header"><span class="doc-name"><div class="icon-chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div>${escapeHtml(meta.title)}</span><span class="badge good">Reviewed</span></div><div class="doc-meta"><span>${escapeHtml(meta.lab)} · ${date}</span><span>Encrypted · opaque to server</span></div></div>`;
+                return `<div class="doc-card"><div class="doc-card-header"><span class="doc-name"><span class="pigment" style="background:var(--cardio)"></span>${escapeHtml(meta.title)}</span><span class="doc-version">${escapeHtml(meta.lab)}</span></div><div class="doc-meta"><span>${date} · encrypted · opaque to server</span></div>${biomarkerStrip(meta.title)}</div>`;
             }).join('');
         }
 
-        // Connect: integrations
-        const PROVIDER_META = { apple_health: { statusEl: '#appleHealthStatus', toggleEl: '#appleHealthToggle' }, google_health: { statusEl: '#googleHealthStatus', toggleEl: '#googleHealthToggle' }, whoop: { statusEl: '#whoopStatus', toggleEl: '#whoopToggle' } };
+        // ── Connect ──
+        const PROVIDERS = { apple_health:{s:'#appleHealthStatus',t:'#appleHealthToggle'}, google_health:{s:'#googleHealthStatus',t:'#googleHealthToggle'}, whoop:{s:'#whoopStatus',t:'#whoopToggle'} };
         function renderIntegrations() {
-            let n = 0;
-            for (const [provider, meta] of Object.entries(PROVIDER_META)) {
-                const conn = state.connections[provider]; const s = $(meta.statusEl); const t = $(meta.toggleEl);
-                if (conn && conn.status === 'connected') { n++; s.textContent = conn.last_synced_at ? `synced ${new Date(conn.last_synced_at).toLocaleTimeString()}` : 'connected'; t.textContent = 'Disconnect'; t.classList.add('connected'); }
-                else { s.textContent = 'not connected'; t.textContent = 'Connect'; t.classList.remove('connected'); }
+            let n=0;
+            for (const [p, m] of Object.entries(PROVIDERS)) {
+                const conn = state.connections[p]; const s=$(m.s), t=$(m.t);
+                if (conn && conn.status==='connected') { n++; s.textContent = conn.last_synced_at ? `synced ${new Date(conn.last_synced_at).toLocaleTimeString()}` : 'connected'; t.textContent='Disconnect'; t.classList.add('connected'); }
+                else { s.textContent='not connected'; t.textContent='Connect'; t.classList.remove('connected'); }
             }
             $('#connectedCount').textContent = `${n} connected`;
-            $('#whoopMetricsPanel').style.display = (state.connections.whoop?.status === 'connected') ? 'block' : 'none';
+            $('#whoopMetricsPanel').style.display = (state.connections.whoop?.status==='connected') ? 'block' : 'none';
+            renderInsights(); // readiness fuses over whatever's connected
         }
         async function refreshIntegrations() {
             if (!state.serverOnline || !state.sessionToken) { renderIntegrations(); return; }
             const res = await apiGet('/integrations');
-            if (res.status === 200) { state.connections = {}; (res.data.connections || []).forEach(c => { state.connections[c.provider] = c; }); renderIntegrations(); if (state.connections.whoop?.status === 'connected') fetchWhoopMetrics(); }
+            if (res.status===200){ state.connections={}; (res.data.connections||[]).forEach(c=>{state.connections[c.provider]=c;}); renderIntegrations(); if (state.connections.whoop?.status==='connected') fetchWhoop(); }
         }
-        async function fetchWhoopMetrics() {
-            const res = await apiGet('/integrations/whoop/metrics');
-            if (res.status === 200) { $('#whoopRecovery').textContent = res.data.recovery_score ?? '—'; $('#whoopStrain').textContent = res.data.strain ?? '—'; $('#whoopHrv').textContent = res.data.hrv_ms ?? '—'; }
-        }
-        async function toggleOnDeviceProvider(provider, t) {
-            const connected = state.connections[provider]?.status === 'connected'; t.disabled = true;
-            if (connected) { const r = await apiDelete(`/integrations/${provider}`); if (r.status === 200) addActivityLog('info', 'Disconnected', provider.replace('_', ' ')); }
-            else { const r = await apiPost(`/integrations/${provider}/connect`, { authorized: true }); if (r.status === 200) { addActivityLog('success', 'Connected', provider.replace('_', ' ')); showIsland('Connected', 1600); } else { addActivityLog('error', 'Connect failed', r.data?.error?.message || 'unknown error'); } }
-            t.disabled = false; await refreshIntegrations();
+        async function fetchWhoop() { const r = await apiGet('/integrations/whoop/metrics'); if (r.status===200){ $('#whoopRecovery').textContent=r.data.recovery_score??'—'; $('#whoopStrain').textContent=r.data.strain??'—'; $('#whoopHrv').textContent=r.data.hrv_ms??'—'; } }
+        async function toggleOnDevice(p, t) {
+            const on = state.connections[p]?.status==='connected'; t.disabled=true;
+            if (on) { const r=await apiDelete(`/integrations/${p}`); if (r.status===200) addActivityLog('info','Disconnected', p.replace('_',' ')); }
+            else { const r=await apiPost(`/integrations/${p}/connect`,{authorized:true}); if (r.status===200){ addActivityLog('success','Connected', p.replace('_',' ')); showIsland('Connected',1600);} else addActivityLog('error','Connect failed', r.data?.error?.message||'unknown error'); }
+            t.disabled=false; await refreshIntegrations();
         }
         async function toggleWhoop(t) {
-            const connected = state.connections.whoop?.status === 'connected'; t.disabled = true;
-            if (connected) { const r = await apiDelete('/integrations/whoop'); if (r.status === 200) addActivityLog('info', 'Disconnected', 'whoop'); }
+            const on = state.connections.whoop?.status==='connected'; t.disabled=true;
+            if (on) { const r=await apiDelete('/integrations/whoop'); if (r.status===200) addActivityLog('info','Disconnected','whoop'); }
             else {
                 const a = await apiGet('/integrations/whoop/authorize');
-                if (a.status === 200) {
-                    // Real app opens authorize_url in ASWebAuthenticationSession; Whoop redirects to our callback.
-                    // A sandboxed demo can't complete a real consent screen, so we drive the redirect directly.
-                    const url = new URL(a.data.authorize_url); const cbPath = `/integrations/whoop/callback${url.search}`;
-                    logConsole('info', '', `Simulating Whoop consent redirect → ${cbPath}`, '');
-                    const cb = await apiGet(cbPath);
-                    if (cb.status === 200) { addActivityLog('success', 'Connected', 'whoop (mock OAuth2)'); showIsland('Connected', 1600); }
-                    else { addActivityLog('error', 'Whoop connect failed', cb.data?.error?.message || 'unknown error'); }
-                }
+                if (a.status===200) { const url=new URL(a.data.authorize_url); const cb=`/integrations/whoop/callback${url.search}`; logConsole('info','',`Simulating Whoop consent redirect → ${cb}`,''); const r=await apiGet(cb); if (r.status===200){ addActivityLog('success','Connected','whoop (mock OAuth2)'); showIsland('Connected',1600);} else addActivityLog('error','Whoop connect failed', r.data?.error?.message||'unknown error'); }
             }
-            t.disabled = false; await refreshIntegrations();
+            t.disabled=false; await refreshIntegrations();
         }
-        $('#appleHealthToggle').addEventListener('click', (e) => toggleOnDeviceProvider('apple_health', e.currentTarget));
-        $('#googleHealthToggle').addEventListener('click', (e) => toggleOnDeviceProvider('google_health', e.currentTarget));
-        $('#whoopToggle').addEventListener('click', (e) => toggleWhoop(e.currentTarget));
+        $('#appleHealthToggle').addEventListener('click', e => toggleOnDevice('apple_health', e.currentTarget));
+        $('#googleHealthToggle').addEventListener('click', e => toggleOnDevice('google_health', e.currentTarget));
+        $('#whoopToggle').addEventListener('click', e => toggleWhoop(e.currentTarget));
 
-        // Dashboard challenges
-        function updateChallengeProgress() { $('#challengeProgress').textContent = `${$$('.challenge-check.done').length}/${$$('.challenge-row').length}`; }
-        $$('.challenge-check').forEach(check => { check.addEventListener('click', () => { check.classList.toggle('done'); check.nextElementSibling.classList.toggle('done'); updateChallengeProgress(); if (check.classList.contains('done')) showIsland('+' + check.parentElement.dataset.pts + ' pts', 1200); }); });
-
-        // Toggles
+        // ── Challenges + toggles ──
+        function updateChallenges() { $('#challengeProgress').textContent = `${$$('.challenge-check.done').length}/${$$('.challenge-row').length}`; }
+        $$('.challenge-check').forEach(ch => ch.addEventListener('click', () => { ch.classList.toggle('done'); ch.nextElementSibling.classList.toggle('done'); updateChallenges(); if (ch.classList.contains('done')) showIsland('+'+ch.parentElement.dataset.pts+' pts', 1200); }));
         $$('.toggle').forEach(t => t.addEventListener('click', () => t.classList.toggle('on')));
 
         function addActivityLog(type, title, detail) {
-            const c = $('#activityLog'); const e = document.createElement('div'); e.className = 'log-entry';
-            const dot = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
+            const c=$('#activityLog'); const e=document.createElement('div'); e.className='log-entry';
+            const dot = type==='success'?'success':type==='error'?'error':type==='warning'?'warning':'info';
             e.innerHTML = `<div class="log-dot ${dot}"></div><div class="log-text"><strong>${escapeHtml(title)}</strong><span class="time">${escapeHtml(detail)} · ${new Date().toLocaleTimeString()}</span></div>`;
             c.insertBefore(e, c.firstChild); while (c.children.length > 20) c.removeChild(c.lastChild);
         }
-        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-        function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+        function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+        function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
 
-        function connectWebSocket() {
-            if (!state.sessionToken) { logConsole('warn', '', 'WebSocket: skipping — no session token (requires real attestation)', ''); return; }
-            try {
-                state.ws = new WebSocket(`${WS_URL}?token=${state.sessionToken}`);
-                state.ws.onopen = () => { logConsole('info', '', 'WebSocket connected', ''); showIsland('Stream active', 1600); };
-                state.ws.onmessage = (e) => logConsole('request', 'WS', `← ${truncate(e.data, 80)}`, '');
-                state.ws.onclose = () => logConsole('warn', '', 'WebSocket disconnected', '');
-                state.ws.onerror = () => logConsole('error', '', 'WebSocket error', '');
-            } catch (e) { logConsole('error', '', `WebSocket error: ${e.message}`, ''); }
-        }
+        $$('.console-tab').forEach(tab => tab.addEventListener('click', () => { $$('.console-tab').forEach(t=>t.classList.remove('active')); tab.classList.add('active'); }));
 
-        $$('.console-tab').forEach(tab => { tab.addEventListener('click', () => { $$('.console-tab').forEach(t => t.classList.remove('active')); tab.classList.add('active'); }); });
+        // Offline fallback so the portrait always renders even with no backend.
+        const FALLBACK_INSIGHTS = {
+            version: '1.0.0-offline',
+            biological_age: { clamp_years: 12, signals: {
+                resting_heart_rate: { bands: [{max:55,years:-3},{max:65,years:-1},{max:75,years:1},{max:200,years:3.5}] },
+                hrv_ms: { bands: [{max:30,years:3},{max:50,years:1},{max:80,years:-1.5},{max:500,years:-3}] },
+                sleep_hours: { bands: [{max:6,years:2},{max:7,years:.5},{max:9,years:-1.5},{max:24,years:1}] },
+                daily_steps: { bands: [{max:4000,years:2},{max:8000,years:0},{max:12000,years:-1.5},{max:100000,years:-2.5}] } } },
+            readiness: { components: {
+                hrv:{weight:.35,good_at:70,poor_at:30}, resting_heart_rate:{weight:.20,good_at:52,poor_at:80,invert:true},
+                sleep_performance:{weight:.30,good_at:95,poor_at:60}, prior_strain:{weight:.15,good_at:8,poor_at:18,invert:true} },
+                labels: [{min:80,text:'Primed'},{min:60,text:'Ready'},{min:40,text:'Maintain'},{min:0,text:'Recover'}] },
+            biomarkers: { ldl_cholesterol:{unit:'mg/dL',optimal_max:100,borderline_max:130,high_min:160}, hdl_cholesterol:{unit:'mg/dL',low_max:40,optimal_min:60}, hba1c:{unit:'%',optimal_max:5.4,prediabetic_min:5.7,diabetic_min:6.5}, vitamin_d:{unit:'ng/mL',deficient_max:20,optimal_min:40}, tsh:{unit:'mIU/L',optimal_min:.4,optimal_max:4}, fasting_glucose:{unit:'mg/dL',optimal_max:99,prediabetic_min:100,diabetic_min:126} },
+            correlation: { habits: { morning_walk:{prior:.62}, medication_adherence:{prior:.55}, winddown_routine:{prior:.71}, hydration:{prior:.34} }, min_observations:5 },
+            circadian: { chronotypes: { lark:{wind_down:'20:30',peak_focus:'09:00',last_caffeine:'12:00'}, neutral:{wind_down:'22:00',peak_focus:'10:30',last_caffeine:'14:00'}, owl:{wind_down:'23:30',peak_focus:'12:30',last_caffeine:'16:00'} } }
+        };
 
-        logConsole('info', '', 'Lifeline simulator starting…', '');
-        logConsole('info', '', `Device ID: ${state.deviceId}`, '');
+        logConsole('info','','Lifeline simulator starting…','');
+        logConsole('info','',`Device ID: ${state.deviceId}`,'');
     })();
     </script>
 </body>
