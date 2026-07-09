@@ -2,477 +2,465 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
     <title>Lifeline — Private Health Companion</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         /* ═══════════════════════════════════════════════════════════════════════
-           RESET & TOKENS
-           ═══════════════════════════════════════════════════════════════════════
-           "Liquid Glass": translucent frosted-glass surfaces over a vivid,
-           soft color-mesh backdrop — Apple's current material language.
-           Stage (outside the device) stays dark so the glass product surface
-           reads as the hero; the product itself is light, airy, colorful.
+           LIFELINE · LIQUID GLASS DESIGN SYSTEM  (iOS 26 / 27)
+           ───────────────────────────────────────────────────────────────────────
+           A minimalist health dashboard (blueprint "Variant A") rendered in
+           Apple's Liquid Glass material: translucent, blurred surfaces over a
+           calm color wash, adaptive to light/dark, and gracefully degrading
+           under Reduce Transparency / Reduce Motion. Everything is tokenized so
+           margins, radii, type and materials stay consistent across screens.
            ═══════════════════════════════════════════════════════════════════════ */
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            /* Stage (dev chrome) */
-            --stage: #08090c;
-            --stage-panel: rgba(255,255,255,0.06);
+            /* Type scale — Dynamic-Type-friendly via clamp() */
+            --fs-hero: clamp(1.5rem, 1.35rem + 1vw, 1.75rem);
+            --fs-title: clamp(1.15rem, 1.05rem + 0.6vw, 1.3rem);
+            --fs-body: 0.875rem;
+            --fs-small: 0.75rem;
+            --fs-micro: 0.625rem;
+
+            /* Spacing / radii — one consistent ladder */
+            --sp-1: 6px; --sp-2: 10px; --sp-3: 14px; --sp-4: 18px; --sp-5: 24px;
+            --r-sm: 14px; --r-md: 20px; --r-lg: 28px; --r-pill: 999px;
+
+            /* Stage (dev chrome around the phone) */
+            --stage: #0a0b0f;
+            --stage-panel: rgba(255,255,255,0.055);
             --stage-border: rgba(255,255,255,0.1);
-            --stage-ink: rgba(255,255,255,0.92);
-            --stage-ink-dim: rgba(255,255,255,0.5);
+            --stage-ink: rgba(255,255,255,0.9);
+            --stage-ink-dim: rgba(255,255,255,0.48);
             --stage-ink-faint: rgba(255,255,255,0.3);
 
-            /* Product surface (glass) */
-            --glass-hi: rgba(255,255,255,0.62);
-            --glass-lo: rgba(255,255,255,0.38);
-            --glass-border: rgba(255,255,255,0.7);
-            --glass-tint: rgba(255,255,255,0.5);
-            --ink: #17181c;
-            --ink-dim: rgba(23,24,28,0.62);
-            --ink-faint: rgba(23,24,28,0.4);
+            /* Health category accents (Apple Health palette) */
+            --red-1:#ff6482; --red-2:#ff2d55;
+            --orange-1:#ffb340; --orange-2:#ff9500;
+            --green-1:#5ce68a; --green-2:#30d158;
+            --teal-1:#54d6d6; --teal-2:#00c7be;
+            --indigo-1:#b18cff; --indigo-2:#7d5cff;
+            --blue-1:#5cb8ff; --blue-2:#0a84ff;
+            --pink-1:#ff7ab8; --pink-2:#ff2d92;
 
-            /* Apple Health category accents */
-            --red-1: #ff5e7a; --red-2: #ff2d55;
-            --orange-1: #ffb340; --orange-2: #ff9500;
-            --green-1: #4ee08a; --green-2: #30d158;
-            --indigo-1: #b06cf5; --indigo-2: #7a3ff0;
-            --blue-1: #4db4ff; --blue-2: #0a84ff;
-            --pink-1: #ff6bb3; --pink-2: #ff2d92;
+            /* Product surface — LIGHT */
+            --bg-a:#f3f5f9; --bg-b:#eef1f7;
+            --glass-hi: rgba(255,255,255,0.66);
+            --glass-lo: rgba(255,255,255,0.42);
+            --glass-brd: rgba(255,255,255,0.75);
+            --glass-shadow: rgba(28,30,45,0.16);
+            --ink:#101216;
+            --ink-dim: rgba(16,18,22,0.6);
+            --ink-faint: rgba(16,18,22,0.4);
+            --hair: rgba(16,18,22,0.08);
+            --accent-1: var(--teal-1); --accent-2: var(--teal-2);
+            --accent-soft: rgba(0,199,190,0.14);
 
-            --radius-sm: 14px;
-            --radius-md: 22px;
-            --radius-lg: 30px;
-            --radius-pill: 999px;
-            --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
-            --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+            --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
             --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-            --phone-width: 388px;
-            --phone-height: 818px;
+            --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --blur: 20px;
+            --phone-w: 390px;
+            --phone-h: 822px;
         }
 
-        html { color-scheme: light; }
+        /* Product surface — DARK (Liquid Glass adapts to appearance) */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-a:#0c0e13; --bg-b:#0a0c10;
+                --glass-hi: rgba(70,76,92,0.5);
+                --glass-lo: rgba(48,53,66,0.36);
+                --glass-brd: rgba(255,255,255,0.14);
+                --glass-shadow: rgba(0,0,0,0.5);
+                --ink:#f2f4f8;
+                --ink-dim: rgba(242,244,248,0.62);
+                --ink-faint: rgba(242,244,248,0.4);
+                --hair: rgba(255,255,255,0.1);
+            }
+        }
 
+        html { color-scheme: light dark; }
         body {
             font-family: var(--font-ui);
             background: var(--stage);
             color: var(--stage-ink);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: flex; flex-direction: column; align-items: center;
             -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
         }
-
         button, input { font-family: inherit; }
         .tnum { font-variant-numeric: tabular-nums; }
-        ::selection { background: rgba(255,45,85,0.25); }
+        ::selection { background: var(--accent-soft); }
 
-        /* ═══════════════════════════════════════════════════════════════════════
-           PAGE HEADER (stage chrome)
-           ═══════════════════════════════════════════════════════════════════════ */
+        /* ── Liquid Glass material primitive ─────────────────────────────────── */
+        .glass {
+            background: linear-gradient(160deg, var(--glass-hi), var(--glass-lo));
+            -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+            backdrop-filter: blur(var(--blur)) saturate(180%);
+            border: 1px solid var(--glass-brd);
+            border-radius: var(--r-md);
+            box-shadow: 0 14px 34px -14px var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.5);
+        }
+        /* Accessibility: honor Reduce Transparency — drop blur for solid fills */
+        @media (prefers-reduced-transparency: reduce) {
+            .glass, .stage-panel, .chat-input-bar input, .provider-toggle {
+                -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+                background: Canvas !important; color: CanvasText;
+            }
+            .page-header, .console-panel { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+        }
+
+        /* ═══════════ PAGE HEADER (stage) ═══════════ */
         .page-header {
             position: sticky; top: 0; z-index: 100; width: 100%;
-            padding: 20px 40px; display: flex; align-items: center; justify-content: space-between;
-            background: rgba(8,9,12,0.75); backdrop-filter: blur(20px) saturate(160%);
-            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            padding: var(--sp-4) var(--sp-5);
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(10,11,15,0.72);
+            -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%);
             border-bottom: 1px solid var(--stage-border);
         }
         .brand { display: flex; align-items: center; gap: 11px; }
-        .brand .mark {
-            width: 30px; height: 30px; border-radius: 9px;
-            background: linear-gradient(155deg, var(--red-1), var(--red-2));
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-            box-shadow: 0 4px 14px -2px rgba(255,45,85,0.55);
-        }
-        .brand .mark svg { width: 16px; height: 16px; color: #fff; }
-        .brand .wordmark { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
-        .brand .tagline { font-size: 11px; font-weight: 500; letter-spacing: 0.8px; color: var(--stage-ink-faint); margin-left: 8px; text-transform: uppercase; display: none; }
+        .brand .mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(155deg, var(--teal-1), var(--teal-2)); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px -2px rgba(0,199,190,0.5); flex-shrink: 0; }
+        .brand .mark svg { width: 16px; height: 16px; color: #04201e; }
+        .brand .wordmark { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; }
+        .brand .tagline { font-size: var(--fs-small); font-weight: 500; letter-spacing: 0.6px; color: var(--stage-ink-faint); margin-left: 8px; text-transform: uppercase; display: none; }
         @media (min-width: 760px) { .brand .tagline { display: inline; } }
-        .server-status { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--stage-ink-dim); }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff453a; }
+        .server-status { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: var(--fs-small); color: var(--stage-ink-dim); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff453a; flex-shrink: 0; }
         .status-dot.connected { background: #30d158; box-shadow: 0 0 8px rgba(48,209,88,0.7); animation: pulse-dot 2.6s ease-in-out infinite; }
-        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:.4;} }
 
-        /* ═══════════════════════════════════════════════════════════════════════
-           STAGE BACKDROP — soft color mesh visible around/behind the device
-           ═══════════════════════════════════════════════════════════════════════ */
-        .stage-mesh {
-            position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
-            background: var(--stage);
-        }
-        .stage-mesh::before, .stage-mesh::after {
-            content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.35;
-        }
-        .stage-mesh::before { width: 640px; height: 640px; top: -220px; left: -160px; background: radial-gradient(circle, var(--red-2), transparent 70%); }
-        .stage-mesh::after { width: 620px; height: 620px; bottom: -240px; right: -140px; background: radial-gradient(circle, var(--blue-2), transparent 70%); }
+        /* Stage backdrop glow */
+        .stage-mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        .stage-mesh::before, .stage-mesh::after { content:''; position:absolute; border-radius:50%; filter: blur(100px); opacity:.3; }
+        .stage-mesh::before { width:620px; height:620px; top:-200px; left:-160px; background: radial-gradient(circle, var(--teal-2), transparent 70%); }
+        .stage-mesh::after { width:600px; height:600px; bottom:-220px; right:-140px; background: radial-gradient(circle, var(--indigo-2), transparent 70%); }
 
-        /* ═══════════════════════════════════════════════════════════════════════
-           MAIN LAYOUT
-           ═══════════════════════════════════════════════════════════════════════ */
-        .simulator-container {
-            position: relative; z-index: 2; display: flex; align-items: flex-start; gap: 26px;
-            padding: 44px 40px; width: 100%; max-width: 1220px; justify-content: center;
-        }
+        /* ═══════════ LAYOUT ═══════════ */
+        .simulator-container { position: relative; z-index: 2; display: flex; align-items: flex-start; gap: 26px; padding: 44px 40px; width: 100%; max-width: 1220px; justify-content: center; }
         .device-column { display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
-        .device-label { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 10.5px; color: var(--stage-ink-faint); letter-spacing: 0.4px; padding: 0 4px; }
+        .device-label { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--stage-ink-faint); letter-spacing: 0.4px; padding: 0 4px; }
 
-        /* ── Device frame ─────────────────────────────────────────────────── */
         .iphone-frame {
-            width: calc(var(--phone-width) + 16px); height: calc(var(--phone-height) + 16px);
-            background: linear-gradient(160deg, #2b2d33, #0d0e11);
-            border-radius: 48px; padding: 8px; position: relative;
+            width: calc(var(--phone-w) + 16px); height: calc(var(--phone-h) + 16px);
+            background: linear-gradient(160deg, #2b2d33, #101116);
+            border-radius: 50px; padding: 8px; position: relative;
             box-shadow: 0 40px 90px -24px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.06);
         }
-        .iphone-screen {
-            width: var(--phone-width); height: var(--phone-height);
-            background: #eef0f4;
-            border-radius: 42px; overflow: hidden; position: relative;
-        }
+        .iphone-screen { width: var(--phone-w); height: var(--phone-h); border-radius: 43px; overflow: hidden; position: relative; background: var(--bg-b); }
 
-        /* Color-mesh backdrop INSIDE the phone — this is what the glass refracts */
-        .product-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
-        .product-mesh span { position: absolute; border-radius: 50%; filter: blur(60px); }
-        .product-mesh .m1 { width: 340px; height: 340px; top: -120px; left: -100px; background: radial-gradient(circle, var(--red-1), transparent 72%); opacity: 0.65; }
-        .product-mesh .m2 { width: 300px; height: 300px; top: -60px; right: -120px; background: radial-gradient(circle, var(--blue-1), transparent 72%); opacity: 0.55; }
-        .product-mesh .m3 { width: 320px; height: 320px; bottom: 140px; right: -110px; background: radial-gradient(circle, var(--green-1), transparent 72%); opacity: 0.5; }
-        .product-mesh .m4 { width: 300px; height: 300px; bottom: -100px; left: -90px; background: radial-gradient(circle, var(--indigo-1), transparent 72%); opacity: 0.5; }
-        .product-mesh .m5 { width: 260px; height: 260px; bottom: 260px; left: 40px; background: radial-gradient(circle, var(--orange-1), transparent 72%); opacity: 0.4; }
+        /* Product color wash — subtle, refracted by the glass above it */
+        .product-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: linear-gradient(180deg, var(--bg-a), var(--bg-b)); }
+        .product-mesh span { position: absolute; border-radius: 50%; filter: blur(64px); opacity: 0.5; }
+        .product-mesh .m1 { width: 300px; height: 300px; top: -110px; left: -80px; background: radial-gradient(circle, var(--teal-1), transparent 72%); }
+        .product-mesh .m2 { width: 260px; height: 260px; top: -40px; right: -100px; background: radial-gradient(circle, var(--blue-1), transparent 72%); opacity: 0.4; }
+        .product-mesh .m3 { width: 300px; height: 300px; bottom: 60px; right: -120px; background: radial-gradient(circle, var(--indigo-1), transparent 72%); opacity: 0.4; }
+        .product-mesh .m4 { width: 260px; height: 260px; bottom: -80px; left: -70px; background: radial-gradient(circle, var(--pink-1), transparent 72%); opacity: 0.32; }
 
-        .dynamic-island {
-            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            width: 108px; height: 30px; background: #000; border-radius: 16px; z-index: 60;
-            display: flex; align-items: center; justify-content: center;
-            transition: width 0.35s var(--ease), height 0.35s var(--ease);
-        }
+        .dynamic-island { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 108px; height: 30px; background: #000; border-radius: 16px; z-index: 60; display: flex; align-items: center; justify-content: center; transition: width .4s var(--spring), height .4s var(--spring); }
         .dynamic-island.active { width: 210px; height: 36px; }
-        .dynamic-island .island-content { display: none; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 10.5px; color: #ff5e7a; font-weight: 600; }
+        .dynamic-island .island-content { display: none; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: var(--fs-micro); color: #2fe0d0; font-weight: 600; }
         .dynamic-island.active .island-content { display: flex; }
         .dynamic-island svg { width: 12px; height: 12px; flex-shrink: 0; }
 
-        .ios-status-bar {
-            position: absolute; top: 0; left: 0; right: 0; height: 48px; z-index: 55;
-            display: flex; align-items: flex-end; justify-content: space-between; padding: 0 26px 6px;
-            font-family: var(--font-ui); font-size: 15px; font-weight: 600; color: var(--ink);
-        }
-        .ios-status-bar .icons { display: flex; gap: 6px; align-items: center; color: var(--ink); }
+        .ios-status-bar { position: absolute; top: 0; left: 0; right: 0; height: 48px; z-index: 55; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 26px 6px; font-size: 0.94rem; font-weight: 600; color: var(--ink); }
+        .ios-status-bar .icons { display: flex; gap: 6px; align-items: center; }
         .ios-status-bar svg { width: 15px; height: 15px; }
+        .home-indicator { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; background: color-mix(in srgb, var(--ink) 28%, transparent); border-radius: 2px; z-index: 60; }
 
-        .home-indicator { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; background: rgba(0,0,0,0.28); border-radius: 2px; z-index: 60; }
-
-        /* ═══════════════════════════════════════════════════════════════════════
-           APP SCREENS
-           ═══════════════════════════════════════════════════════════════════════ */
-        .app-screen { position: absolute; inset: 0; display: none; flex-direction: column; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; z-index: 1; }
+        /* ═══════════ SCREENS ═══════════ */
+        .app-screen { position: absolute; inset: 0; display: none; flex-direction: column; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; z-index: 1; -webkit-overflow-scrolling: touch; }
         .app-screen::-webkit-scrollbar { display: none; }
         .app-screen.active { display: flex; }
+        .screen-pad { padding: 56px 16px calc(104px + env(safe-area-inset-bottom)); position: relative; z-index: 1; }
 
-        /* ── Glass primitives ─────────────────────────────────────────────── */
-        .glass {
-            background: linear-gradient(165deg, var(--glass-hi), var(--glass-lo));
-            backdrop-filter: blur(28px) saturate(180%);
-            -webkit-backdrop-filter: blur(28px) saturate(180%);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-md);
-            box-shadow: 0 16px 40px -14px rgba(20,20,40,0.18), inset 0 1px 0 rgba(255,255,255,0.7);
-        }
-        .icon-chip {
-            width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 10px -2px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.35);
-        }
+        /* Scroll-edge effect: a soft top scrim fades in as content scrolls under the status bar */
+        .scroll-edge { position: absolute; top: 0; left: 0; right: 0; height: 54px; z-index: 40; pointer-events: none; opacity: 0; transition: opacity .2s var(--ease);
+            background: linear-gradient(180deg, var(--bg-a), transparent);
+            -webkit-mask: linear-gradient(180deg, #000 40%, transparent); mask: linear-gradient(180deg, #000 40%, transparent); }
+        .app-screen.scrolled .scroll-edge { opacity: 0.92; }
+
+        /* Buttons */
+        .btn-primary { width: 100%; padding: 15px; border-radius: var(--r-pill); border: none; background: linear-gradient(135deg, var(--teal-1), var(--teal-2)); color: #04201e; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 12px 26px -10px rgba(0,199,190,0.55); transition: transform .15s var(--spring), box-shadow .15s var(--ease); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 16px 32px -10px rgba(0,199,190,0.65); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-glass { width: 100%; padding: 13px; border-radius: var(--r-pill); background: var(--glass-lo); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); border: 1px solid var(--glass-brd); color: var(--ink); font-size: var(--fs-body); font-weight: 600; cursor: pointer; transition: background .15s var(--ease); }
+        .btn-glass:hover { background: var(--glass-hi); }
+
+        /* Icon chips */
+        .icon-chip { width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px -2px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.35); }
         .icon-chip svg { width: 18px; height: 18px; color: #fff; }
-        .icon-chip.red { background: linear-gradient(155deg, var(--red-1), var(--red-2)); }
-        .icon-chip.orange { background: linear-gradient(155deg, var(--orange-1), var(--orange-2)); }
-        .icon-chip.green { background: linear-gradient(155deg, var(--green-1), var(--green-2)); }
-        .icon-chip.indigo { background: linear-gradient(155deg, var(--indigo-1), var(--indigo-2)); }
-        .icon-chip.blue { background: linear-gradient(155deg, var(--blue-1), var(--blue-2)); }
-        .icon-chip.pink { background: linear-gradient(155deg, var(--pink-1), var(--pink-2)); }
-        .icon-chip.gray { background: linear-gradient(155deg, #9aa0ac, #6b7280); }
+        .icon-chip.sm { width: 28px; height: 28px; border-radius: 8px; }
+        .icon-chip.sm svg { width: 14px; height: 14px; }
+        .icon-chip.red{background:linear-gradient(155deg,var(--red-1),var(--red-2));}
+        .icon-chip.orange{background:linear-gradient(155deg,var(--orange-1),var(--orange-2));}
+        .icon-chip.green{background:linear-gradient(155deg,var(--green-1),var(--green-2));}
+        .icon-chip.teal{background:linear-gradient(155deg,var(--teal-1),var(--teal-2));}
+        .icon-chip.indigo{background:linear-gradient(155deg,var(--indigo-1),var(--indigo-2));}
+        .icon-chip.blue{background:linear-gradient(155deg,var(--blue-1),var(--blue-2));}
+        .icon-chip.pink{background:linear-gradient(155deg,var(--pink-1),var(--pink-2));}
+        .icon-chip.gray{background:linear-gradient(155deg,#aeb4c0,#7b8290);}
 
-        .btn-primary {
-            width: 100%; padding: 16px; border-radius: var(--radius-pill); border: none;
-            background: linear-gradient(135deg, var(--red-1), var(--red-2));
-            color: #fff; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            box-shadow: 0 14px 30px -10px rgba(255,45,85,0.55);
-            transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
-        }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 18px 36px -10px rgba(255,45,85,0.65); }
-        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
-        .btn-glass {
-            width: 100%; padding: 14px; border-radius: var(--radius-pill);
-            background: rgba(255,255,255,0.5); backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.7); color: var(--ink);
-            font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer;
-            transition: background 0.15s var(--ease);
-        }
-        .btn-glass:hover { background: rgba(255,255,255,0.7); }
-
-        /* ── Onboarding ──────────────────────────────────────────────────────── */
-        #onboarding-screen { align-items: center; justify-content: space-between; padding: 68px 26px 36px; text-align: center; }
-        .onboarding-icon {
-            width: 92px; height: 92px; border-radius: 26px; display: flex; align-items: center; justify-content: center; margin-bottom: 26px;
-            box-shadow: 0 20px 40px -14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4);
-        }
+        /* ── Onboarding ── */
+        #onboarding-screen { align-items: center; justify-content: space-between; padding: calc(64px + env(safe-area-inset-top)) 26px calc(36px + env(safe-area-inset-bottom)); text-align: center; }
+        .onboarding-icon { width: 90px; height: 90px; border-radius: 26px; display: flex; align-items: center; justify-content: center; margin: 0 auto 26px; box-shadow: 0 20px 40px -14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4); }
         .onboarding-icon svg { width: 42px; height: 42px; color: #fff; }
         .onboarding-slide { display: none; flex-direction: column; align-items: center; }
-        .onboarding-slide.active { display: flex; }
-        .onboarding-title { font-size: 25px; font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; margin-bottom: 12px; color: var(--ink); }
-        .onboarding-title em { font-style: normal; background: linear-gradient(135deg, var(--red-2), var(--pink-2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-        .onboarding-copy { font-size: 14.5px; color: var(--ink-dim); line-height: 1.6; max-width: 280px; }
-        .onboarding-dots { display: flex; gap: 7px; margin: 30px 0 0; justify-content: center; }
-        .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(23,24,28,0.16); transition: all 0.3s var(--ease); }
-        .onboarding-dots span.active { background: var(--red-2); width: 20px; border-radius: 3px; }
-        .onboarding-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 30px; }
+        .onboarding-slide.active { display: flex; animation: fade-up .35s var(--ease); }
+        @keyframes fade-up { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none;} }
+        .onboarding-title { font-size: var(--fs-hero); font-weight: 800; line-height: 1.24; letter-spacing: -0.02em; margin-bottom: 12px; color: var(--ink); }
+        .onboarding-title em { font-style: normal; background: linear-gradient(135deg, var(--teal-2), var(--blue-2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .onboarding-copy { font-size: 0.92rem; color: var(--ink-dim); line-height: 1.6; max-width: 288px; margin: 0 auto; }
+        /* Permissions list inside a slide */
+        .perm-list { width: 100%; max-width: 300px; margin: 22px auto 0; display: flex; flex-direction: column; gap: 8px; }
+        .perm-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; }
+        .perm-row .pt { flex: 1; }
+        .perm-row .pt h5 { font-size: var(--fs-body); font-weight: 700; color: var(--ink); }
+        .perm-row .pt p { font-size: var(--fs-micro); color: var(--ink-faint); margin-top: 1px; }
+        .onboarding-dots { display: flex; gap: 7px; margin: 28px 0 0; justify-content: center; }
+        .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--hair); transition: all .3s var(--spring); }
+        .onboarding-dots span.active { background: var(--teal-2); width: 20px; border-radius: 3px; }
+        .onboarding-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
 
-        /* ── Splash ──────────────────────────────────────────────────────────── */
+        /* ── Splash ── */
         #splash-screen { align-items: center; justify-content: center; }
-        .splash-mark { width: 76px; height: 76px; border-radius: 22px; background: linear-gradient(155deg, var(--red-1), var(--red-2)); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; box-shadow: 0 20px 44px -12px rgba(255,45,85,0.5); }
-        .splash-mark svg { width: 36px; height: 36px; color: #fff; }
-        .splash-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; color: var(--ink); }
-        .splash-subtitle { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: 1px; text-transform: uppercase; }
-        .splash-progress { margin-top: 36px; width: 180px; height: 4px; background: rgba(23,24,28,0.1); overflow: hidden; border-radius: 2px; }
-        .splash-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--red-2), var(--pink-2)); transition: width 0.25s var(--ease); }
-        .splash-status-text { margin-top: 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); min-height: 16px; }
+        .splash-mark { width: 74px; height: 74px; border-radius: 22px; background: linear-gradient(155deg, var(--teal-1), var(--teal-2)); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; box-shadow: 0 20px 44px -12px rgba(0,199,190,0.5); }
+        .splash-mark svg { width: 34px; height: 34px; color: #04201e; }
+        .splash-title { font-size: var(--fs-title); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; color: var(--ink); }
+        .splash-subtitle { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); letter-spacing: 1px; text-transform: uppercase; }
+        .splash-progress { margin-top: 36px; width: 180px; height: 4px; background: var(--hair); overflow: hidden; border-radius: 2px; }
+        .splash-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--teal-2), var(--blue-2)); transition: width .25s var(--ease); }
+        .splash-status-text { margin-top: 14px; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); min-height: 16px; }
 
-        /* ── Shared screen chrome ────────────────────────────────────────────── */
-        .screen-pad { padding: 58px 16px 106px; position: relative; z-index: 1; }
-        .eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px; }
-        .screen-title { font-size: 27px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+        /* ── Common ── */
+        .eyebrow { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px; }
+        .screen-title { font-size: var(--fs-hero); font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+        .dashboard-greeting { font-size: var(--fs-body); font-weight: 600; color: var(--ink-dim); margin-bottom: 2px; }
+        .panel { padding: var(--sp-4); margin-bottom: 12px; }
+        .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+        .panel-header h4 { font-size: var(--fs-small); font-weight: 700; color: var(--ink); }
+        .panel-header .meta { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); }
+        .section-label { font-size: var(--fs-small); font-weight: 700; color: var(--ink-dim); letter-spacing: 0.2px; margin: 4px 2px 10px; }
 
-        .panel { padding: 18px; margin-bottom: 12px; }
-        .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-        .panel-header h4 { font-size: 12px; font-weight: 700; color: var(--ink); }
-        .panel-header .meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
-
-        /* ── Dashboard ───────────────────────────────────────────────────────── */
-        .dashboard-greeting { font-size: 14px; font-weight: 600; color: var(--ink-dim); margin-bottom: 2px; }
+        /* Health score ring */
         .score-row { display: flex; align-items: center; gap: 18px; }
-        .ring-container { position: relative; width: 90px; height: 90px; flex-shrink: 0; }
-        .ring-container svg { transform: rotate(-90deg); width: 90px; height: 90px; }
+        .ring-container { position: relative; width: 92px; height: 92px; flex-shrink: 0; }
+        .ring-container svg { transform: rotate(-90deg); width: 92px; height: 92px; }
         .ring-container circle { fill: none; stroke-linecap: round; }
-        .ring-bg { stroke: rgba(23,24,28,0.08); }
+        .ring-bg { stroke: var(--hair); }
         .ring-progress { transition: stroke-dashoffset 1.2s var(--ease); }
-        .ring-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 22px; font-weight: 800; color: var(--ink); }
-        .score-info h3 { font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--ink); }
-        .score-info p { font-size: 12px; color: var(--ink-dim); line-height: 1.5; }
+        .ring-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 1.4rem; font-weight: 800; color: var(--ink); }
+        .score-info h3 { font-size: var(--fs-title); font-weight: 800; margin-bottom: 4px; color: var(--ink); }
+        .score-info p { font-size: var(--fs-small); color: var(--ink-dim); line-height: 1.5; }
 
+        /* Behavioral-feedback trend chart */
+        .trend-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--sp-2); }
+        .trend-head .val { font-size: var(--fs-title); font-weight: 800; color: var(--ink); }
+        .trend-head .delta { font-family: var(--font-mono); font-size: var(--fs-small); font-weight: 600; color: var(--green-2); }
+        .trend-chart { width: 100%; height: 70px; display: block; }
+        .trend-area { fill: url(#trendFill); }
+        .trend-line { fill: none; stroke: var(--teal-2); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 320; stroke-dashoffset: 320; }
+        .app-screen.dash-in .trend-line { animation: draw 1.1s var(--ease) forwards; }
+        @keyframes draw { to { stroke-dashoffset: 0; } }
+        .trend-days { display: flex; justify-content: space-between; margin-top: 6px; font-family: var(--font-mono); font-size: 0.5rem; color: var(--ink-faint); letter-spacing: 0.3px; }
+
+        /* Streak + achievements */
         .streak-banner { display: flex; align-items: center; gap: 14px; padding: 15px 16px; margin-bottom: 12px; }
-        .streak-count { font-size: 17px; font-weight: 800; color: var(--ink); }
-        .streak-label { font-size: 11.5px; color: var(--ink-dim); }
+        .streak-count { font-size: var(--fs-title); font-weight: 800; color: var(--ink); }
+        .streak-label { font-size: var(--fs-small); color: var(--ink-dim); }
+        .achv-strip { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; margin-bottom: 8px; scrollbar-width: none; }
+        .achv-strip::-webkit-scrollbar { display: none; }
+        .achv { flex: 0 0 auto; width: 92px; padding: 14px 10px; text-align: center; border-radius: var(--r-sm); }
+        .achv .icon-chip { margin: 0 auto 8px; }
+        .achv .t { font-size: var(--fs-micro); font-weight: 700; color: var(--ink); line-height: 1.2; }
+        .achv .s { font-size: 0.56rem; color: var(--ink-faint); margin-top: 2px; }
+        .achv.locked { opacity: 0.5; }
 
-        .challenge-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(23,24,28,0.07); }
+        /* Challenges */
+        .challenge-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--hair); }
         .challenge-row:last-child { border-bottom: none; }
-        .challenge-check { width: 24px; height: 24px; border-radius: 50%; border: 1.75px solid rgba(23,24,28,0.18); flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s var(--ease); }
+        .challenge-check { width: 24px; height: 24px; border-radius: 50%; border: 1.75px solid color-mix(in srgb, var(--ink) 20%, transparent); flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s var(--spring); }
         .challenge-check.done { background: linear-gradient(155deg, var(--green-1), var(--green-2)); border-color: transparent; box-shadow: 0 3px 8px -2px rgba(48,209,88,0.55); }
-        .challenge-check svg { width: 13px; height: 13px; color: #fff; opacity: 0; transition: opacity 0.15s; }
+        .challenge-check svg { width: 13px; height: 13px; color: #fff; opacity: 0; transition: opacity .15s; }
         .challenge-check.done svg { opacity: 1; }
-        .challenge-text { flex: 1; font-size: 13.5px; color: var(--ink); font-weight: 500; }
+        .challenge-text { flex: 1; font-size: var(--fs-body); color: var(--ink); font-weight: 500; }
         .challenge-text.done { color: var(--ink-faint); text-decoration: line-through; }
-        .challenge-pts { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--orange-2); }
+        .challenge-pts { font-family: var(--font-mono); font-size: var(--fs-small); font-weight: 600; color: var(--orange-2); }
 
+        /* Metric tiles */
         .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
         .metric-tile { padding: 16px; }
         .metric-tile .metric-top { margin-bottom: 12px; }
-        .metric-value { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 2px; color: var(--ink); }
-        .metric-label { font-size: 10.5px; font-weight: 600; color: var(--ink-dim); letter-spacing: 0.2px; text-transform: uppercase; }
-        .metric-trend { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; margin-top: 8px; }
-        .trend-up { color: var(--green-2); }
-        .trend-down { color: var(--red-2); }
+        .metric-value { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 2px; color: var(--ink); }
+        .metric-label { font-size: var(--fs-micro); font-weight: 600; color: var(--ink-dim); letter-spacing: 0.2px; text-transform: uppercase; }
+        .metric-trend { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600; margin-top: 8px; }
+        .trend-up { color: var(--green-2); } .trend-down { color: var(--red-2); }
 
-        .badge { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.3px; padding: 4px 10px; border-radius: var(--radius-pill); }
-        .badge.good { background: rgba(48,209,88,0.16); color: #248a3d; }
-        .badge.warn { background: rgba(255,149,0,0.16); color: #b16400; }
+        .badge { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.3px; padding: 4px 10px; border-radius: var(--r-pill); }
+        .badge.good { background: rgba(48,209,88,0.16); color: #1f8a3b; }
+        .badge.warn { background: rgba(255,149,0,0.16); color: #a9640a; }
         .badge.bad { background: rgba(255,69,58,0.16); color: #c8261e; }
-        .badge.neutral { background: rgba(23,24,28,0.08); color: var(--ink-faint); }
+        .badge.neutral { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-faint); }
+        @media (prefers-color-scheme: dark) { .badge.good{color:#5ce68a;} .badge.warn{color:#ffb340;} .badge.bad{color:#ff6b62;} }
 
         .server-details { display: flex; flex-direction: column; gap: 10px; }
-        .server-detail-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; }
+        .server-detail-row { display: flex; justify-content: space-between; align-items: center; font-size: var(--fs-small); }
         .server-detail-row .label { color: var(--ink-dim); font-weight: 500; }
-        .server-detail-row .value { font-family: var(--font-mono); font-weight: 600; font-size: 11.5px; color: var(--ink); }
+        .server-detail-row .value { font-family: var(--font-mono); font-weight: 600; font-size: var(--fs-micro); color: var(--ink); }
 
-        /* ── AI Chat ─────────────────────────────────────────────────────────── */
-        #chat-screen { padding: 58px 0 106px; position: relative; z-index: 1; }
-        .chat-header { padding: 0 18px 16px; }
-        .chat-header h2 { font-size: 20px; font-weight: 800; color: var(--ink); }
-        .chat-header p { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); margin-top: 3px; }
+        /* AI chat */
+        #chat-screen { padding: 56px 0 calc(104px + env(safe-area-inset-bottom)); position: relative; z-index: 1; }
+        .chat-header { padding: 0 18px 14px; }
+        .chat-header h2 { font-size: var(--fs-title); font-weight: 800; color: var(--ink); }
+        .chat-header p { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); margin-top: 3px; }
         .chat-messages { flex: 1; padding: 8px 18px 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-        .chat-bubble { max-width: 86%; padding: 12px 16px; border-radius: 20px; font-size: 13.5px; line-height: 1.55; animation: bubble-in 0.2s var(--ease); }
-        @keyframes bubble-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .chat-bubble.user { align-self: flex-end; background: linear-gradient(135deg, var(--red-1), var(--red-2)); color: #fff; font-weight: 500; border-bottom-right-radius: 6px; box-shadow: 0 8px 20px -8px rgba(255,45,85,0.5); }
+        .chat-bubble { max-width: 86%; padding: 12px 16px; border-radius: var(--r-md); font-size: var(--fs-body); line-height: 1.55; animation: bubble-in .22s var(--spring); }
+        @keyframes bubble-in { from{opacity:0; transform: translateY(6px) scale(.98);} to{opacity:1; transform:none;} }
+        .chat-bubble.user { align-self: flex-end; background: linear-gradient(135deg, var(--teal-1), var(--teal-2)); color: #04201e; font-weight: 500; border-bottom-right-radius: 6px; box-shadow: 0 8px 18px -8px rgba(0,199,190,0.5); }
         .chat-bubble.ai { align-self: flex-start; border-bottom-left-radius: 6px; color: var(--ink); }
-        .chat-bubble.ai .ai-label { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; color: var(--blue-2); margin-bottom: 5px; letter-spacing: 0.6px; }
-        .chat-bubble.system { align-self: center; color: var(--ink-faint); font-family: var(--font-mono); font-size: 10.5px; padding: 4px; }
-        .chat-input-bar { padding: 12px 18px; display: flex; gap: 8px; position: relative; z-index: 2; }
-        .chat-input-bar input { flex: 1; background: rgba(255,255,255,0.55); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.7); border-radius: var(--radius-pill); padding: 12px 16px; color: var(--ink); font-size: 13.5px; outline: none; transition: border-color 0.15s; }
-        .chat-input-bar input:focus { border-color: var(--red-2); }
+        .chat-bubble.ai .ai-label { font-family: var(--font-mono); font-size: 0.6rem; font-weight: 600; color: var(--teal-2); margin-bottom: 5px; letter-spacing: 0.6px; }
+        .chat-bubble.system { align-self: center; color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--fs-micro); padding: 4px; }
+        .chat-input-bar { padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); display: flex; gap: 8px; position: relative; z-index: 2; }
+        .chat-input-bar input { flex: 1; background: var(--glass-lo); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); border: 1px solid var(--glass-brd); border-radius: var(--r-pill); padding: 12px 16px; color: var(--ink); font-size: var(--fs-body); outline: none; transition: border-color .15s; }
+        .chat-input-bar input:focus { border-color: var(--teal-2); }
         .chat-input-bar input::placeholder { color: var(--ink-faint); }
-        .chat-send-btn { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--red-1), var(--red-2)); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 8px 18px -6px rgba(255,45,85,0.55); transition: transform 0.15s; }
+        .chat-send-btn { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--teal-1), var(--teal-2)); border: none; color: #04201e; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 8px 18px -6px rgba(0,199,190,0.55); transition: transform .15s var(--spring); }
         .chat-send-btn:hover { transform: scale(1.06); }
+        .chat-send-btn:active { transform: scale(0.94); }
         .chat-send-btn svg { width: 18px; height: 18px; }
         .typing-indicator { display: flex; gap: 4px; padding: 4px 0; }
         .typing-indicator span { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-faint); animation: typing-bounce 1.2s ease-in-out infinite; }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
-        @keyframes typing-bounce { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+        .typing-indicator span:nth-child(2){animation-delay:.15s;} .typing-indicator span:nth-child(3){animation-delay:.3s;}
+        @keyframes typing-bounce { 0%,60%,100%{opacity:.3;} 30%{opacity:1;} }
 
-        /* ── Vault ────────────────────────────────────────────────────────────── */
-        .segmented { display: flex; padding: 4px; margin-bottom: 16px; border-radius: var(--radius-pill); }
-        .segmented button { flex: 1; padding: 9px; border: none; background: transparent; color: var(--ink-dim); font-family: inherit; font-size: 12.5px; font-weight: 700; border-radius: var(--radius-pill); cursor: pointer; transition: all 0.15s var(--ease); }
-        .segmented button.active { background: rgba(255,255,255,0.85); color: var(--ink); box-shadow: 0 4px 10px -2px rgba(0,0,0,0.12); }
-        .vault-pane { display: none; }
-        .vault-pane.active { display: block; }
-
+        /* Vault */
+        .segmented { display: flex; padding: 4px; margin-bottom: 16px; border-radius: var(--r-pill); }
+        .segmented button { flex: 1; padding: 9px; border: none; background: transparent; color: var(--ink-dim); font-size: var(--fs-small); font-weight: 700; border-radius: var(--r-pill); cursor: pointer; transition: all .2s var(--ease); }
+        .segmented button.active { background: var(--glass-hi); color: var(--ink); box-shadow: 0 4px 10px -2px rgba(0,0,0,0.12); }
+        .vault-pane { display: none; } .vault-pane.active { display: block; }
         .doc-card { padding: 15px 16px; margin-bottom: 10px; }
         .doc-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .doc-name { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 700; color: var(--ink); }
-        .doc-version { font-family: var(--font-mono); font-size: 11px; color: var(--red-2); font-weight: 700; }
-        .doc-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); display: flex; flex-direction: column; gap: 4px; padding-left: 44px; }
-
-        .action-btn { width: 100%; padding: 15px; border-radius: var(--radius-pill); background: linear-gradient(135deg, var(--red-1), var(--red-2)); border: none; color: #fff; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 14px 28px -10px rgba(255,45,85,0.5); transition: transform 0.15s; }
-        .action-btn:hover { transform: translateY(-1px); }
-        .action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .doc-name { display: flex; align-items: center; gap: 10px; font-size: var(--fs-body); font-weight: 700; color: var(--ink); }
+        .doc-version { font-family: var(--font-mono); font-size: var(--fs-small); color: var(--teal-2); font-weight: 600; }
+        .doc-meta { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); display: flex; flex-direction: column; gap: 4px; padding-left: 44px; }
+        .action-btn { width: 100%; padding: 15px; border-radius: var(--r-pill); background: linear-gradient(135deg, var(--teal-1), var(--teal-2)); border: none; color: #04201e; font-size: var(--fs-body); font-weight: 700; cursor: pointer; margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 12px 26px -10px rgba(0,199,190,0.5); transition: transform .15s var(--spring); }
+        .action-btn:hover { transform: translateY(-1px); } .action-btn:active { transform: scale(0.98); }
+        .action-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
         .action-btn svg { width: 16px; height: 16px; }
-
         .empty-state { text-align: center; padding: 34px 14px; }
         .empty-state .icon-chip { margin: 0 auto 14px; }
-        .empty-state p { font-size: 12.5px; line-height: 1.55; color: var(--ink-dim); }
-
+        .empty-state p { font-size: var(--fs-small); line-height: 1.55; color: var(--ink-dim); }
         .activity-log { margin-top: 20px; }
-        .activity-log h3 { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px; padding: 0 2px; }
-        .log-entry { display: flex; align-items: flex-start; gap: 10px; padding: 10px 2px; border-bottom: 1px solid rgba(23,24,28,0.06); animation: slide-in 0.18s var(--ease); }
-        @keyframes slide-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
+        .activity-log h3 { font-size: var(--fs-small); font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px; padding: 0 2px; }
+        .log-entry { display: flex; align-items: flex-start; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--hair); animation: slide-in .18s var(--ease); }
+        @keyframes slide-in { from{opacity:0; transform: translateX(-4px);} to{opacity:1; transform:none;} }
         .log-entry:last-child { border-bottom: none; }
         .log-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
-        .log-dot.success { background: var(--green-2); }
-        .log-dot.error { background: var(--red-2); }
-        .log-dot.info { background: var(--blue-2); }
-        .log-dot.warning { background: var(--orange-2); }
-        .log-text { font-size: 12.5px; line-height: 1.45; color: var(--ink-dim); }
+        .log-dot.success{background:var(--green-2);} .log-dot.error{background:var(--red-2);} .log-dot.info{background:var(--teal-2);} .log-dot.warning{background:var(--orange-2);}
+        .log-text { font-size: var(--fs-small); line-height: 1.45; color: var(--ink-dim); }
         .log-text strong { color: var(--ink); font-weight: 700; }
-        .log-text .time { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); display: block; margin-top: 2px; }
+        .log-text .time { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); display: block; margin-top: 2px; }
 
-        /* ── Connect ──────────────────────────────────────────────────────────── */
+        /* Connect */
         .provider-card { padding: 15px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; }
         .provider-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 6px 14px -4px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.35); }
         .provider-icon svg { width: 22px; height: 22px; color: #fff; }
         .provider-info { flex: 1; min-width: 0; }
-        .provider-info h4 { font-size: 14px; font-weight: 700; margin-bottom: 3px; color: var(--ink); }
-        .provider-info p { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); }
-        .provider-toggle { padding: 9px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(23,24,28,0.14); background: rgba(255,255,255,0.5); color: var(--ink-dim); font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; flex-shrink: 0; transition: all 0.15s var(--ease); }
-        .provider-toggle.connected { background: linear-gradient(135deg, var(--green-1), var(--green-2)); border-color: transparent; color: #fff; box-shadow: 0 6px 14px -6px rgba(48,209,88,0.6); }
-        .provider-toggle:hover { border-color: var(--red-2); color: var(--red-2); }
-        .provider-toggle.connected:hover { color: #fff; opacity: 0.85; }
-
+        .provider-info h4 { font-size: var(--fs-body); font-weight: 700; margin-bottom: 3px; color: var(--ink); }
+        .provider-info p { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); }
+        .provider-toggle { padding: 9px 16px; border-radius: var(--r-pill); border: 1px solid var(--glass-brd); background: var(--glass-lo); color: var(--ink-dim); font-size: var(--fs-small); font-weight: 700; cursor: pointer; flex-shrink: 0; transition: all .15s var(--ease); }
+        .provider-toggle.connected { background: linear-gradient(135deg, var(--green-1), var(--green-2)); border-color: transparent; color: #04220f; box-shadow: 0 6px 14px -6px rgba(48,209,88,0.6); }
+        .provider-toggle:hover { border-color: var(--teal-2); color: var(--teal-2); }
+        .provider-toggle.connected:hover { color: #04220f; opacity: .9; }
         .whoop-metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 2px; }
-        .whoop-metric { background: rgba(255,255,255,0.5); border-radius: var(--radius-sm); padding: 12px 8px; text-align: center; }
-        .whoop-metric .v { font-size: 17px; font-weight: 800; color: var(--pink-2); }
-        .whoop-metric .l { font-size: 9px; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; }
-
+        .whoop-metric { background: var(--glass-lo); border-radius: var(--r-sm); padding: 12px 8px; text-align: center; }
+        .whoop-metric .v { font-size: 1.05rem; font-weight: 800; color: var(--pink-2); }
+        .whoop-metric .l { font-size: 0.56rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; }
         .zk-banner { display: flex; align-items: center; gap: 12px; padding: 15px 16px; margin-bottom: 12px; }
         .zk-banner .icon-chip { margin: 0; }
-        .zk-banner p { font-size: 12px; line-height: 1.5; color: var(--ink-dim); }
+        .zk-banner p { font-size: var(--fs-small); line-height: 1.5; color: var(--ink-dim); }
         .zk-banner strong { color: var(--ink); }
 
-        /* ── You (Settings) ──────────────────────────────────────────────────── */
+        /* You */
         .screentime-ring-row { display: flex; align-items: center; gap: 18px; }
-        .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(23,24,28,0.07); }
+        .blocked-apps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .blocked-app { display: flex; align-items: center; gap: 7px; padding: 7px 11px 7px 8px; border-radius: var(--r-pill); background: var(--glass-lo); border: 1px solid var(--hair); font-size: var(--fs-small); font-weight: 600; color: var(--ink); }
+        .blocked-app .dotimg { width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; }
+        .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--hair); }
         .settings-row:last-child { border-bottom: none; }
-        .settings-row-label { display: flex; align-items: center; gap: 12px; font-size: 13.5px; font-weight: 500; color: var(--ink); }
-        .settings-row .value { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
-
-        .toggle { width: 44px; height: 27px; border-radius: 14px; background: rgba(23,24,28,0.14); position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
-        .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 23px; height: 23px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); transition: all 0.2s var(--ease); }
+        .settings-row-label { display: flex; align-items: center; gap: 12px; font-size: var(--fs-body); font-weight: 500; color: var(--ink); }
+        .settings-row .value { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-faint); }
+        .toggle { width: 44px; height: 27px; border-radius: 14px; background: color-mix(in srgb, var(--ink) 16%, transparent); position: relative; cursor: pointer; flex-shrink: 0; transition: background .25s var(--ease); }
+        .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 23px; height: 23px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); transition: transform .25s var(--spring); }
         .toggle.on { background: var(--green-2); }
         .toggle.on::after { transform: translateX(17px); }
 
-        /* ── Tab Bar (floating glass pill) ───────────────────────────────────── */
-        .tab-bar { position: absolute; bottom: 18px; left: 16px; right: 16px; height: 68px; border-radius: var(--radius-pill); display: flex; align-items: stretch; justify-content: space-around; z-index: 50; transition: opacity 0.2s var(--ease), transform 0.2s var(--ease); }
-        /* No tab is "current" during onboarding/splash — hide the bar rather than show a misleading active tab */
-        #onboarding-screen.active ~ .tab-bar, #splash-screen.active ~ .tab-bar { opacity: 0; transform: translateY(12px); pointer-events: none; }
+        /* Tab bar — floating glass pill */
+        .tab-bar { position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); left: 14px; right: 14px; height: 66px; border-radius: var(--r-pill); display: flex; align-items: stretch; justify-content: space-around; z-index: 50; transition: opacity .25s var(--ease), transform .25s var(--spring); }
+        #onboarding-screen.active ~ .tab-bar, #splash-screen.active ~ .tab-bar { opacity: 0; transform: translateY(14px); pointer-events: none; }
         .tab-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; flex: 1; position: relative; -webkit-tap-highlight-color: transparent; }
-        .tab-item svg { width: 21px; height: 21px; color: var(--ink-faint); transition: color 0.15s, transform 0.15s; }
-        .tab-item.active svg { color: var(--red-2); transform: translateY(-1px); }
-        .tab-item .tab-label { font-size: 9.5px; font-weight: 600; color: var(--ink-faint); transition: color 0.15s; }
-        .tab-item.active .tab-label { color: var(--red-2); font-weight: 700; }
+        .tab-item svg { width: 21px; height: 21px; color: var(--ink-faint); transition: color .15s, transform .2s var(--spring); }
+        .tab-item.active svg { color: var(--teal-2); transform: translateY(-1px) scale(1.05); }
+        .tab-item .tab-label { font-size: 0.56rem; font-weight: 600; color: var(--ink-faint); transition: color .15s; }
+        .tab-item.active .tab-label { color: var(--teal-2); font-weight: 700; }
 
-        /* ═══════════════════════════════════════════════════════════════════════
-           CONSOLE PANEL (stage chrome — dark glass)
-           ═══════════════════════════════════════════════════════════════════════ */
-        .console-panel {
-            width: 420px; height: calc(var(--phone-height) + 16px);
-            background: var(--stage-panel); backdrop-filter: blur(24px) saturate(160%);
-            -webkit-backdrop-filter: blur(24px) saturate(160%);
-            border: 1px solid var(--stage-border); border-radius: var(--radius-lg);
-            display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
-        }
+        /* ═══════════ CONSOLE (stage) ═══════════ */
+        .console-panel { width: 420px; height: calc(var(--phone-h) + 16px); background: var(--stage-panel); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); border: 1px solid var(--stage-border); border-radius: var(--r-lg); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
         .console-header { padding: 16px 18px; border-bottom: 1px solid var(--stage-border); display: flex; align-items: center; justify-content: space-between; }
         .console-header .title-group { display: flex; align-items: center; gap: 8px; }
-        .console-header h3 { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; color: var(--stage-ink-dim); text-transform: uppercase; }
+        .console-header h3 { font-size: var(--fs-small); font-weight: 700; letter-spacing: 0.7px; color: var(--stage-ink-dim); text-transform: uppercase; }
         .console-header svg { width: 15px; height: 15px; color: var(--stage-ink-faint); }
         .console-tabs { display: flex; gap: 2px; }
-        .console-tab { padding: 6px 13px; border-radius: var(--radius-pill); font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; cursor: pointer; color: var(--stage-ink-faint); background: transparent; border: none; transition: all 0.15s; }
+        .console-tab { padding: 6px 13px; border-radius: var(--r-pill); font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600; cursor: pointer; color: var(--stage-ink-faint); background: transparent; border: none; transition: all .15s; }
         .console-tab.active { background: rgba(255,255,255,0.12); color: #fff; }
-        .console-body { flex: 1; overflow-y: auto; padding: 14px 18px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.9; scrollbar-width: thin; }
-        .console-line { display: flex; gap: 9px; padding: 1px 0; animation: console-in 0.15s; }
-        @keyframes console-in { from { opacity: 0; } to { opacity: 1; } }
+        .console-body { flex: 1; overflow-y: auto; padding: 14px 18px; font-family: var(--font-mono); font-size: var(--fs-small); line-height: 1.9; scrollbar-width: thin; }
+        .console-line { display: flex; gap: 9px; padding: 1px 0; animation: console-in .15s; }
+        @keyframes console-in { from{opacity:0;} to{opacity:1;} }
         .console-line .timestamp { color: var(--stage-ink-faint); white-space: nowrap; flex-shrink: 0; }
         .console-line .method { font-weight: 700; flex-shrink: 0; }
-        .method-get { color: #64d2ff; }
-        .method-post { color: #ff9f0a; }
-        .method-delete { color: #ff453a; }
-        .method-ws { color: var(--stage-ink-faint); }
+        .method-get{color:#64d2ff;} .method-post{color:#ff9f0a;} .method-delete{color:#ff453a;} .method-ws{color:var(--stage-ink-faint);}
         .console-line .path { color: var(--stage-ink-dim); word-break: break-all; }
         .console-line .status { font-weight: 700; flex-shrink: 0; margin-left: auto; padding-left: 8px; }
-        .status-200, .status-201 { color: #30d158; }
-        .status-400, .status-401 { color: #ff453a; }
-        .status-409 { color: #ff9f0a; }
-        .status-500 { color: #ff453a; }
-        .console-line.info .msg { color: #64d2ff; }
-        .console-line.error .msg { color: #ff453a; }
-        .console-line.warn .msg { color: #ff9f0a; }
+        .status-200,.status-201{color:#30d158;} .status-400,.status-401,.status-500{color:#ff453a;} .status-409{color:#ff9f0a;}
+        .console-line.info .msg{color:#64d2ff;} .console-line.error .msg{color:#ff453a;} .console-line.warn .msg{color:#ff9f0a;}
         .console-line .response-data { color: var(--stage-ink-faint); word-break: break-all; }
 
-        /* ═══════════════════════════════════════════════════════════════════════
-           RESPONSIVE
-           ═══════════════════════════════════════════════════════════════════════ */
         @media (max-width: 940px) {
             .simulator-container { flex-direction: column; align-items: center; padding: 24px 16px; }
-            .console-panel { width: 100%; max-width: var(--phone-width); height: 380px; }
+            .console-panel { width: 100%; max-width: var(--phone-w); height: 380px; }
         }
     </style>
 </head>
 <body>
     <div class="stage-mesh" aria-hidden="true"></div>
 
-    <!-- ═══════════ PAGE HEADER ═══════════ -->
     <header class="page-header">
         <div class="brand">
             <div class="mark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div>
             <span class="wordmark">Lifeline</span>
             <span class="tagline">Private Health Companion</span>
         </div>
-        <div class="server-status">
-            <div class="status-dot" id="serverDot"></div>
-            <span id="serverStatusText" class="tnum">connecting…</span>
-        </div>
+        <div class="server-status"><div class="status-dot" id="serverDot"></div><span id="serverStatusText" class="tnum">connecting…</span></div>
     </header>
 
-    <!-- ═══════════ MAIN LAYOUT ═══════════ -->
     <div class="simulator-container">
         <div class="device-column">
-            <div class="device-label">
-                <span>iOS Simulator</span>
-                <span id="deviceIdLabel" class="tnum">—</span>
-            </div>
+            <div class="device-label"><span>iOS Simulator</span><span id="deviceIdLabel" class="tnum">—</span></div>
             <div class="iphone-frame">
                 <div class="iphone-screen">
-                    <div class="product-mesh" aria-hidden="true"><span class="m1"></span><span class="m2"></span><span class="m3"></span><span class="m4"></span><span class="m5"></span></div>
+                    <div class="product-mesh" aria-hidden="true"><span class="m1"></span><span class="m2"></span><span class="m3"></span><span class="m4"></span></div>
 
                     <div class="ios-status-bar">
                         <span class="time tnum" id="iosTime">09:41</span>
@@ -493,25 +481,24 @@
                     <div class="app-screen active" id="onboarding-screen">
                         <div>
                             <div class="onboarding-slide active" data-slide="0">
-                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--red-1),var(--red-2)); box-shadow:0 20px 40px -14px rgba(255,45,85,0.5), inset 0 1px 0 rgba(255,255,255,0.4);">
-                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg>
-                                </div>
+                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--teal-1),var(--teal-2));box-shadow:0 20px 40px -14px rgba(0,199,190,.5),inset 0 1px 0 rgba(255,255,255,.4);"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div>
                                 <div class="onboarding-title">A private companion for a <em>longer</em>, richer life</div>
                                 <div class="onboarding-copy">Lifeline turns daily habits into lasting change — with zero-knowledge encryption, so only you ever see your data.</div>
                             </div>
                             <div class="onboarding-slide" data-slide="1">
-                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--blue-1),var(--blue-2)); box-shadow:0 20px 40px -14px rgba(10,132,255,0.5), inset 0 1px 0 rgba(255,255,255,0.4);">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg>
-                                </div>
-                                <div class="onboarding-title">One vault for <em>every</em> signal</div>
-                                <div class="onboarding-copy">Connect Apple Health, Google Health, and Whoop — and bring your own lab results from your doctor — into a single, private picture.</div>
+                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--blue-1),var(--blue-2));box-shadow:0 20px 40px -14px rgba(10,132,255,.5),inset 0 1px 0 rgba(255,255,255,.4);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l2 7 4-14 2 7h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                                <div class="onboarding-title">See <em>cause and effect</em>, clearly</div>
+                                <div class="onboarding-copy">Behavioral feedback loops map your daily choices to real trends — so progress feels obvious, and streaks keep you going.</div>
                             </div>
                             <div class="onboarding-slide" data-slide="2">
-                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--indigo-1),var(--indigo-2)); box-shadow:0 20px 40px -14px rgba(122,63,240,0.5), inset 0 1px 0 rgba(255,255,255,0.4);">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M7.6 17l3-3.5M16.4 17l-3-3.5"/></svg>
+                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--indigo-1),var(--indigo-2));box-shadow:0 20px 40px -14px rgba(125,92,255,.5),inset 0 1px 0 rgba(255,255,255,.4);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg></div>
+                                <div class="onboarding-title">Grant a few <em>permissions</em></div>
+                                <div class="onboarding-copy">Everything stays on-device unless you choose to sync it. Turn on what helps; change it anytime.</div>
+                                <div class="perm-list">
+                                    <div class="perm-row glass"><div class="icon-chip sm red"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div><div class="pt"><h5>Health data</h5><p>Read vitals on-device</p></div><div class="toggle on"></div></div>
+                                    <div class="perm-row glass"><div class="icon-chip sm orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div><div class="pt"><h5>Notifications</h5><p>Reminders &amp; streaks</p></div><div class="toggle on"></div></div>
+                                    <div class="perm-row glass"><div class="icon-chip sm indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2" stroke-linecap="round"/></svg></div><div class="pt"><h5>Screen Time</h5><p>Auto-lock social apps</p></div><div class="toggle"></div></div>
                                 </div>
-                                <div class="onboarding-title">Coaching that knows <em>when to stop</em></div>
-                                <div class="onboarding-copy">Clinical-first AI guidance, daily challenges that build real streaks, and a screen-time limit that quietly closes social apps when you've had enough.</div>
                             </div>
                         </div>
                         <div style="width:100%;">
@@ -534,87 +521,64 @@
 
                     <!-- ═══ DASHBOARD ═══ -->
                     <div class="app-screen" id="dashboard-screen">
+                        <div class="scroll-edge"></div>
                         <div class="screen-pad">
                             <div class="dashboard-greeting" id="greetingText">Good morning</div>
-                            <div class="screen-title">Your Vitals</div>
+                            <div class="screen-title">Today</div>
                             <div style="height:18px;"></div>
 
                             <div class="panel glass">
                                 <div class="score-row">
                                     <div class="ring-container">
-                                        <svg viewBox="0 0 90 90">
-                                            <circle class="ring-bg" cx="45" cy="45" r="38" stroke-width="7"/>
-                                            <circle class="ring-progress" cx="45" cy="45" r="38" stroke-width="7" stroke="url(#scoreGrad)" stroke-dasharray="238.8" stroke-dashoffset="238.8" id="healthRing"/>
-                                            <defs>
-                                                <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                    <stop offset="0%" stop-color="#ff5e7a"/>
-                                                    <stop offset="100%" stop-color="#ff2d55"/>
-                                                </linearGradient>
-                                            </defs>
+                                        <svg viewBox="0 0 92 92">
+                                            <circle class="ring-bg" cx="46" cy="46" r="39" stroke-width="7"/>
+                                            <circle class="ring-progress" cx="46" cy="46" r="39" stroke-width="7" stroke="url(#scoreGrad)" stroke-dasharray="245" stroke-dashoffset="245" id="healthRing"/>
+                                            <defs><linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#54d6d6"/><stop offset="100%" stop-color="#00c7be"/></linearGradient></defs>
                                         </svg>
                                         <div class="ring-center-text tnum" id="healthScore">—</div>
                                     </div>
-                                    <div class="score-info">
-                                        <h3>Health Score</h3>
-                                        <p>Composite index from on-device signals</p>
-                                    </div>
+                                    <div class="score-info"><h3>Health Score</h3><p>Composite index from on-device signals</p></div>
                                 </div>
+                            </div>
+
+                            <div class="panel glass">
+                                <div class="panel-header"><h4>7-Day Trend</h4><span class="meta">Behavioral feedback</span></div>
+                                <div class="trend-head"><span class="val tnum">+6 pts</span><span class="delta tnum">▲ improving</span></div>
+                                <svg class="trend-chart" viewBox="0 0 300 70" preserveAspectRatio="none">
+                                    <defs><linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00c7be" stop-opacity="0.28"/><stop offset="100%" stop-color="#00c7be" stop-opacity="0"/></linearGradient></defs>
+                                    <path class="trend-area" d="M0,52 L44,44 L88,48 L132,34 L176,30 L220,20 L300,14 L300,70 L0,70 Z"/>
+                                    <path class="trend-line" d="M0,52 L44,44 L88,48 L132,34 L176,30 L220,20 L300,14"/>
+                                </svg>
+                                <div class="trend-days"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span></div>
                             </div>
 
                             <div class="streak-banner glass">
                                 <div class="icon-chip orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div>
-                                <div style="flex:1;">
-                                    <div class="streak-count tnum" id="streakCount">12-day streak</div>
-                                    <div class="streak-label">Longest run yet — keep it alive today</div>
-                                </div>
+                                <div style="flex:1;"><div class="streak-count tnum" id="streakCount">12-day streak</div><div class="streak-label">Longest run yet — keep it alive today</div></div>
+                            </div>
+
+                            <div class="section-label">Milestones</div>
+                            <div class="achv-strip">
+                                <div class="achv glass"><div class="icon-chip orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div><div class="t">7-Day Streak</div><div class="s">Unlocked</div></div>
+                                <div class="achv glass"><div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l2 7 4-14 2 7h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="t">10k Steps</div><div class="s">Unlocked</div></div>
+                                <div class="achv glass"><div class="icon-chip indigo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></div><div class="t">Sleep Pro</div><div class="s">Unlocked</div></div>
+                                <div class="achv glass locked"><div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div class="t">30-Day Club</div><div class="s">18 to go</div></div>
                             </div>
 
                             <div class="panel glass">
                                 <div class="panel-header"><h4>Today's Challenges</h4><span class="meta tnum" id="challengeProgress">0/3</span></div>
                                 <div id="challengeList">
-                                    <div class="challenge-row" data-pts="10">
-                                        <div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-                                        <div class="challenge-text">10-minute morning walk</div>
-                                        <div class="challenge-pts">+10</div>
-                                    </div>
-                                    <div class="challenge-row" data-pts="15">
-                                        <div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-                                        <div class="challenge-text">Log today's medication</div>
-                                        <div class="challenge-pts">+15</div>
-                                    </div>
-                                    <div class="challenge-row" data-pts="10">
-                                        <div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-                                        <div class="challenge-text">Wind down 60 min before bed</div>
-                                        <div class="challenge-pts">+10</div>
-                                    </div>
+                                    <div class="challenge-row" data-pts="10"><div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="challenge-text">10-minute morning walk</div><div class="challenge-pts">+10</div></div>
+                                    <div class="challenge-row" data-pts="15"><div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="challenge-text">Log today's medication</div><div class="challenge-pts">+15</div></div>
+                                    <div class="challenge-row" data-pts="10"><div class="challenge-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="challenge-text">Wind down 60 min before bed</div><div class="challenge-pts">+10</div></div>
                                 </div>
                             </div>
 
                             <div class="metrics-grid">
-                                <div class="metric-tile glass">
-                                    <div class="metric-top"><div class="icon-chip red"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div></div>
-                                    <div class="metric-value tnum">72</div>
-                                    <div class="metric-label">Heart Rate</div>
-                                    <div class="metric-trend trend-down tnum">▼ 3 bpm</div>
-                                </div>
-                                <div class="metric-tile glass">
-                                    <div class="metric-top"><div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 8 4-16 2 8h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
-                                    <div class="metric-value tnum">8,247</div>
-                                    <div class="metric-label">Steps</div>
-                                    <div class="metric-trend trend-up tnum">▲ 12%</div>
-                                </div>
-                                <div class="metric-tile glass">
-                                    <div class="metric-top"><div class="icon-chip indigo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></div></div>
-                                    <div class="metric-value tnum">7:24</div>
-                                    <div class="metric-label">Sleep</div>
-                                    <div class="metric-trend trend-up tnum">▲ 18 min</div>
-                                </div>
-                                <div class="metric-tile glass">
-                                    <div class="metric-top"><div class="icon-chip orange"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div></div>
-                                    <div class="metric-value tnum">486</div>
-                                    <div class="metric-label">Calories</div>
-                                    <div class="metric-trend trend-up tnum">▲ 8%</div>
-                                </div>
+                                <div class="metric-tile glass"><div class="metric-top"><div class="icon-chip red"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div></div><div class="metric-value tnum">72</div><div class="metric-label">Heart Rate</div><div class="metric-trend trend-down tnum">▼ 3 bpm</div></div>
+                                <div class="metric-tile glass"><div class="metric-top"><div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 8 4-16 2 8h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="metric-value tnum">8,247</div><div class="metric-label">Steps</div><div class="metric-trend trend-up tnum">▲ 12%</div></div>
+                                <div class="metric-tile glass"><div class="metric-top"><div class="icon-chip indigo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></div></div><div class="metric-value tnum">7:24</div><div class="metric-label">Sleep</div><div class="metric-trend trend-up tnum">▲ 18 min</div></div>
+                                <div class="metric-tile glass"><div class="metric-top"><div class="icon-chip orange"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div></div><div class="metric-value tnum">486</div><div class="metric-label">Calories</div><div class="metric-trend trend-up tnum">▲ 8%</div></div>
                             </div>
 
                             <div class="panel glass">
@@ -631,209 +595,98 @@
 
                     <!-- ═══ AI CHAT ═══ -->
                     <div class="app-screen" id="chat-screen">
-                        <div class="chat-header">
-                            <h2>Lifeline AI</h2>
-                            <p>PRIVATE HEALTH COMPANION · ZERO-KNOWLEDGE</p>
-                        </div>
+                        <div class="chat-header"><h2>Lifeline AI</h2><p>PRIVATE HEALTH COMPANION · ZERO-KNOWLEDGE</p></div>
                         <div class="chat-messages" id="chatMessages">
                             <div class="chat-bubble system">End-to-end encrypted — no data retained</div>
-                            <div class="chat-bubble ai glass">
-                                <div class="ai-label">LIFELINE AI</div>
-                                Hello — I'm your private health companion. I can analyze biometric data and provide clinical-first guidance. How can I help?
-                            </div>
+                            <div class="chat-bubble ai glass"><div class="ai-label">LIFELINE AI</div>Hello — I'm your private health companion. I can analyze biometric data and provide clinical-first guidance. How can I help?</div>
                         </div>
                         <div class="chat-input-bar">
                             <input type="text" id="chatInput" placeholder="Ask about your health…" autocomplete="off">
-                            <button class="chat-send-btn" id="chatSendBtn" title="Send" aria-label="Send">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </button>
+                            <button class="chat-send-btn" id="chatSendBtn" title="Send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                         </div>
                     </div>
 
                     <!-- ═══ VAULT ═══ -->
                     <div class="app-screen" id="vault-screen">
+                        <div class="scroll-edge"></div>
                         <div class="screen-pad">
                             <div class="screen-title">Your Vault</div>
                             <div class="eyebrow" style="margin-top:6px;">ZERO-KNOWLEDGE E2EE STORAGE</div>
                             <div style="height:16px;"></div>
-
-                            <div class="segmented glass">
-                                <button class="active" data-vault="sync">Journal</button>
-                                <button data-vault="labs">Lab Results</button>
-                            </div>
-
+                            <div class="segmented glass"><button class="active" data-vault="sync">Journal</button><button data-vault="labs">Lab Results</button></div>
                             <div class="vault-pane active" id="vault-sync">
-                                <div class="doc-card glass">
-                                    <div class="doc-card-header">
-                                        <span class="doc-name"><div class="icon-chip pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Health Journal</span>
-                                        <span class="doc-version tnum" id="syncVersion">v0</span>
-                                    </div>
-                                    <div class="doc-meta">
-                                        <span>AES-256-GCM · encrypted on-device</span>
-                                        <span>last sync: <span id="lastSyncTime">never</span></span>
-                                    </div>
-                                </div>
-                                <div class="doc-card glass">
-                                    <div class="doc-card-header">
-                                        <span class="doc-name"><div class="icon-chip blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Medication Log</span>
-                                        <span class="doc-version tnum">v0</span>
-                                    </div>
-                                    <div class="doc-meta">
-                                        <span>XChaCha20-Poly1305 · encrypted on-device</span>
-                                        <span>last sync: never</span>
-                                    </div>
-                                </div>
-                                <button class="action-btn" id="syncNowBtn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    Sync now
-                                </button>
+                                <div class="doc-card glass"><div class="doc-card-header"><span class="doc-name"><div class="icon-chip pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Health Journal</span><span class="doc-version tnum" id="syncVersion">v0</span></div><div class="doc-meta"><span>AES-256-GCM · encrypted on-device</span><span>last sync: <span id="lastSyncTime">never</span></span></div></div>
+                                <div class="doc-card glass"><div class="doc-card-header"><span class="doc-name"><div class="icon-chip blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Medication Log</span><span class="doc-version tnum">v0</span></div><div class="doc-meta"><span>XChaCha20-Poly1305 · encrypted on-device</span><span>last sync: never</span></div></div>
+                                <button class="action-btn" id="syncNowBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" stroke-linecap="round" stroke-linejoin="round"/></svg>Sync now</button>
                             </div>
-
                             <div class="vault-pane" id="vault-labs">
                                 <div id="labResultsList">
-                                    <div class="empty-state glass">
-                                        <div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div>
-                                        <p>No lab results yet.<br>Upload a PDF or photo from your doctor — it's encrypted on-device before it ever leaves your phone.</p>
-                                    </div>
+                                    <div class="empty-state glass"><div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div><p>No lab results yet.<br>Upload a PDF or photo from your doctor — it's encrypted on-device before it ever leaves your phone.</p></div>
                                 </div>
-                                <button class="action-btn" id="uploadLabBtn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0-12l4 4m-4-4L8 7M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    Upload lab results
-                                </button>
+                                <button class="action-btn" id="uploadLabBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0-12l4 4m-4-4L8 7M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round" stroke-linejoin="round"/></svg>Upload lab results</button>
                             </div>
-
-                            <div class="activity-log">
-                                <h3>Activity</h3>
-                                <div class="panel glass" id="activityLog" style="padding:6px 14px;">
-                                    <div class="log-entry">
-                                        <div class="log-dot info"></div>
-                                        <div class="log-text"><strong>Ready to sync</strong><span class="time">waiting for connection…</span></div>
-                                    </div>
-                                </div>
-                            </div>
+                            <div class="activity-log"><h3>Activity</h3><div class="panel glass" id="activityLog" style="padding:6px 14px;"><div class="log-entry"><div class="log-dot info"></div><div class="log-text"><strong>Ready to sync</strong><span class="time">waiting for connection…</span></div></div></div></div>
                         </div>
                     </div>
 
                     <!-- ═══ CONNECT ═══ -->
                     <div class="app-screen" id="connect-screen">
+                        <div class="scroll-edge"></div>
                         <div class="screen-pad">
                             <div class="screen-title">Connect</div>
                             <div class="eyebrow" style="margin-top:6px;">BRING YOUR OWN HEALTH DATA</div>
                             <div style="height:16px;"></div>
-
-                            <div class="provider-card glass">
-                                <div class="provider-icon" style="background:linear-gradient(155deg,#3a3a3c,#1c1c1e);"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div>
-                                <div class="provider-info"><h4>Apple Health</h4><p id="appleHealthStatus">not connected</p></div>
-                                <button class="provider-toggle" id="appleHealthToggle" data-provider="apple_health">Connect</button>
-                            </div>
-
-                            <div class="provider-card glass">
-                                <div class="provider-icon blue" style="background:linear-gradient(155deg,var(--blue-1),var(--blue-2));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div>
-                                <div class="provider-info"><h4>Google Health</h4><p id="googleHealthStatus">not connected</p></div>
-                                <button class="provider-toggle" id="googleHealthToggle" data-provider="google_health">Connect</button>
-                            </div>
-
-                            <div class="provider-card glass">
-                                <div class="provider-icon" style="background:linear-gradient(155deg,var(--pink-1),var(--pink-2));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 4v2m0 12v2"/></svg></div>
-                                <div class="provider-info"><h4>Whoop</h4><p id="whoopStatus">not connected</p></div>
-                                <button class="provider-toggle" id="whoopToggle" data-provider="whoop">Connect</button>
-                            </div>
-
-                            <div class="panel glass" id="whoopMetricsPanel" style="display:none;">
-                                <div class="panel-header"><h4>Whoop Recovery</h4><span class="meta">MOCK</span></div>
-                                <div class="whoop-metrics-grid">
-                                    <div class="whoop-metric"><div class="v tnum" id="whoopRecovery">—</div><div class="l">Recovery</div></div>
-                                    <div class="whoop-metric"><div class="v tnum" id="whoopStrain">—</div><div class="l">Strain</div></div>
-                                    <div class="whoop-metric"><div class="v tnum" id="whoopHrv">—</div><div class="l">HRV ms</div></div>
-                                </div>
-                            </div>
-
-                            <div class="zk-banner glass">
-                                <div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg></div>
-                                <p><strong>Apple Health &amp; Google Health</strong> are read on-device only — nothing leaves your phone. <strong>Whoop</strong> uses OAuth2; your token is encrypted at rest and never touches your other devices.</p>
-                            </div>
+                            <div class="provider-card glass"><div class="provider-icon" style="background:linear-gradient(155deg,#3a3a3c,#1c1c1e);"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div><div class="provider-info"><h4>Apple Health</h4><p id="appleHealthStatus">not connected</p></div><button class="provider-toggle" id="appleHealthToggle" data-provider="apple_health">Connect</button></div>
+                            <div class="provider-card glass"><div class="provider-icon blue" style="background:linear-gradient(155deg,var(--blue-1),var(--blue-2));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div><div class="provider-info"><h4>Google Health</h4><p id="googleHealthStatus">not connected</p></div><button class="provider-toggle" id="googleHealthToggle" data-provider="google_health">Connect</button></div>
+                            <div class="provider-card glass"><div class="provider-icon" style="background:linear-gradient(155deg,var(--pink-1),var(--pink-2));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 4v2m0 12v2"/></svg></div><div class="provider-info"><h4>Whoop</h4><p id="whoopStatus">not connected</p></div><button class="provider-toggle" id="whoopToggle" data-provider="whoop">Connect</button></div>
+                            <div class="panel glass" id="whoopMetricsPanel" style="display:none;"><div class="panel-header"><h4>Whoop Recovery</h4><span class="meta">MOCK</span></div><div class="whoop-metrics-grid"><div class="whoop-metric"><div class="v tnum" id="whoopRecovery">—</div><div class="l">Recovery</div></div><div class="whoop-metric"><div class="v tnum" id="whoopStrain">—</div><div class="l">Strain</div></div><div class="whoop-metric"><div class="v tnum" id="whoopHrv">—</div><div class="l">HRV ms</div></div></div></div>
+                            <div class="zk-banner glass"><div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg></div><p><strong>Apple &amp; Google Health</strong> are read on-device only — nothing leaves your phone. <strong>Whoop</strong> uses OAuth2; your token is encrypted at rest and never touches your other devices.</p></div>
                         </div>
                     </div>
 
                     <!-- ═══ YOU ═══ -->
                     <div class="app-screen" id="you-screen">
+                        <div class="scroll-edge"></div>
                         <div class="screen-pad">
                             <div class="screen-title">You</div>
                             <div style="height:16px;"></div>
-
                             <div class="panel glass">
-                                <div class="panel-header"><h4>Screen Time Limit</h4><span class="badge good" id="screenTimeBadge">ON</span></div>
+                                <div class="panel-header"><h4>Social Hard-Blocker</h4><span class="badge good" id="screenTimeBadge">ACTIVE</span></div>
                                 <div class="screentime-ring-row">
                                     <div class="ring-container" style="width:74px;height:74px;">
-                                        <svg viewBox="0 0 74 74" style="width:74px;height:74px;">
-                                            <circle class="ring-bg" cx="37" cy="37" r="31" stroke-width="6"/>
-                                            <circle cx="37" cy="37" r="31" stroke-width="6" fill="none" stroke="url(#stGrad)" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="68" id="screenTimeRing"/>
-                                            <defs><linearGradient id="stGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#b06cf5"/><stop offset="100%" stop-color="#7a3ff0"/></linearGradient></defs>
-                                        </svg>
-                                        <div class="ring-center-text tnum" style="font-size:14px;">65%</div>
+                                        <svg viewBox="0 0 74 74" style="width:74px;height:74px;"><circle class="ring-bg" cx="37" cy="37" r="31" stroke-width="6"/><circle cx="37" cy="37" r="31" stroke-width="6" fill="none" stroke="url(#stGrad)" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="68"/><defs><linearGradient id="stGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#b18cff"/><stop offset="100%" stop-color="#7d5cff"/></linearGradient></defs></svg>
+                                        <div class="ring-center-text tnum" style="font-size:0.85rem;">65%</div>
                                     </div>
-                                    <div style="flex:1;">
-                                        <p style="font-size:12.5px; color:var(--ink-dim); line-height:1.5;">39 of 60 daily minutes used on Instagram, TikTok &amp; X. Apps lock automatically at your limit.</p>
-                                    </div>
+                                    <div style="flex:1;"><p style="font-size:var(--fs-small); color:var(--ink-dim); line-height:1.5;">39 of 60 daily minutes used. At your limit, Lifeline closes these apps automatically.</p></div>
+                                </div>
+                                <div class="blocked-apps">
+                                    <div class="blocked-app"><span class="dotimg" style="background:linear-gradient(135deg,#feda75,#d62976 55%,#4f5bd5);"></span>Instagram</div>
+                                    <div class="blocked-app"><span class="dotimg" style="background:#000;"></span>TikTok</div>
+                                    <div class="blocked-app"><span class="dotimg" style="background:#000;"></span>X</div>
+                                    <div class="blocked-app"><span class="dotimg" style="background:#1877f2;"></span>Facebook</div>
                                 </div>
                             </div>
-
                             <div class="panel glass">
-                                <div class="settings-row">
-                                    <div class="settings-row-label"><div class="icon-chip indigo" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>Auto-lock social apps</div>
-                                    <div class="toggle on" id="screenTimeToggle"></div>
-                                </div>
-                                <div class="settings-row">
-                                    <div class="settings-row-label"><div class="icon-chip orange" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>Streak reminders</div>
-                                    <div class="toggle on" id="remindersToggle"></div>
-                                </div>
-                                <div class="settings-row">
-                                    <div class="settings-row-label"><div class="icon-chip blue" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>Daily digest</div>
-                                    <div class="toggle" id="digestToggle"></div>
-                                </div>
+                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2" stroke-linecap="round"/></svg></div>Auto-lock social apps</div><div class="toggle on" id="screenTimeToggle"></div></div>
+                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>Streak reminders</div><div class="toggle on" id="remindersToggle"></div></div>
+                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>Daily digest</div><div class="toggle" id="digestToggle"></div></div>
                             </div>
-
                             <div class="panel glass">
-                                <div class="settings-row">
-                                    <div class="settings-row-label"><div class="icon-chip green" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>Privacy &amp; Security</div>
-                                    <span class="value">Zero-knowledge</span>
-                                </div>
-                                <div class="settings-row">
-                                    <div class="settings-row-label"><div class="icon-chip pink" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div>Connected Accounts</div>
-                                    <span class="value tnum" id="connectedCount">0 connected</span>
-                                </div>
-                                <div class="settings-row">
-                                    <div class="settings-row-label"><div class="icon-chip red" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Lab Results</div>
-                                    <span class="value tnum" id="settingsLabCount">0 uploaded</span>
-                                </div>
+                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>Privacy &amp; Security</div><span class="value">Zero-knowledge</span></div>
+                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div>Connected Accounts</div><span class="value tnum" id="connectedCount">0 connected</span></div>
+                                <div class="settings-row"><div class="settings-row-label"><div class="icon-chip sm red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Lab Results</div><span class="value tnum" id="settingsLabCount">0 uploaded</span></div>
                             </div>
-
                             <button class="btn-glass" id="restartOnboardingBtn">Replay onboarding</button>
                         </div>
                     </div>
 
                     <!-- ═══ TAB BAR ═══ -->
                     <div class="tab-bar glass">
-                        <div class="tab-item active" data-tab="dashboard">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 7 4-14 2 7h6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            <span class="tab-label">Vitals</span>
-                        </div>
-                        <div class="tab-item" data-tab="chat">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M7.6 17l3-3.5M16.4 17l-3-3.5"/></svg>
-                            <span class="tab-label">AI</span>
-                        </div>
-                        <div class="tab-item" data-tab="vault">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M9 4v16" stroke-linecap="round"/></svg>
-                            <span class="tab-label">Vault</span>
-                        </div>
-                        <div class="tab-item" data-tab="connect">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg>
-                            <span class="tab-label">Connect</span>
-                        </div>
-                        <div class="tab-item" data-tab="you">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" stroke-linecap="round"/></svg>
-                            <span class="tab-label">You</span>
-                        </div>
+                        <div class="tab-item active" data-tab="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 7 4-14 2 7h6" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="tab-label">Today</span></div>
+                        <div class="tab-item" data-tab="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M7.6 17l3-3.5M16.4 17l-3-3.5"/></svg><span class="tab-label">AI</span></div>
+                        <div class="tab-item" data-tab="vault"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M9 4v16" stroke-linecap="round"/></svg><span class="tab-label">Vault</span></div>
+                        <div class="tab-item" data-tab="connect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg><span class="tab-label">Connect</span></div>
+                        <div class="tab-item" data-tab="you"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" stroke-linecap="round"/></svg><span class="tab-label">You</span></div>
                     </div>
 
                     <div class="home-indicator"></div>
@@ -841,114 +694,61 @@
             </div>
         </div>
 
-        <!-- ── Console Panel ───────────────────────────────────────────── -->
         <div class="console-panel">
             <div class="console-header">
-                <div class="title-group">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 6l-2 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <h3>API Console</h3>
-                </div>
-                <div class="console-tabs">
-                    <button class="console-tab active" data-console="requests">Requests</button>
-                    <button class="console-tab" data-console="websocket">Stream</button>
-                </div>
+                <div class="title-group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 6l-2 12" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>API Console</h3></div>
+                <div class="console-tabs"><button class="console-tab active" data-console="requests">Requests</button><button class="console-tab" data-console="websocket">Stream</button></div>
             </div>
             <div class="console-body" id="consoleBody"></div>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════
-         ENGINE
-         ═══════════════════════════════════════════════════════════════════════ -->
     <script>
     (() => {
         'use strict';
-
-        // ── Configuration ────────────────────────────────────────────────────
         const API_BASE = 'http://localhost:8443/api/v1';
         const WS_URL = 'ws://localhost:8443/api/v1/stream';
-
-        // ── State ────────────────────────────────────────────────────────────
-        let state = {
-            deviceId: crypto.randomUUID(),
-            sessionToken: null,
-            challenge: null,
-            serverOnline: false,
-            currentTab: 'dashboard',
-            syncVersion: 0,
-            labCount: 0,
-            connections: {},
-            ws: null,
-        };
-
-        // ── DOM Refs ─────────────────────────────────────────────────────────
+        let state = { deviceId: crypto.randomUUID(), sessionToken: null, challenge: null, serverOnline: false, currentTab: 'dashboard', syncVersion: 0, labCount: 0, connections: {}, ws: null };
         const $ = (sel) => document.querySelector(sel);
         const $$ = (sel) => document.querySelectorAll(sel);
 
-        // ── Clock ────────────────────────────────────────────────────────────
         function updateClock() {
             const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            $('#iosTime').textContent = `${h}:${m}`;
+            $('#iosTime').textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
             const hour = now.getHours();
-            if (hour < 12) $('#greetingText').textContent = 'Good morning';
-            else if (hour < 17) $('#greetingText').textContent = 'Good afternoon';
-            else $('#greetingText').textContent = 'Good evening';
+            $('#greetingText').textContent = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
         }
-        setInterval(updateClock, 10000);
-        updateClock();
+        setInterval(updateClock, 10000); updateClock();
 
-        // ── Console Logger ───────────────────────────────────────────────────
         function logConsole(type, method, path, status, data) {
             const body = $('#consoleBody');
             const now = new Date();
             const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
             const line = document.createElement('div');
             line.className = 'console-line';
-
             if (type === 'request') {
-                const methodClass = method === 'GET' ? 'method-get' : method === 'DELETE' ? 'method-delete' : method === 'POST' ? 'method-post' : 'method-ws';
-                line.innerHTML = `
-                    <span class="timestamp tnum">${ts}</span>
-                    <span class="method ${methodClass}">${method}</span>
-                    <span class="path">${path}</span>
-                    ${status ? `<span class="status status-${status} tnum">${status}</span>` : ''}
-                `;
+                const mc = method === 'GET' ? 'method-get' : method === 'DELETE' ? 'method-delete' : method === 'POST' ? 'method-post' : 'method-ws';
+                line.innerHTML = `<span class="timestamp tnum">${ts}</span><span class="method ${mc}">${method}</span><span class="path">${path}</span>${status ? `<span class="status status-${status} tnum">${status}</span>` : ''}`;
                 if (data) {
-                    const dataLine = document.createElement('div');
-                    dataLine.className = 'console-line';
-                    dataLine.innerHTML = `<span class="timestamp">   </span><span class="response-data">→ ${truncate(JSON.stringify(data), 120)}</span>`;
-                    body.appendChild(line);
-                    body.appendChild(dataLine);
-                    body.scrollTop = body.scrollHeight;
-                    return;
+                    const d = document.createElement('div'); d.className = 'console-line';
+                    d.innerHTML = `<span class="timestamp">   </span><span class="response-data">→ ${truncate(JSON.stringify(data), 120)}</span>`;
+                    body.appendChild(line); body.appendChild(d); body.scrollTop = body.scrollHeight; return;
                 }
             } else {
                 line.className = `console-line ${type}`;
                 line.innerHTML = `<span class="timestamp tnum">${ts}</span><span class="msg">${path}</span>`;
             }
-            body.appendChild(line);
-            body.scrollTop = body.scrollHeight;
+            body.appendChild(line); body.scrollTop = body.scrollHeight;
         }
-
         function truncate(str, len) { return str.length > len ? str.substring(0, len) + '…' : str; }
 
-        // ── API Helpers ──────────────────────────────────────────────────────
         async function apiRequest(method, path, body) {
             const headers = {};
-            if (state.sessionToken) {
-                headers['Authorization'] = `Bearer ${state.sessionToken}`;
-                headers['X-Device-Id'] = state.deviceId;
-            }
+            if (state.sessionToken) { headers['Authorization'] = `Bearer ${state.sessionToken}`; headers['X-Device-Id'] = state.deviceId; }
             const opts = { method, headers };
-            if (body !== undefined) {
-                headers['Content-Type'] = 'application/json';
-                opts.body = JSON.stringify(body);
-            }
+            if (body !== undefined) { headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
             const res = await fetch(`${API_BASE}${path}`, opts);
-            let data = null;
-            try { data = await res.json(); } catch (e) {}
+            let data = null; try { data = await res.json(); } catch (e) {}
             logConsole('request', method, path, res.status, data);
             return { status: res.status, data };
         }
@@ -956,60 +756,43 @@
         const apiPost = (path, body) => apiRequest('POST', path, body ?? {});
         const apiDelete = (path) => apiRequest('DELETE', path);
 
-        // ── Dynamic Island ───────────────────────────────────────────────────
-        function showIsland(text, durationMs = 1800) {
-            const island = $('#dynamicIsland');
-            $('#islandText').textContent = text;
-            island.classList.add('active');
-            setTimeout(() => island.classList.remove('active'), durationMs);
-        }
+        function showIsland(text, ms = 1800) { const i = $('#dynamicIsland'); $('#islandText').textContent = text; i.classList.add('active'); setTimeout(() => i.classList.remove('active'), ms); }
 
-        // ── Onboarding ───────────────────────────────────────────────────────
+        // Onboarding
         let onboardingIndex = 0;
         const onboardingSlides = $$('.onboarding-slide');
         const onboardingDots = $$('#onboardingDots span');
-
         function showOnboardingSlide(i) {
             onboardingSlides.forEach((s, idx) => s.classList.toggle('active', idx === i));
             onboardingDots.forEach((d, idx) => d.classList.toggle('active', idx === i));
             onboardingIndex = i;
             $('#onboardingNextBtn').textContent = i === onboardingSlides.length - 1 ? 'Begin Secure Setup' : 'Continue';
         }
-        function finishOnboarding() {
-            $('#onboarding-screen').classList.remove('active');
-            $('#splash-screen').classList.add('active');
-            bootSequence();
-        }
-        $('#onboardingNextBtn').addEventListener('click', () => {
-            if (onboardingIndex < onboardingSlides.length - 1) showOnboardingSlide(onboardingIndex + 1);
-            else finishOnboarding();
-        });
+        function finishOnboarding() { $('#onboarding-screen').classList.remove('active'); $('#splash-screen').classList.add('active'); bootSequence(); }
+        $('#onboardingNextBtn').addEventListener('click', () => { onboardingIndex < onboardingSlides.length - 1 ? showOnboardingSlide(onboardingIndex + 1) : finishOnboarding(); });
         $('#onboardingSkipBtn').addEventListener('click', finishOnboarding);
-        $('#restartOnboardingBtn').addEventListener('click', () => {
-            $$('.app-screen').forEach(s => s.classList.remove('active'));
-            $('#onboarding-screen').classList.add('active');
-            showOnboardingSlide(0);
-        });
+        $('#restartOnboardingBtn').addEventListener('click', () => { $$('.app-screen').forEach(s => s.classList.remove('active')); $('#onboarding-screen').classList.add('active'); showOnboardingSlide(0); });
 
-        // ── Tab Navigation ───────────────────────────────────────────────────
+        // Tab nav
         $$('.tab-item').forEach(tab => {
             tab.addEventListener('click', () => {
                 const target = tab.dataset.tab;
                 if (target === state.currentTab) return;
-                $$('.tab-item').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                $$('.app-screen').forEach(s => s.classList.remove('active'));
-                $(`#${target}-screen`).classList.add('active');
+                $$('.tab-item').forEach(t => t.classList.remove('active')); tab.classList.add('active');
+                $$('.app-screen').forEach(s => s.classList.remove('active')); $(`#${target}-screen`).classList.add('active');
                 state.currentTab = target;
                 if (target === 'vault') refreshLabResults();
                 if (target === 'connect') refreshIntegrations();
             });
         });
 
-        // ── Splash Boot Sequence ─────────────────────────────────────────────
+        // Scroll-edge effect (iOS 26): fade a top scrim as content scrolls under the status bar
+        $$('.app-screen').forEach(screen => {
+            screen.addEventListener('scroll', () => { screen.classList.toggle('scrolled', screen.scrollTop > 8); }, { passive: true });
+        });
+
         async function bootSequence() {
-            const progress = $('#splashProgress');
-            const status = $('#splashStatus');
+            const progress = $('#splashProgress'); const status = $('#splashStatus');
             const steps = [
                 { pct: 10, text: 'Initializing secure enclave…', delay: 300 },
                 { pct: 25, text: 'Generating device keypair…', delay: 350 },
@@ -1021,420 +804,204 @@
                 { pct: 100, text: 'Ready', delay: 250 },
             ];
             for (const step of steps) {
-                progress.style.width = step.pct + '%';
-                status.textContent = step.text;
+                progress.style.width = step.pct + '%'; status.textContent = step.text;
                 if (step.pct === 40) await checkServer();
                 if (step.pct === 55 && state.serverOnline) await getChallenge();
                 if (step.pct === 70 && state.serverOnline && state.challenge) await simulateAttestation();
                 if (step.pct === 85 && state.serverOnline) await fetchPolicyMatrix();
                 await sleep(step.delay);
             }
-
             await sleep(300);
             $('#splash-screen').classList.remove('active');
-            $('#dashboard-screen').classList.add('active');
+            const dash = $('#dashboard-screen');
+            dash.classList.add('active', 'dash-in');
             state.currentTab = 'dashboard';
-
-            setTimeout(() => {
-                const score = 87;
-                $('#healthScore').textContent = score;
-                const circumference = 238.8;
-                $('#healthRing').style.strokeDashoffset = circumference - (circumference * score / 100);
-            }, 200);
-
+            setTimeout(() => { const score = 87; $('#healthScore').textContent = score; const c = 245; $('#healthRing').style.strokeDashoffset = c - (c * score / 100); }, 200);
             $('#deviceIdDisplay').textContent = state.deviceId.substring(0, 8) + '…';
             $('#deviceIdLabel').textContent = state.deviceId.substring(0, 8);
-            if (state.sessionToken) {
-                $('#sessionStatus').textContent = 'active';
-                $('#sessionStatus').style.color = '#30d158';
-                showIsland('Session active', 2400);
-            } else {
-                showIsland('Demo mode', 2400);
-            }
+            if (state.sessionToken) { $('#sessionStatus').textContent = 'active'; $('#sessionStatus').style.color = '#30d158'; showIsland('Session active', 2400); }
+            else { showIsland('Demo mode', 2400); }
         }
 
         async function checkServer() {
             try {
                 const res = await apiGet('/auth/challenge');
                 if (res.status === 200 && res.data.challenge) {
-                    state.serverOnline = true;
-                    state.challenge = res.data.challenge;
-                    $('#serverDot').classList.add('connected');
-                    $('#serverStatusText').textContent = 'connected — mockdatabase';
-                    $('#serverBadge').textContent = 'ONLINE';
-                    $('#serverBadge').className = 'badge good';
-                    $('#dbMode').textContent = 'in-memory mock';
+                    state.serverOnline = true; state.challenge = res.data.challenge;
+                    $('#serverDot').classList.add('connected'); $('#serverStatusText').textContent = 'connected — mockdatabase';
+                    $('#serverBadge').textContent = 'ONLINE'; $('#serverBadge').className = 'badge good'; $('#dbMode').textContent = 'in-memory mock';
                     logConsole('info', '', 'Server online — development mode with MockDatabase', '');
                 }
             } catch (e) {
-                state.serverOnline = false;
-                $('#serverDot').classList.remove('connected');
-                $('#serverStatusText').textContent = 'offline';
-                $('#serverBadge').textContent = 'OFFLINE';
-                $('#serverBadge').className = 'badge bad';
+                state.serverOnline = false; $('#serverDot').classList.remove('connected'); $('#serverStatusText').textContent = 'offline';
+                $('#serverBadge').textContent = 'OFFLINE'; $('#serverBadge').className = 'badge bad';
                 logConsole('error', '', 'Server unreachable at localhost:8443', '');
             }
         }
-
         async function getChallenge() {
-            try {
-                const res = await apiGet('/auth/challenge');
-                if (res.status === 200) {
-                    state.challenge = res.data.challenge;
-                    addActivityLog('success', 'Challenge received', `nonce: ${state.challenge.substring(0, 16)}…`);
-                }
-            } catch (e) { logConsole('error', '', 'Failed to get challenge', ''); }
+            try { const res = await apiGet('/auth/challenge'); if (res.status === 200) { state.challenge = res.data.challenge; addActivityLog('success', 'Challenge received', `nonce: ${state.challenge.substring(0, 16)}…`); } }
+            catch (e) { logConsole('error', '', 'Failed to get challenge', ''); }
         }
-
-        // NOTE: Real attestation requires actual Apple hardware. In dev mode we
-        // demonstrate the API flow and show the expected error, since a browser
-        // cannot produce a real attestation object.
+        // NOTE: real attestation needs Apple hardware; a browser can't forge one, so dev mode shows the expected error.
         async function simulateAttestation() {
             try {
-                const res = await apiPost('/auth/verify-attestation', {
-                    device_id: state.deviceId,
-                    key_id: btoa('simulated-key-id-' + state.deviceId.substring(0, 8)),
-                    attestation: btoa('simulated-attestation-object'),
-                    challenge: state.challenge,
-                });
-                if (res.status === 200) {
-                    state.sessionToken = res.data.token;
-                    addActivityLog('success', 'Device attested & registered', 'Session token issued');
-                } else {
-                    logConsole('warn', '', `Attestation demo: ${res.data?.error?.code || 'expected error in browser'} — real attestation requires iOS hardware`, '');
-                    addActivityLog('warning', 'Attestation (demo mode)', 'Real attestation requires iOS hardware');
-                    state.sessionToken = null;
-                }
+                const res = await apiPost('/auth/verify-attestation', { device_id: state.deviceId, key_id: btoa('simulated-key-id-' + state.deviceId.substring(0, 8)), attestation: btoa('simulated-attestation-object'), challenge: state.challenge });
+                if (res.status === 200) { state.sessionToken = res.data.token; addActivityLog('success', 'Device attested & registered', 'Session token issued'); }
+                else { logConsole('warn', '', `Attestation demo: ${res.data?.error?.code || 'expected error in browser'} — real attestation requires iOS hardware`, ''); addActivityLog('warning', 'Attestation (demo mode)', 'Real attestation requires iOS hardware'); state.sessionToken = null; }
             } catch (e) { logConsole('error', '', `Attestation error: ${e.message}`, ''); }
         }
-
         async function fetchPolicyMatrix() {
-            try {
-                const res = await apiGet('/ai/policy-matrix');
-                if (res.status === 200) addActivityLog('success', 'Policy matrix loaded', `v${res.data.version}`);
-            } catch (e) { logConsole('error', '', 'Failed to fetch policy matrix', ''); }
+            try { const res = await apiGet('/ai/policy-matrix'); if (res.status === 200) addActivityLog('success', 'Policy matrix loaded', `v${res.data.version}`); }
+            catch (e) { logConsole('error', '', 'Failed to fetch policy matrix', ''); }
         }
 
-        // ── AI Chat ──────────────────────────────────────────────────────────
+        // AI chat
         async function sendChatMessage() {
-            const input = $('#chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-            input.value = '';
-            addChatBubble('user', text);
-            const typingId = addTypingIndicator();
+            const input = $('#chatInput'); const text = input.value.trim(); if (!text) return; input.value = '';
+            addChatBubble('user', text); const typingId = addTypingIndicator();
             try {
                 let challenge = null;
-                if (state.serverOnline) {
-                    try {
-                        const challengeRes = await apiGet('/auth/challenge');
-                        if (challengeRes.status === 200) challenge = challengeRes.data.challenge;
-                    } catch (e) {}
-                }
+                if (state.serverOnline) { try { const c = await apiGet('/auth/challenge'); if (c.status === 200) challenge = c.data.challenge; } catch (e) {} }
                 const res = await apiPost('/ai/proxy', { prompt: text, execution_token: challenge || 'demo-token' });
                 removeTypingIndicator(typingId);
-                if (res.status === 200) {
-                    const aiText = res.data.content?.[0]?.text || res.data.content || 'I received your message.';
-                    addChatBubble('ai', aiText);
-                    showIsland('AI response', 1400);
-                } else if (res.status === 401) {
-                    addChatBubble('ai', 'Authentication required. In production this endpoint is protected by Apple App Attest device attestation — this demo shows the full API flow.');
-                } else {
-                    addChatBubble('ai', `Server responded with status ${res.status}: ${res.data?.error?.message || 'unknown error'}`);
-                }
-            } catch (e) {
-                removeTypingIndicator(typingId);
-                addChatBubble('ai', 'Could not reach the server. Make sure the Lifeline backend is running on localhost:8443.');
-                logConsole('error', '', `Chat error: ${e.message}`, '');
-            }
+                if (res.status === 200) { const aiText = res.data.content?.[0]?.text || res.data.content || 'I received your message.'; addChatBubble('ai', aiText); showIsland('AI response', 1400); }
+                else if (res.status === 401) { addChatBubble('ai', 'Authentication required. In production this endpoint is protected by Apple App Attest device attestation — this demo shows the full API flow.'); }
+                else { addChatBubble('ai', `Server responded with status ${res.status}: ${res.data?.error?.message || 'unknown error'}`); }
+            } catch (e) { removeTypingIndicator(typingId); addChatBubble('ai', 'Could not reach the server. Make sure the Lifeline backend is running on localhost:8443.'); logConsole('error', '', `Chat error: ${e.message}`, ''); }
         }
-
         function addChatBubble(role, text) {
-            const container = $('#chatMessages');
-            const bubble = document.createElement('div');
-            bubble.className = `chat-bubble ${role}` + (role === 'ai' ? ' glass' : '');
-            if (role === 'ai') bubble.innerHTML = `<div class="ai-label">LIFELINE AI</div>${escapeHtml(text)}`;
-            else bubble.textContent = text;
-            container.appendChild(bubble);
-            container.scrollTop = container.scrollHeight;
+            const c = $('#chatMessages'); const b = document.createElement('div');
+            b.className = `chat-bubble ${role}` + (role === 'ai' ? ' glass' : '');
+            if (role === 'ai') b.innerHTML = `<div class="ai-label">LIFELINE AI</div>${escapeHtml(text)}`; else b.textContent = text;
+            c.appendChild(b); c.scrollTop = c.scrollHeight;
         }
         function addTypingIndicator() {
-            const container = $('#chatMessages');
-            const id = 'typing-' + Date.now();
-            const el = document.createElement('div');
-            el.className = 'chat-bubble ai glass';
-            el.id = id;
+            const c = $('#chatMessages'); const id = 'typing-' + Date.now(); const el = document.createElement('div');
+            el.className = 'chat-bubble ai glass'; el.id = id;
             el.innerHTML = `<div class="ai-label">LIFELINE AI</div><div class="typing-indicator"><span></span><span></span><span></span></div>`;
-            container.appendChild(el);
-            container.scrollTop = container.scrollHeight;
-            return id;
+            c.appendChild(el); c.scrollTop = c.scrollHeight; return id;
         }
         function removeTypingIndicator(id) { const el = document.getElementById(id); if (el) el.remove(); }
         $('#chatSendBtn').addEventListener('click', sendChatMessage);
         $('#chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
 
-        // ── Vault: Sync ──────────────────────────────────────────────────────
+        // Vault: sync
         $('#syncNowBtn').addEventListener('click', async () => {
-            const btn = $('#syncNowBtn');
-            btn.disabled = true;
+            const btn = $('#syncNowBtn'); btn.disabled = true;
             try {
-                const challengeRes = await apiGet('/auth/challenge');
-                if (challengeRes.status !== 200) throw new Error('Challenge failed');
+                const c = await apiGet('/auth/challenge'); if (c.status !== 200) throw new Error('Challenge failed');
                 addActivityLog('info', 'Sync initiated', 'Requesting challenge nonce…');
-                const documentId = '550e8400-e29b-41d4-a716-446655440000';
-                state.syncVersion++;
+                const documentId = '550e8400-e29b-41d4-a716-446655440000'; state.syncVersion++;
                 const fakeBlob = btoa(JSON.stringify({ encrypted: true, timestamp: new Date().toISOString(), data: 'AES-256-GCM encrypted health journal data' }));
-                const syncRes = await apiPost('/sync/delta', {
-                    document_id: documentId,
-                    device_id: state.deviceId,
-                    version_sequence: state.syncVersion,
-                    encrypted_blob: fakeBlob,
-                    initialization_vector: btoa('random-12b-iv'),
-                    auth_tag: btoa('auth-tag-16bytes'),
-                    client_signature: btoa('ecdsa-p256-signature'),
-                    document_type: 'health_journal',
-                });
-                if (syncRes.status === 200) {
-                    addActivityLog('success', 'Document synced', `version ${state.syncVersion}`);
-                    $('#syncVersion').textContent = `v${state.syncVersion}`;
-                    $('#lastSyncTime').textContent = new Date().toLocaleTimeString();
-                    showIsland('Synced', 1600);
-                } else if (syncRes.status === 401) {
-                    addActivityLog('warning', 'Auth required', 'Sync requires a valid session token from device attestation');
-                } else {
-                    addActivityLog('error', 'Sync failed', syncRes.data?.error?.message || 'unknown error');
-                }
-            } catch (e) {
-                addActivityLog('error', 'Sync error', e.message);
-                logConsole('error', '', `Sync error: ${e.message}`, '');
-            }
+                const r = await apiPost('/sync/delta', { document_id: documentId, device_id: state.deviceId, version_sequence: state.syncVersion, encrypted_blob: fakeBlob, initialization_vector: btoa('random-12b-iv'), auth_tag: btoa('auth-tag-16bytes'), client_signature: btoa('ecdsa-p256-signature'), document_type: 'health_journal' });
+                if (r.status === 200) { addActivityLog('success', 'Document synced', `version ${state.syncVersion}`); $('#syncVersion').textContent = `v${state.syncVersion}`; $('#lastSyncTime').textContent = new Date().toLocaleTimeString(); showIsland('Synced', 1600); }
+                else if (r.status === 401) { addActivityLog('warning', 'Auth required', 'Sync requires a valid session token from device attestation'); }
+                else { addActivityLog('error', 'Sync failed', r.data?.error?.message || 'unknown error'); }
+            } catch (e) { addActivityLog('error', 'Sync error', e.message); logConsole('error', '', `Sync error: ${e.message}`, ''); }
             btn.disabled = false;
         });
 
-        // ── Vault: segmented control ─────────────────────────────────────────
-        $$('.segmented button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                $$('.segmented button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                $$('.vault-pane').forEach(p => p.classList.remove('active'));
-                $(`#vault-${btn.dataset.vault}`).classList.add('active');
-            });
-        });
+        // Vault: segmented control
+        $$('.segmented button').forEach(btn => { btn.addEventListener('click', () => { $$('.segmented button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); $$('.vault-pane').forEach(p => p.classList.remove('active')); $(`#vault-${btn.dataset.vault}`).classList.add('active'); }); });
 
-        // ── Vault: Lab Results ───────────────────────────────────────────────
+        // Vault: lab results
         const LAB_TITLES = ['Lipid Panel', 'Complete Blood Count', 'Metabolic Panel', 'Thyroid Panel (TSH)', 'Vitamin D, 25-Hydroxy'];
         const LAB_LABS = ['Quest Diagnostics', 'LabCorp', 'City Health Partners', 'Mercy Medical Lab'];
         let uploadedLabTitles = {};
-
         $('#uploadLabBtn').addEventListener('click', async () => {
-            const btn = $('#uploadLabBtn');
-            btn.disabled = true;
+            const btn = $('#uploadLabBtn'); btn.disabled = true;
             try {
                 if (!state.serverOnline) { addActivityLog('error', 'Upload failed', 'Server unreachable'); return; }
-                const challengeRes = await apiGet('/auth/challenge');
-                if (challengeRes.status !== 200) throw new Error('Challenge failed');
-
+                const c = await apiGet('/auth/challenge'); if (c.status !== 200) throw new Error('Challenge failed');
                 const documentId = crypto.randomUUID();
                 const title = LAB_TITLES[Math.floor(Math.random() * LAB_TITLES.length)];
                 const lab = LAB_LABS[Math.floor(Math.random() * LAB_LABS.length)];
                 uploadedLabTitles[documentId] = { title, lab };
-
                 const fakeBlob = btoa(JSON.stringify({ encrypted: true, source: 'doctor_upload', timestamp: new Date().toISOString() }));
-                const res = await apiPost('/sync/delta', {
-                    document_id: documentId,
-                    device_id: state.deviceId,
-                    version_sequence: 1,
-                    encrypted_blob: fakeBlob,
-                    initialization_vector: btoa('random-12b-iv2'),
-                    auth_tag: btoa('auth-tag-16bytes2'),
-                    client_signature: btoa('ecdsa-p256-signature2'),
-                    document_type: 'lab_result',
-                });
-
-                if (res.status === 200) {
-                    addActivityLog('success', 'Lab result uploaded', `${title} · encrypted on-device`);
-                    showIsland('Uploaded', 1600);
-                    await refreshLabResults();
-                } else if (res.status === 401) {
-                    addActivityLog('warning', 'Auth required', 'Uploading requires a valid session token from device attestation');
-                } else {
-                    addActivityLog('error', 'Upload failed', res.data?.error?.message || 'unknown error');
-                }
-            } catch (e) {
-                addActivityLog('error', 'Upload error', e.message);
-            }
+                const res = await apiPost('/sync/delta', { document_id: documentId, device_id: state.deviceId, version_sequence: 1, encrypted_blob: fakeBlob, initialization_vector: btoa('random-12b-iv2'), auth_tag: btoa('auth-tag-16bytes2'), client_signature: btoa('ecdsa-p256-signature2'), document_type: 'lab_result' });
+                if (res.status === 200) { addActivityLog('success', 'Lab result uploaded', `${title} · encrypted on-device`); showIsland('Uploaded', 1600); await refreshLabResults(); }
+                else if (res.status === 401) { addActivityLog('warning', 'Auth required', 'Uploading requires a valid session token from device attestation'); }
+                else { addActivityLog('error', 'Upload failed', res.data?.error?.message || 'unknown error'); }
+            } catch (e) { addActivityLog('error', 'Upload error', e.message); }
             btn.disabled = false;
         });
-
         async function refreshLabResults() {
             if (!state.serverOnline) return;
-            const res = await apiGet('/sync/documents/lab_result');
-            if (res.status !== 200) return;
-            const docs = res.data.documents || [];
-            state.labCount = docs.length;
-            $('#settingsLabCount').textContent = `${docs.length} uploaded`;
-
+            const res = await apiGet('/sync/documents/lab_result'); if (res.status !== 200) return;
+            const docs = res.data.documents || []; state.labCount = docs.length; $('#settingsLabCount').textContent = `${docs.length} uploaded`;
             const list = $('#labResultsList');
-            if (docs.length === 0) {
-                list.innerHTML = `<div class="empty-state glass">
-                    <div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div>
-                    <p>No lab results yet.<br>Upload a PDF or photo from your doctor — it's encrypted on-device before it ever leaves your phone.</p>
-                </div>`;
-                return;
-            }
+            if (docs.length === 0) { list.innerHTML = `<div class="empty-state glass"><div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div><p>No lab results yet.<br>Upload a PDF or photo from your doctor — it's encrypted on-device before it ever leaves your phone.</p></div>`; return; }
             list.innerHTML = docs.map(doc => {
                 const meta = uploadedLabTitles[doc.document_id] || { title: 'Lab Result', lab: 'External Lab' };
                 const date = new Date(doc.created_at).toLocaleDateString();
-                return `
-                    <div class="doc-card glass">
-                        <div class="doc-card-header">
-                            <span class="doc-name"><div class="icon-chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div>${escapeHtml(meta.title)}</span>
-                            <span class="badge good">Reviewed</span>
-                        </div>
-                        <div class="doc-meta">
-                            <span>${escapeHtml(meta.lab)} · ${date}</span>
-                            <span>Encrypted · opaque to server</span>
-                        </div>
-                    </div>`;
+                return `<div class="doc-card glass"><div class="doc-card-header"><span class="doc-name"><div class="icon-chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div>${escapeHtml(meta.title)}</span><span class="badge good">Reviewed</span></div><div class="doc-meta"><span>${escapeHtml(meta.lab)} · ${date}</span><span>Encrypted · opaque to server</span></div></div>`;
             }).join('');
         }
 
-        // ── Connect: Integrations ────────────────────────────────────────────
-        const PROVIDER_META = {
-            apple_health: { statusEl: '#appleHealthStatus', toggleEl: '#appleHealthToggle' },
-            google_health: { statusEl: '#googleHealthStatus', toggleEl: '#googleHealthToggle' },
-            whoop: { statusEl: '#whoopStatus', toggleEl: '#whoopToggle' },
-        };
-
+        // Connect: integrations
+        const PROVIDER_META = { apple_health: { statusEl: '#appleHealthStatus', toggleEl: '#appleHealthToggle' }, google_health: { statusEl: '#googleHealthStatus', toggleEl: '#googleHealthToggle' }, whoop: { statusEl: '#whoopStatus', toggleEl: '#whoopToggle' } };
         function renderIntegrations() {
-            let connectedCount = 0;
+            let n = 0;
             for (const [provider, meta] of Object.entries(PROVIDER_META)) {
-                const conn = state.connections[provider];
-                const statusEl = $(meta.statusEl);
-                const toggleEl = $(meta.toggleEl);
-                if (conn && conn.status === 'connected') {
-                    connectedCount++;
-                    statusEl.textContent = conn.last_synced_at ? `synced ${new Date(conn.last_synced_at).toLocaleTimeString()}` : 'connected';
-                    toggleEl.textContent = 'Disconnect';
-                    toggleEl.classList.add('connected');
-                } else {
-                    statusEl.textContent = 'not connected';
-                    toggleEl.textContent = 'Connect';
-                    toggleEl.classList.remove('connected');
-                }
+                const conn = state.connections[provider]; const s = $(meta.statusEl); const t = $(meta.toggleEl);
+                if (conn && conn.status === 'connected') { n++; s.textContent = conn.last_synced_at ? `synced ${new Date(conn.last_synced_at).toLocaleTimeString()}` : 'connected'; t.textContent = 'Disconnect'; t.classList.add('connected'); }
+                else { s.textContent = 'not connected'; t.textContent = 'Connect'; t.classList.remove('connected'); }
             }
-            $('#connectedCount').textContent = `${connectedCount} connected`;
+            $('#connectedCount').textContent = `${n} connected`;
             $('#whoopMetricsPanel').style.display = (state.connections.whoop?.status === 'connected') ? 'block' : 'none';
         }
-
         async function refreshIntegrations() {
             if (!state.serverOnline || !state.sessionToken) { renderIntegrations(); return; }
             const res = await apiGet('/integrations');
-            if (res.status === 200) {
-                state.connections = {};
-                (res.data.connections || []).forEach(c => { state.connections[c.provider] = c; });
-                renderIntegrations();
-                if (state.connections.whoop?.status === 'connected') fetchWhoopMetrics();
-            }
+            if (res.status === 200) { state.connections = {}; (res.data.connections || []).forEach(c => { state.connections[c.provider] = c; }); renderIntegrations(); if (state.connections.whoop?.status === 'connected') fetchWhoopMetrics(); }
         }
-
         async function fetchWhoopMetrics() {
             const res = await apiGet('/integrations/whoop/metrics');
-            if (res.status === 200) {
-                $('#whoopRecovery').textContent = res.data.recovery_score ?? '—';
-                $('#whoopStrain').textContent = res.data.strain ?? '—';
-                $('#whoopHrv').textContent = res.data.hrv_ms ?? '—';
-            }
+            if (res.status === 200) { $('#whoopRecovery').textContent = res.data.recovery_score ?? '—'; $('#whoopStrain').textContent = res.data.strain ?? '—'; $('#whoopHrv').textContent = res.data.hrv_ms ?? '—'; }
         }
-
-        async function toggleOnDeviceProvider(provider, toggleEl) {
-            const connected = state.connections[provider]?.status === 'connected';
-            toggleEl.disabled = true;
-            if (connected) {
-                const res = await apiDelete(`/integrations/${provider}`);
-                if (res.status === 200) addActivityLog('info', 'Disconnected', provider.replace('_', ' '));
-            } else {
-                const res = await apiPost(`/integrations/${provider}/connect`, { authorized: true });
-                if (res.status === 200) {
-                    addActivityLog('success', 'Connected', provider.replace('_', ' '));
-                    showIsland('Connected', 1600);
-                } else {
-                    addActivityLog('error', 'Connect failed', res.data?.error?.message || 'unknown error');
+        async function toggleOnDeviceProvider(provider, t) {
+            const connected = state.connections[provider]?.status === 'connected'; t.disabled = true;
+            if (connected) { const r = await apiDelete(`/integrations/${provider}`); if (r.status === 200) addActivityLog('info', 'Disconnected', provider.replace('_', ' ')); }
+            else { const r = await apiPost(`/integrations/${provider}/connect`, { authorized: true }); if (r.status === 200) { addActivityLog('success', 'Connected', provider.replace('_', ' ')); showIsland('Connected', 1600); } else { addActivityLog('error', 'Connect failed', r.data?.error?.message || 'unknown error'); } }
+            t.disabled = false; await refreshIntegrations();
+        }
+        async function toggleWhoop(t) {
+            const connected = state.connections.whoop?.status === 'connected'; t.disabled = true;
+            if (connected) { const r = await apiDelete('/integrations/whoop'); if (r.status === 200) addActivityLog('info', 'Disconnected', 'whoop'); }
+            else {
+                const a = await apiGet('/integrations/whoop/authorize');
+                if (a.status === 200) {
+                    // Real app opens authorize_url in ASWebAuthenticationSession; Whoop redirects to our callback.
+                    // A sandboxed demo can't complete a real consent screen, so we drive the redirect directly.
+                    const url = new URL(a.data.authorize_url); const cbPath = `/integrations/whoop/callback${url.search}`;
+                    logConsole('info', '', `Simulating Whoop consent redirect → ${cbPath}`, '');
+                    const cb = await apiGet(cbPath);
+                    if (cb.status === 200) { addActivityLog('success', 'Connected', 'whoop (mock OAuth2)'); showIsland('Connected', 1600); }
+                    else { addActivityLog('error', 'Whoop connect failed', cb.data?.error?.message || 'unknown error'); }
                 }
             }
-            toggleEl.disabled = false;
-            await refreshIntegrations();
+            t.disabled = false; await refreshIntegrations();
         }
-
-        async function toggleWhoop(toggleEl) {
-            const connected = state.connections.whoop?.status === 'connected';
-            toggleEl.disabled = true;
-            if (connected) {
-                const res = await apiDelete('/integrations/whoop');
-                if (res.status === 200) addActivityLog('info', 'Disconnected', 'whoop');
-            } else {
-                const authRes = await apiGet('/integrations/whoop/authorize');
-                if (authRes.status === 200) {
-                    // In a real app this opens `authorize_url` in a browser/ASWebAuthenticationSession
-                    // and Whoop redirects back to our callback. Here we simulate that redirect directly
-                    // since a sandboxed demo can't complete a real third-party OAuth consent screen.
-                    const url = new URL(authRes.data.authorize_url);
-                    const callbackPath = `/integrations/whoop/callback${url.search}`;
-                    logConsole('info', '', `Simulating Whoop consent redirect → ${callbackPath}`, '');
-                    const cbRes = await apiGet(callbackPath);
-                    if (cbRes.status === 200) {
-                        addActivityLog('success', 'Connected', 'whoop (mock OAuth2)');
-                        showIsland('Connected', 1600);
-                    } else {
-                        addActivityLog('error', 'Whoop connect failed', cbRes.data?.error?.message || 'unknown error');
-                    }
-                }
-            }
-            toggleEl.disabled = false;
-            await refreshIntegrations();
-        }
-
         $('#appleHealthToggle').addEventListener('click', (e) => toggleOnDeviceProvider('apple_health', e.currentTarget));
         $('#googleHealthToggle').addEventListener('click', (e) => toggleOnDeviceProvider('google_health', e.currentTarget));
         $('#whoopToggle').addEventListener('click', (e) => toggleWhoop(e.currentTarget));
 
-        // ── Dashboard: Daily challenges ──────────────────────────────────────
-        function updateChallengeProgress() {
-            const rows = $$('.challenge-row');
-            const done = $$('.challenge-check.done').length;
-            $('#challengeProgress').textContent = `${done}/${rows.length}`;
-        }
-        $$('.challenge-check').forEach(check => {
-            check.addEventListener('click', () => {
-                check.classList.toggle('done');
-                check.nextElementSibling.classList.toggle('done');
-                updateChallengeProgress();
-                if (check.classList.contains('done')) showIsland('+' + check.parentElement.dataset.pts + ' pts', 1200);
-            });
-        });
+        // Dashboard challenges
+        function updateChallengeProgress() { $('#challengeProgress').textContent = `${$$('.challenge-check.done').length}/${$$('.challenge-row').length}`; }
+        $$('.challenge-check').forEach(check => { check.addEventListener('click', () => { check.classList.toggle('done'); check.nextElementSibling.classList.toggle('done'); updateChallengeProgress(); if (check.classList.contains('done')) showIsland('+' + check.parentElement.dataset.pts + ' pts', 1200); }); });
 
-        // ── You: toggles ─────────────────────────────────────────────────────
+        // Toggles
         $$('.toggle').forEach(t => t.addEventListener('click', () => t.classList.toggle('on')));
 
-        // ── Activity Log ─────────────────────────────────────────────────────
         function addActivityLog(type, title, detail) {
-            const container = $('#activityLog');
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            const dotClass = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
-            entry.innerHTML = `
-                <div class="log-dot ${dotClass}"></div>
-                <div class="log-text"><strong>${escapeHtml(title)}</strong><span class="time">${escapeHtml(detail)} · ${new Date().toLocaleTimeString()}</span></div>
-            `;
-            container.insertBefore(entry, container.firstChild);
-            while (container.children.length > 20) container.removeChild(container.lastChild);
+            const c = $('#activityLog'); const e = document.createElement('div'); e.className = 'log-entry';
+            const dot = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
+            e.innerHTML = `<div class="log-dot ${dot}"></div><div class="log-text"><strong>${escapeHtml(title)}</strong><span class="time">${escapeHtml(detail)} · ${new Date().toLocaleTimeString()}</span></div>`;
+            c.insertBefore(e, c.firstChild); while (c.children.length > 20) c.removeChild(c.lastChild);
         }
-
-        // ── Utilities ────────────────────────────────────────────────────────
         function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-        function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+        function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
-        // ── WebSocket Connection ─────────────────────────────────────────────
         function connectWebSocket() {
             if (!state.sessionToken) { logConsole('warn', '', 'WebSocket: skipping — no session token (requires real attestation)', ''); return; }
             try {
@@ -1446,12 +1013,8 @@
             } catch (e) { logConsole('error', '', `WebSocket error: ${e.message}`, ''); }
         }
 
-        // ── Console Tab Switching ────────────────────────────────────────────
-        $$('.console-tab').forEach(tab => {
-            tab.addEventListener('click', () => { $$('.console-tab').forEach(t => t.classList.remove('active')); tab.classList.add('active'); });
-        });
+        $$('.console-tab').forEach(tab => { tab.addEventListener('click', () => { $$('.console-tab').forEach(t => t.classList.remove('active')); tab.classList.add('active'); }); });
 
-        // ── Boot ─────────────────────────────────────────────────────────────
         logConsole('info', '', 'Lifeline simulator starting…', '');
         logConsole('info', '', `Device ID: ${state.deviceId}`, '');
     })();

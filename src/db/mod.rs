@@ -299,7 +299,20 @@ impl Database for MockDatabase {
     }
 
     async fn insert_device(&self, device: &AttestedDevice) -> Result<(), AppError> {
+        // Mirror the Postgres registration semantics: reject a re-registration
+        // that would overwrite an existing device's public key (account
+        // takeover), and keep same-key re-registration idempotent without
+        // resetting the monotonic sign counter. See devices::insert_device.
         let mut guard = self.devices.lock().unwrap();
+        if let Some(existing) = guard.get(&device.device_id) {
+            if existing.public_key_der != device.public_key_der {
+                return Err(AppError::Conflict(
+                    "device_id is already registered to a different key".to_owned(),
+                ));
+            }
+            // Same key — idempotent, preserve the existing counter.
+            return Ok(());
+        }
         guard.insert(device.device_id, device.clone());
         Ok(())
     }

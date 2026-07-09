@@ -596,3 +596,67 @@ async fn test_integrations_and_lab_results_flow() {
     let empty_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(empty_json["count"], 0);
 }
+
+#[tokio::test]
+async fn test_device_registration_cannot_be_hijacked() {
+    // Regression test: device_id is a client-chosen UUID that is NOT bound to
+    // the attested key. Registration must not let a second party overwrite the
+    // public key of an already-registered device_id (account takeover), while
+    // still allowing idempotent same-key re-registration without resetting the
+    // monotonic sign counter.
+    let (_state, db) = create_test_state();
+
+    let device_id = Uuid::new_v4();
+    let key_a = vec![0x04u8; 65];
+    let key_b = vec![0x05u8; 65];
+
+    // First registration succeeds.
+    db.insert_device(&AttestedDevice {
+        device_id,
+        public_key_der: key_a.clone(),
+        sign_counter: 0,
+        registered_at: chrono::Utc::now(),
+    })
+    .await
+    .unwrap();
+
+    // Advance the counter as a legitimate assertion would.
+    db.update_counter(device_id, 7).await.unwrap();
+
+    // Re-registration with the SAME key is idempotent and must preserve the
+    // advanced counter (resetting it would reopen the assertion-replay window).
+    db.insert_device(&AttestedDevice {
+        device_id,
+        public_key_der: key_a.clone(),
+        sign_counter: 0,
+        registered_at: chrono::Utc::now(),
+    })
+    .await
+    .unwrap();
+    let device = db.get_device(device_id).await.unwrap().unwrap();
+    assert_eq!(
+        device.sign_counter, 7,
+        "same-key re-registration must not reset the sign counter"
+    );
+    assert_eq!(device.public_key_der, key_a);
+
+    // Re-registration with a DIFFERENT key must be rejected, not silently
+    // overwrite the victim's key.
+    let hijack = db
+        .insert_device(&AttestedDevice {
+            device_id,
+            public_key_der: key_b,
+            sign_counter: 0,
+            registered_at: chrono::Utc::now(),
+        })
+        .await;
+    assert!(
+        hijack.is_err(),
+        "must not allow overwriting an existing device's key"
+    );
+
+    // The original key is intact.
+    let device = db.get_device(device_id).await.unwrap().unwrap();
+    assert_eq!(device.public_key_der, key_a);
+    assert_eq!(device.sign_counter, 7);
+}
