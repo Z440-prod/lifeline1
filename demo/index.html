@@ -6,509 +6,437 @@
     <title>Lifeline — Private Health Companion</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         /* ═══════════════════════════════════════════════════════════════════════
            RESET & TOKENS
            ═══════════════════════════════════════════════════════════════════════
-           Palette: warm espresso canvas + brass gold / deep emerald / wine —
-           a "private wellness club" register rather than a clinical or techy one.
-           Status hues (good/warning/danger) are kept deliberately distinct from
-           the decorative gold/wine so meaning is never ambiguous; see the
-           dataviz color-formula validation this palette was checked against.
+           "Liquid Glass": translucent frosted-glass surfaces over a vivid,
+           soft color-mesh backdrop — Apple's current material language.
+           Stage (outside the device) stays dark so the glass product surface
+           reads as the hero; the product itself is light, airy, colorful.
            ═══════════════════════════════════════════════════════════════════════ */
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --canvas: #16110f;
-            --surface: #1f1815;
-            --surface-2: #29211d;
-            --surface-3: #332822;
-            --hairline: rgba(244,231,211,0.12);
-            --hairline-strong: rgba(244,231,211,0.24);
-            --ink: #f4e7d3;
-            --ink-dim: rgba(244,231,211,0.66);
-            --ink-faint: rgba(244,231,211,0.38);
-            --gold: #c9a24e;
-            --gold-soft: rgba(201,162,78,0.14);
-            --emerald: #189167;
-            --emerald-soft: rgba(24,145,103,0.16);
-            --wine: #a8425b;
-            --wine-soft: rgba(168,66,91,0.16);
-            --warning: #c2662a;
-            --warning-soft: rgba(194,102,42,0.16);
-            --danger: #d0483e;
-            --danger-soft: rgba(208,72,62,0.16);
-            --radius-sm: 6px;
-            --radius-md: 12px;
-            --radius-lg: 22px;
-            --font-display: 'Fraunces', Georgia, serif;
-            --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            /* Stage (dev chrome) */
+            --stage: #08090c;
+            --stage-panel: rgba(255,255,255,0.06);
+            --stage-border: rgba(255,255,255,0.1);
+            --stage-ink: rgba(255,255,255,0.92);
+            --stage-ink-dim: rgba(255,255,255,0.5);
+            --stage-ink-faint: rgba(255,255,255,0.3);
+
+            /* Product surface (glass) */
+            --glass-hi: rgba(255,255,255,0.62);
+            --glass-lo: rgba(255,255,255,0.38);
+            --glass-border: rgba(255,255,255,0.7);
+            --glass-tint: rgba(255,255,255,0.5);
+            --ink: #17181c;
+            --ink-dim: rgba(23,24,28,0.62);
+            --ink-faint: rgba(23,24,28,0.4);
+
+            /* Apple Health category accents */
+            --red-1: #ff5e7a; --red-2: #ff2d55;
+            --orange-1: #ffb340; --orange-2: #ff9500;
+            --green-1: #4ee08a; --green-2: #30d158;
+            --indigo-1: #b06cf5; --indigo-2: #7a3ff0;
+            --blue-1: #4db4ff; --blue-2: #0a84ff;
+            --pink-1: #ff6bb3; --pink-2: #ff2d92;
+
+            --radius-sm: 14px;
+            --radius-md: 22px;
+            --radius-lg: 30px;
+            --radius-pill: 999px;
+            --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
             --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
             --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-            --phone-width: 384px;
-            --phone-height: 812px;
+            --phone-width: 388px;
+            --phone-height: 818px;
         }
 
-        html { color-scheme: dark; }
+        html { color-scheme: light; }
 
         body {
             font-family: var(--font-ui);
-            background: var(--canvas);
-            color: var(--ink);
+            background: var(--stage);
+            color: var(--stage-ink);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             -webkit-font-smoothing: antialiased;
-            position: relative;
         }
 
-        ::selection { background: var(--gold-soft); color: var(--ink); }
         button, input { font-family: inherit; }
         .tnum { font-variant-numeric: tabular-nums; }
-
-        /* ── Abstract-expressionist canvas wash ─────────────────────────────────
-           Three irregular, hand-drawn-feeling brush blobs (gold / emerald /
-           wine) blended over the espresso canvas, plus a fine grain overlay.
-           Used once, fixed to the page — not repeated per-card. */
-        .canvas-wash {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            overflow: hidden;
-        }
-        .canvas-wash svg { position: absolute; }
-        .grain-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 1;
-            pointer-events: none;
-            opacity: 0.05;
-            mix-blend-mode: overlay;
-        }
+        ::selection { background: rgba(255,45,85,0.25); }
 
         /* ═══════════════════════════════════════════════════════════════════════
-           PAGE HEADER
+           PAGE HEADER (stage chrome)
            ═══════════════════════════════════════════════════════════════════════ */
         .page-header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            width: 100%;
-            padding: 22px 40px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(22,17,15,0.82);
-            backdrop-filter: blur(14px);
-            border-bottom: 1px solid var(--hairline);
+            position: sticky; top: 0; z-index: 100; width: 100%;
+            padding: 20px 40px; display: flex; align-items: center; justify-content: space-between;
+            background: rgba(8,9,12,0.75); backdrop-filter: blur(20px) saturate(160%);
+            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            border-bottom: 1px solid var(--stage-border);
         }
-
-        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand { display: flex; align-items: center; gap: 11px; }
         .brand .mark {
-            width: 30px; height: 30px;
-            border-radius: 8px;
-            background: linear-gradient(155deg, var(--gold), #8f6f2e);
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
+            width: 30px; height: 30px; border-radius: 9px;
+            background: linear-gradient(155deg, var(--red-1), var(--red-2));
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            box-shadow: 0 4px 14px -2px rgba(255,45,85,0.55);
         }
-        .brand .mark svg { width: 16px; height: 16px; color: #16110f; }
-        .brand .wordmark {
-            font-family: var(--font-display);
-            font-size: 19px;
-            font-weight: 600;
-            letter-spacing: 0.01em;
-        }
-        .brand .tagline {
-            font-size: 11px;
-            font-weight: 500;
-            letter-spacing: 1px;
-            color: var(--ink-faint);
-            margin-left: 10px;
-            text-transform: uppercase;
-            display: none;
-        }
+        .brand .mark svg { width: 16px; height: 16px; color: #fff; }
+        .brand .wordmark { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+        .brand .tagline { font-size: 11px; font-weight: 500; letter-spacing: 0.8px; color: var(--stage-ink-faint); margin-left: 8px; text-transform: uppercase; display: none; }
         @media (min-width: 760px) { .brand .tagline { display: inline; } }
-
-        .server-status {
-            display: flex; align-items: center; gap: 8px;
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--ink-faint);
-        }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); flex-shrink: 0; }
-        .status-dot.connected { background: var(--emerald); animation: pulse-dot 2.6s ease-in-out infinite; }
+        .server-status { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--stage-ink-dim); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff453a; }
+        .status-dot.connected { background: #30d158; box-shadow: 0 0 8px rgba(48,209,88,0.7); animation: pulse-dot 2.6s ease-in-out infinite; }
         @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           STAGE BACKDROP — soft color mesh visible around/behind the device
+           ═══════════════════════════════════════════════════════════════════════ */
+        .stage-mesh {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+            background: var(--stage);
+        }
+        .stage-mesh::before, .stage-mesh::after {
+            content: ''; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.35;
+        }
+        .stage-mesh::before { width: 640px; height: 640px; top: -220px; left: -160px; background: radial-gradient(circle, var(--red-2), transparent 70%); }
+        .stage-mesh::after { width: 620px; height: 620px; bottom: -240px; right: -140px; background: radial-gradient(circle, var(--blue-2), transparent 70%); }
 
         /* ═══════════════════════════════════════════════════════════════════════
            MAIN LAYOUT
            ═══════════════════════════════════════════════════════════════════════ */
         .simulator-container {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            align-items: flex-start;
-            gap: 26px;
-            padding: 40px;
-            width: 100%;
-            max-width: 1200px;
-            justify-content: center;
+            position: relative; z-index: 2; display: flex; align-items: flex-start; gap: 26px;
+            padding: 44px 40px; width: 100%; max-width: 1220px; justify-content: center;
         }
-
         .device-column { display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
-        .device-label {
-            display: flex; align-items: center; justify-content: space-between;
-            font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint);
-            letter-spacing: 0.4px; padding: 0 4px;
-        }
+        .device-label { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 10.5px; color: var(--stage-ink-faint); letter-spacing: 0.4px; padding: 0 4px; }
 
+        /* ── Device frame ─────────────────────────────────────────────────── */
         .iphone-frame {
-            width: calc(var(--phone-width) + 16px);
-            height: calc(var(--phone-height) + 16px);
-            background: linear-gradient(160deg, #3a2f27, #171210);
-            border: 1px solid var(--hairline-strong);
-            border-radius: 46px;
-            padding: 8px;
-            position: relative;
-            box-shadow: 0 30px 70px -20px rgba(0,0,0,0.7);
+            width: calc(var(--phone-width) + 16px); height: calc(var(--phone-height) + 16px);
+            background: linear-gradient(160deg, #2b2d33, #0d0e11);
+            border-radius: 48px; padding: 8px; position: relative;
+            box-shadow: 0 40px 90px -24px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.06);
         }
         .iphone-screen {
             width: var(--phone-width); height: var(--phone-height);
-            background: var(--canvas);
-            border-radius: 40px;
-            overflow: hidden;
-            position: relative;
-            border: 1px solid rgba(0,0,0,0.4);
+            background: #eef0f4;
+            border-radius: 42px; overflow: hidden; position: relative;
         }
+
+        /* Color-mesh backdrop INSIDE the phone — this is what the glass refracts */
+        .product-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+        .product-mesh span { position: absolute; border-radius: 50%; filter: blur(60px); }
+        .product-mesh .m1 { width: 340px; height: 340px; top: -120px; left: -100px; background: radial-gradient(circle, var(--red-1), transparent 72%); opacity: 0.65; }
+        .product-mesh .m2 { width: 300px; height: 300px; top: -60px; right: -120px; background: radial-gradient(circle, var(--blue-1), transparent 72%); opacity: 0.55; }
+        .product-mesh .m3 { width: 320px; height: 320px; bottom: 140px; right: -110px; background: radial-gradient(circle, var(--green-1), transparent 72%); opacity: 0.5; }
+        .product-mesh .m4 { width: 300px; height: 300px; bottom: -100px; left: -90px; background: radial-gradient(circle, var(--indigo-1), transparent 72%); opacity: 0.5; }
+        .product-mesh .m5 { width: 260px; height: 260px; bottom: 260px; left: 40px; background: radial-gradient(circle, var(--orange-1), transparent 72%); opacity: 0.4; }
 
         .dynamic-island {
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            width: 108px; height: 30px; background: #000; border-radius: 16px;
-            z-index: 50; display: flex; align-items: center; justify-content: center;
+            width: 108px; height: 30px; background: #000; border-radius: 16px; z-index: 60;
+            display: flex; align-items: center; justify-content: center;
             transition: width 0.35s var(--ease), height 0.35s var(--ease);
         }
         .dynamic-island.active { width: 210px; height: 36px; }
-        .dynamic-island .island-content {
-            display: none; align-items: center; gap: 7px;
-            font-family: var(--font-mono); font-size: 10.5px; color: var(--gold); font-weight: 600;
-        }
+        .dynamic-island .island-content { display: none; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 10.5px; color: #ff5e7a; font-weight: 600; }
         .dynamic-island.active .island-content { display: flex; }
         .dynamic-island svg { width: 12px; height: 12px; flex-shrink: 0; }
 
         .ios-status-bar {
-            position: absolute; top: 0; left: 0; right: 0; height: 48px;
-            display: flex; align-items: flex-end; justify-content: space-between;
-            padding: 0 26px 6px; z-index: 40;
-            font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink);
+            position: absolute; top: 0; left: 0; right: 0; height: 48px; z-index: 55;
+            display: flex; align-items: flex-end; justify-content: space-between; padding: 0 26px 6px;
+            font-family: var(--font-ui); font-size: 15px; font-weight: 600; color: var(--ink);
         }
-        .ios-status-bar .icons { display: flex; gap: 6px; align-items: center; color: var(--ink-dim); }
+        .ios-status-bar .icons { display: flex; gap: 6px; align-items: center; color: var(--ink); }
         .ios-status-bar svg { width: 15px; height: 15px; }
 
-        .home-indicator {
-            position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%);
-            width: 120px; height: 4px; background: rgba(244,231,211,0.28); border-radius: 2px; z-index: 50;
-        }
+        .home-indicator { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; background: rgba(0,0,0,0.28); border-radius: 2px; z-index: 60; }
 
         /* ═══════════════════════════════════════════════════════════════════════
            APP SCREENS
            ═══════════════════════════════════════════════════════════════════════ */
-        .app-screen {
-            position: absolute; inset: 0;
-            background: var(--canvas);
-            display: none; flex-direction: column;
-            overflow-y: auto; overflow-x: hidden;
-            scrollbar-width: none;
-        }
+        .app-screen { position: absolute; inset: 0; display: none; flex-direction: column; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; z-index: 1; }
         .app-screen::-webkit-scrollbar { display: none; }
         .app-screen.active { display: flex; }
 
-        /* ── Onboarding ──────────────────────────────────────────────────────── */
-        #onboarding-screen { align-items: center; justify-content: space-between; padding: 64px 28px 40px; text-align: center; }
-        .onboarding-hero { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; }
-        .onboarding-blob { position: absolute; top: -40px; width: 260px; height: 260px; z-index: 0; }
-        .onboarding-icon {
-            position: relative; z-index: 1;
-            width: 88px; height: 88px; border-radius: 50%;
-            background: var(--surface); border: 1px solid var(--hairline-strong);
-            display: flex; align-items: center; justify-content: center; margin-bottom: 28px;
+        /* ── Glass primitives ─────────────────────────────────────────────── */
+        .glass {
+            background: linear-gradient(165deg, var(--glass-hi), var(--glass-lo));
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            box-shadow: 0 16px 40px -14px rgba(20,20,40,0.18), inset 0 1px 0 rgba(255,255,255,0.7);
         }
-        .onboarding-icon svg { width: 38px; height: 38px; color: var(--gold); }
+        .icon-chip {
+            width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px -2px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.35);
+        }
+        .icon-chip svg { width: 18px; height: 18px; color: #fff; }
+        .icon-chip.red { background: linear-gradient(155deg, var(--red-1), var(--red-2)); }
+        .icon-chip.orange { background: linear-gradient(155deg, var(--orange-1), var(--orange-2)); }
+        .icon-chip.green { background: linear-gradient(155deg, var(--green-1), var(--green-2)); }
+        .icon-chip.indigo { background: linear-gradient(155deg, var(--indigo-1), var(--indigo-2)); }
+        .icon-chip.blue { background: linear-gradient(155deg, var(--blue-1), var(--blue-2)); }
+        .icon-chip.pink { background: linear-gradient(155deg, var(--pink-1), var(--pink-2)); }
+        .icon-chip.gray { background: linear-gradient(155deg, #9aa0ac, #6b7280); }
+
+        .btn-primary {
+            width: 100%; padding: 16px; border-radius: var(--radius-pill); border: none;
+            background: linear-gradient(135deg, var(--red-1), var(--red-2));
+            color: #fff; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            box-shadow: 0 14px 30px -10px rgba(255,45,85,0.55);
+            transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 18px 36px -10px rgba(255,45,85,0.65); }
+        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-glass {
+            width: 100%; padding: 14px; border-radius: var(--radius-pill);
+            background: rgba(255,255,255,0.5); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.7); color: var(--ink);
+            font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer;
+            transition: background 0.15s var(--ease);
+        }
+        .btn-glass:hover { background: rgba(255,255,255,0.7); }
+
+        /* ── Onboarding ──────────────────────────────────────────────────────── */
+        #onboarding-screen { align-items: center; justify-content: space-between; padding: 68px 26px 36px; text-align: center; }
+        .onboarding-icon {
+            width: 92px; height: 92px; border-radius: 26px; display: flex; align-items: center; justify-content: center; margin-bottom: 26px;
+            box-shadow: 0 20px 40px -14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+        .onboarding-icon svg { width: 42px; height: 42px; color: #fff; }
         .onboarding-slide { display: none; flex-direction: column; align-items: center; }
         .onboarding-slide.active { display: flex; }
-        .onboarding-title {
-            font-family: var(--font-display); font-size: 27px; font-weight: 600;
-            line-height: 1.25; margin-bottom: 14px; position: relative; z-index: 1;
-        }
-        .onboarding-title em { color: var(--gold); font-style: normal; }
-        .onboarding-copy {
-            font-size: 14px; color: var(--ink-dim); line-height: 1.65; max-width: 280px;
-            position: relative; z-index: 1;
-        }
-        .onboarding-dots { display: flex; gap: 7px; margin: 32px 0 0; }
-        .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--hairline-strong); transition: all 0.3s var(--ease); }
-        .onboarding-dots span.active { background: var(--gold); width: 20px; border-radius: 3px; }
-        .onboarding-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 36px; }
-
-        .btn-gold {
-            width: 100%; padding: 15px; border-radius: var(--radius-sm); border: none;
-            background: linear-gradient(155deg, var(--gold), #96762f); color: #17120e;
-            font-size: 14.5px; font-weight: 700; font-family: inherit; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            transition: transform 0.15s var(--ease), opacity 0.15s var(--ease);
-        }
-        .btn-gold:hover { transform: translateY(-1px); opacity: 0.94; }
-        .btn-gold:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-        .btn-ghost {
-            width: 100%; padding: 13px; border-radius: var(--radius-sm);
-            background: transparent; border: 1px solid var(--hairline-strong); color: var(--ink-dim);
-            font-size: 13.5px; font-weight: 600; font-family: inherit; cursor: pointer;
-            transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
-        }
-        .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+        .onboarding-title { font-size: 25px; font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; margin-bottom: 12px; color: var(--ink); }
+        .onboarding-title em { font-style: normal; background: linear-gradient(135deg, var(--red-2), var(--pink-2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .onboarding-copy { font-size: 14.5px; color: var(--ink-dim); line-height: 1.6; max-width: 280px; }
+        .onboarding-dots { display: flex; gap: 7px; margin: 30px 0 0; justify-content: center; }
+        .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(23,24,28,0.16); transition: all 0.3s var(--ease); }
+        .onboarding-dots span.active { background: var(--red-2); width: 20px; border-radius: 3px; }
+        .onboarding-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 30px; }
 
         /* ── Splash ──────────────────────────────────────────────────────────── */
         #splash-screen { align-items: center; justify-content: center; }
-        .splash-mark {
-            width: 60px; height: 60px; border-radius: 16px;
-            background: linear-gradient(155deg, var(--gold), #8f6f2e);
-            display: flex; align-items: center; justify-content: center; margin-bottom: 24px;
-        }
-        .splash-mark svg { width: 28px; height: 28px; color: #16110f; }
-        .splash-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; letter-spacing: 0.02em; margin-bottom: 6px; }
+        .splash-mark { width: 76px; height: 76px; border-radius: 22px; background: linear-gradient(155deg, var(--red-1), var(--red-2)); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; box-shadow: 0 20px 44px -12px rgba(255,45,85,0.5); }
+        .splash-mark svg { width: 36px; height: 36px; color: #fff; }
+        .splash-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; color: var(--ink); }
         .splash-subtitle { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: 1px; text-transform: uppercase; }
-        .splash-progress { margin-top: 40px; width: 180px; height: 2px; background: var(--hairline); overflow: hidden; border-radius: 2px; }
-        .splash-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--gold), var(--emerald)); transition: width 0.25s var(--ease); }
+        .splash-progress { margin-top: 36px; width: 180px; height: 4px; background: rgba(23,24,28,0.1); overflow: hidden; border-radius: 2px; }
+        .splash-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--red-2), var(--pink-2)); transition: width 0.25s var(--ease); }
         .splash-status-text { margin-top: 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); min-height: 16px; }
 
         /* ── Shared screen chrome ────────────────────────────────────────────── */
-        .screen-pad { padding: 56px 18px 100px; }
-        .screen-hero { position: relative; margin: -56px -18px 20px; padding: 66px 18px 26px; overflow: hidden; }
-        .screen-hero .blob { position: absolute; z-index: 0; }
-        .screen-hero > * { position: relative; z-index: 1; }
-        .eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
-        .screen-title { font-family: var(--font-display); font-size: 25px; font-weight: 600; letter-spacing: -0.01em; }
+        .screen-pad { padding: 58px 16px 106px; position: relative; z-index: 1; }
+        .eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px; }
+        .screen-title { font-size: 27px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
 
-        .panel {
-            background: var(--surface); border: 1px solid var(--hairline);
-            border-radius: var(--radius-md); padding: 18px; margin-bottom: 12px;
-        }
+        .panel { padding: 18px; margin-bottom: 12px; }
         .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-        .panel-header h4 { font-size: 10.5px; font-weight: 600; letter-spacing: 1.1px; color: var(--ink-dim); text-transform: uppercase; }
+        .panel-header h4 { font-size: 12px; font-weight: 700; color: var(--ink); }
         .panel-header .meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
 
         /* ── Dashboard ───────────────────────────────────────────────────────── */
-        .dashboard-greeting { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 6px; }
-
-        .score-row { display: flex; align-items: center; gap: 20px; }
-        .ring-container { position: relative; width: 92px; height: 92px; flex-shrink: 0; }
-        .ring-container svg { transform: rotate(-90deg); width: 92px; height: 92px; }
+        .dashboard-greeting { font-size: 14px; font-weight: 600; color: var(--ink-dim); margin-bottom: 2px; }
+        .score-row { display: flex; align-items: center; gap: 18px; }
+        .ring-container { position: relative; width: 90px; height: 90px; flex-shrink: 0; }
+        .ring-container svg { transform: rotate(-90deg); width: 90px; height: 90px; }
         .ring-container circle { fill: none; stroke-linecap: round; }
-        .ring-bg { stroke: var(--hairline); }
+        .ring-bg { stroke: rgba(23,24,28,0.08); }
         .ring-progress { transition: stroke-dashoffset 1.2s var(--ease); }
-        .ring-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: var(--font-mono); font-size: 21px; font-weight: 700; color: var(--ink); }
-        .score-info h3 { font-family: var(--font-display); font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .ring-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 22px; font-weight: 800; color: var(--ink); }
+        .score-info h3 { font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--ink); }
         .score-info p { font-size: 12px; color: var(--ink-dim); line-height: 1.5; }
 
-        /* Streak banner */
-        .streak-banner {
-            display: flex; align-items: center; gap: 14px;
-            background: linear-gradient(120deg, var(--gold-soft), transparent 70%);
-            border: 1px solid var(--hairline-strong);
-            border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 12px;
-        }
-        .streak-flame { width: 42px; height: 42px; border-radius: 50%; background: var(--surface-2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .streak-flame svg { width: 22px; height: 22px; color: var(--gold); }
-        .streak-count { font-family: var(--font-display); font-size: 21px; font-weight: 600; color: var(--gold); }
-        .streak-label { font-size: 12px; color: var(--ink-dim); }
+        .streak-banner { display: flex; align-items: center; gap: 14px; padding: 15px 16px; margin-bottom: 12px; }
+        .streak-count { font-size: 17px; font-weight: 800; color: var(--ink); }
+        .streak-label { font-size: 11.5px; color: var(--ink-dim); }
 
-        /* Daily challenges */
-        .challenge-row {
-            display: flex; align-items: center; gap: 12px; padding: 11px 0;
-            border-bottom: 1px solid var(--hairline);
-        }
+        .challenge-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(23,24,28,0.07); }
         .challenge-row:last-child { border-bottom: none; }
-        .challenge-check {
-            width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--hairline-strong);
-            flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;
-            transition: all 0.2s var(--ease);
-        }
-        .challenge-check.done { background: var(--emerald); border-color: var(--emerald); }
-        .challenge-check svg { width: 12px; height: 12px; color: #0c1a15; opacity: 0; transition: opacity 0.15s; }
+        .challenge-check { width: 24px; height: 24px; border-radius: 50%; border: 1.75px solid rgba(23,24,28,0.18); flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s var(--ease); }
+        .challenge-check.done { background: linear-gradient(155deg, var(--green-1), var(--green-2)); border-color: transparent; box-shadow: 0 3px 8px -2px rgba(48,209,88,0.55); }
+        .challenge-check svg { width: 13px; height: 13px; color: #fff; opacity: 0; transition: opacity 0.15s; }
         .challenge-check.done svg { opacity: 1; }
-        .challenge-text { flex: 1; font-size: 13px; }
+        .challenge-text { flex: 1; font-size: 13.5px; color: var(--ink); font-weight: 500; }
         .challenge-text.done { color: var(--ink-faint); text-decoration: line-through; }
-        .challenge-pts { font-family: var(--font-mono); font-size: 10.5px; color: var(--gold); }
+        .challenge-pts { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--orange-2); }
 
         .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-        .metric-tile { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-md); padding: 15px; transition: border-color 0.15s var(--ease); }
-        .metric-tile:hover { border-color: var(--hairline-strong); }
-        .metric-tile .metric-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-        .metric-tile svg { width: 16px; height: 16px; color: var(--ink-faint); }
-        .metric-value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; }
-        .metric-label { font-size: 10.5px; font-weight: 500; color: var(--ink-dim); letter-spacing: 0.3px; text-transform: uppercase; }
-        .metric-trend { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; margin-top: 8px; }
-        .trend-up { color: var(--emerald); }
-        .trend-down { color: var(--wine); }
+        .metric-tile { padding: 16px; }
+        .metric-tile .metric-top { margin-bottom: 12px; }
+        .metric-value { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 2px; color: var(--ink); }
+        .metric-label { font-size: 10.5px; font-weight: 600; color: var(--ink-dim); letter-spacing: 0.2px; text-transform: uppercase; }
+        .metric-trend { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; margin-top: 8px; }
+        .trend-up { color: var(--green-2); }
+        .trend-down { color: var(--red-2); }
 
-        .badge { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.5px; padding: 3px 9px; border-radius: 20px; }
-        .badge.good { background: var(--emerald-soft); color: var(--emerald); }
-        .badge.warn { background: var(--warning-soft); color: var(--warning); }
-        .badge.bad { background: var(--danger-soft); color: var(--danger); }
-        .badge.neutral { background: var(--surface-2); color: var(--ink-faint); }
+        .badge { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.3px; padding: 4px 10px; border-radius: var(--radius-pill); }
+        .badge.good { background: rgba(48,209,88,0.16); color: #248a3d; }
+        .badge.warn { background: rgba(255,149,0,0.16); color: #b16400; }
+        .badge.bad { background: rgba(255,69,58,0.16); color: #c8261e; }
+        .badge.neutral { background: rgba(23,24,28,0.08); color: var(--ink-faint); }
 
-        .server-details { display: flex; flex-direction: column; gap: 9px; }
-        .server-detail-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
-        .server-detail-row .label { color: var(--ink-dim); }
-        .server-detail-row .value { font-family: var(--font-mono); font-weight: 500; font-size: 11.5px; }
+        .server-details { display: flex; flex-direction: column; gap: 10px; }
+        .server-detail-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; }
+        .server-detail-row .label { color: var(--ink-dim); font-weight: 500; }
+        .server-detail-row .value { font-family: var(--font-mono); font-weight: 600; font-size: 11.5px; color: var(--ink); }
 
         /* ── AI Chat ─────────────────────────────────────────────────────────── */
-        #chat-screen { padding: 56px 0 76px; }
-        .chat-header { padding: 0 18px 16px; border-bottom: 1px solid var(--hairline); }
-        .chat-header h2 { font-family: var(--font-display); font-size: 18px; font-weight: 600; }
+        #chat-screen { padding: 58px 0 106px; position: relative; z-index: 1; }
+        .chat-header { padding: 0 18px 16px; }
+        .chat-header h2 { font-size: 20px; font-weight: 800; color: var(--ink); }
         .chat-header p { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); margin-top: 3px; }
-        .chat-messages { flex: 1; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-        .chat-bubble { max-width: 86%; padding: 12px 15px; border-radius: var(--radius-md); font-size: 13.5px; line-height: 1.55; border: 1px solid transparent; animation: bubble-in 0.2s var(--ease); }
+        .chat-messages { flex: 1; padding: 8px 18px 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .chat-bubble { max-width: 86%; padding: 12px 16px; border-radius: 20px; font-size: 13.5px; line-height: 1.55; animation: bubble-in 0.2s var(--ease); }
         @keyframes bubble-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .chat-bubble.user { align-self: flex-end; background: var(--gold-soft); border-color: rgba(201,162,78,0.3); border-bottom-right-radius: 4px; }
-        .chat-bubble.ai { align-self: flex-start; background: var(--surface); border-color: var(--hairline); border-bottom-left-radius: 4px; }
-        .chat-bubble.ai .ai-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; color: var(--emerald); margin-bottom: 5px; letter-spacing: 0.8px; }
-        .chat-bubble.system { align-self: center; background: transparent; color: var(--ink-faint); font-family: var(--font-mono); font-size: 10.5px; padding: 4px; }
-        .chat-input-bar { padding: 12px 18px; border-top: 1px solid var(--hairline); display: flex; gap: 8px; background: rgba(22,17,15,0.92); }
-        .chat-input-bar input { flex: 1; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-sm); padding: 11px 14px; color: var(--ink); font-size: 13.5px; outline: none; transition: border-color 0.15s; }
-        .chat-input-bar input:focus { border-color: var(--gold); }
+        .chat-bubble.user { align-self: flex-end; background: linear-gradient(135deg, var(--red-1), var(--red-2)); color: #fff; font-weight: 500; border-bottom-right-radius: 6px; box-shadow: 0 8px 20px -8px rgba(255,45,85,0.5); }
+        .chat-bubble.ai { align-self: flex-start; border-bottom-left-radius: 6px; color: var(--ink); }
+        .chat-bubble.ai .ai-label { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; color: var(--blue-2); margin-bottom: 5px; letter-spacing: 0.6px; }
+        .chat-bubble.system { align-self: center; color: var(--ink-faint); font-family: var(--font-mono); font-size: 10.5px; padding: 4px; }
+        .chat-input-bar { padding: 12px 18px; display: flex; gap: 8px; position: relative; z-index: 2; }
+        .chat-input-bar input { flex: 1; background: rgba(255,255,255,0.55); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.7); border-radius: var(--radius-pill); padding: 12px 16px; color: var(--ink); font-size: 13.5px; outline: none; transition: border-color 0.15s; }
+        .chat-input-bar input:focus { border-color: var(--red-2); }
         .chat-input-bar input::placeholder { color: var(--ink-faint); }
-        .chat-send-btn { width: 40px; height: 40px; border-radius: var(--radius-sm); background: var(--gold); border: none; color: #17120e; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s; }
-        .chat-send-btn:hover { opacity: 0.85; }
-        .chat-send-btn svg { width: 17px; height: 17px; }
+        .chat-send-btn { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--red-1), var(--red-2)); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 8px 18px -6px rgba(255,45,85,0.55); transition: transform 0.15s; }
+        .chat-send-btn:hover { transform: scale(1.06); }
+        .chat-send-btn svg { width: 18px; height: 18px; }
         .typing-indicator { display: flex; gap: 4px; padding: 4px 0; }
         .typing-indicator span { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-faint); animation: typing-bounce 1.2s ease-in-out infinite; }
         .typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
         .typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
         @keyframes typing-bounce { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
 
-        /* ── Vault (Sync + Lab Results) ──────────────────────────────────────── */
-        .segmented { display: flex; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-sm); padding: 3px; margin-bottom: 16px; }
-        .segmented button { flex: 1; padding: 9px; border: none; background: transparent; color: var(--ink-faint); font-family: inherit; font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer; transition: all 0.15s var(--ease); }
-        .segmented button.active { background: var(--surface-2); color: var(--gold); }
+        /* ── Vault ────────────────────────────────────────────────────────────── */
+        .segmented { display: flex; padding: 4px; margin-bottom: 16px; border-radius: var(--radius-pill); }
+        .segmented button { flex: 1; padding: 9px; border: none; background: transparent; color: var(--ink-dim); font-family: inherit; font-size: 12.5px; font-weight: 700; border-radius: var(--radius-pill); cursor: pointer; transition: all 0.15s var(--ease); }
+        .segmented button.active { background: rgba(255,255,255,0.85); color: var(--ink); box-shadow: 0 4px 10px -2px rgba(0,0,0,0.12); }
         .vault-pane { display: none; }
         .vault-pane.active { display: block; }
 
-        .doc-card { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-md); padding: 15px 16px; margin-bottom: 10px; transition: border-color 0.15s; }
-        .doc-card:hover { border-color: var(--hairline-strong); }
-        .doc-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; }
-        .doc-name { display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 600; }
-        .doc-name svg { width: 16px; height: 16px; color: var(--wine); flex-shrink: 0; }
-        .doc-version { font-family: var(--font-mono); font-size: 11px; color: var(--gold); font-weight: 600; }
-        .doc-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); display: flex; flex-direction: column; gap: 4px; padding-left: 25px; }
+        .doc-card { padding: 15px 16px; margin-bottom: 10px; }
+        .doc-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .doc-name { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 700; color: var(--ink); }
+        .doc-version { font-family: var(--font-mono); font-size: 11px; color: var(--red-2); font-weight: 700; }
+        .doc-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); display: flex; flex-direction: column; gap: 4px; padding-left: 44px; }
 
-        .action-btn { width: 100%; padding: 13px; border-radius: var(--radius-sm); background: var(--gold); border: none; color: #17120e; font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; }
-        .action-btn:hover { opacity: 0.88; }
-        .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .action-btn svg { width: 15px; height: 15px; }
-        .action-btn.outline { background: transparent; border: 1px solid var(--hairline-strong); color: var(--ink-dim); }
-        .action-btn.outline:hover { border-color: var(--gold); color: var(--gold); opacity: 1; }
+        .action-btn { width: 100%; padding: 15px; border-radius: var(--radius-pill); background: linear-gradient(135deg, var(--red-1), var(--red-2)); border: none; color: #fff; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 14px 28px -10px rgba(255,45,85,0.5); transition: transform 0.15s; }
+        .action-btn:hover { transform: translateY(-1px); }
+        .action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .action-btn svg { width: 16px; height: 16px; }
 
-        .empty-state { text-align: center; padding: 30px 10px; color: var(--ink-faint); }
-        .empty-state svg { width: 30px; height: 30px; margin-bottom: 10px; color: var(--hairline-strong); }
-        .empty-state p { font-size: 12.5px; line-height: 1.5; }
+        .empty-state { text-align: center; padding: 34px 14px; }
+        .empty-state .icon-chip { margin: 0 auto 14px; }
+        .empty-state p { font-size: 12.5px; line-height: 1.55; color: var(--ink-dim); }
 
-        .activity-log { margin-top: 22px; }
-        .activity-log h3 { font-size: 10.5px; font-weight: 600; letter-spacing: 1.1px; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 10px; }
-        .log-entry { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--hairline); animation: slide-in 0.18s var(--ease); }
+        .activity-log { margin-top: 20px; }
+        .activity-log h3 { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px; padding: 0 2px; }
+        .log-entry { display: flex; align-items: flex-start; gap: 10px; padding: 10px 2px; border-bottom: 1px solid rgba(23,24,28,0.06); animation: slide-in 0.18s var(--ease); }
         @keyframes slide-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
         .log-entry:last-child { border-bottom: none; }
-        .log-dot { width: 5px; height: 5px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
-        .log-dot.success { background: var(--emerald); }
-        .log-dot.error { background: var(--danger); }
-        .log-dot.info { background: var(--gold); }
-        .log-dot.warning { background: var(--warning); }
+        .log-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+        .log-dot.success { background: var(--green-2); }
+        .log-dot.error { background: var(--red-2); }
+        .log-dot.info { background: var(--blue-2); }
+        .log-dot.warning { background: var(--orange-2); }
         .log-text { font-size: 12.5px; line-height: 1.45; color: var(--ink-dim); }
-        .log-text strong { color: var(--ink); font-weight: 600; }
-        .log-text .time { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); display: block; margin-top: 2px; }
+        .log-text strong { color: var(--ink); font-weight: 700; }
+        .log-text .time { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); display: block; margin-top: 2px; }
 
-        /* ── Connect (Integrations) ──────────────────────────────────────────── */
-        .provider-card { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-md); padding: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; }
-        .provider-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .provider-icon svg { width: 22px; height: 22px; }
-        .provider-icon.apple { background: rgba(244,231,211,0.08); }
-        .provider-icon.apple svg { color: var(--ink); }
-        .provider-icon.google { background: var(--emerald-soft); }
-        .provider-icon.google svg { color: var(--emerald); }
-        .provider-icon.whoop { background: var(--wine-soft); }
-        .provider-icon.whoop svg { color: var(--wine); }
+        /* ── Connect ──────────────────────────────────────────────────────────── */
+        .provider-card { padding: 15px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; }
+        .provider-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 6px 14px -4px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.35); }
+        .provider-icon svg { width: 22px; height: 22px; color: #fff; }
         .provider-info { flex: 1; min-width: 0; }
-        .provider-info h4 { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; }
+        .provider-info h4 { font-size: 14px; font-weight: 700; margin-bottom: 3px; color: var(--ink); }
         .provider-info p { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); }
-        .provider-toggle { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--hairline-strong); background: transparent; color: var(--ink-dim); font-size: 11.5px; font-weight: 600; font-family: inherit; cursor: pointer; flex-shrink: 0; transition: all 0.15s var(--ease); }
-        .provider-toggle.connected { background: var(--emerald-soft); border-color: transparent; color: var(--emerald); }
-        .provider-toggle:hover { border-color: var(--gold); color: var(--gold); }
-        .provider-toggle.connected:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+        .provider-toggle { padding: 9px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(23,24,28,0.14); background: rgba(255,255,255,0.5); color: var(--ink-dim); font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; flex-shrink: 0; transition: all 0.15s var(--ease); }
+        .provider-toggle.connected { background: linear-gradient(135deg, var(--green-1), var(--green-2)); border-color: transparent; color: #fff; box-shadow: 0 6px 14px -6px rgba(48,209,88,0.6); }
+        .provider-toggle:hover { border-color: var(--red-2); color: var(--red-2); }
+        .provider-toggle.connected:hover { color: #fff; opacity: 0.85; }
 
-        .whoop-metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
-        .whoop-metric { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px; text-align: center; }
-        .whoop-metric .v { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--wine); }
-        .whoop-metric .l { font-size: 9px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
+        .whoop-metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 2px; }
+        .whoop-metric { background: rgba(255,255,255,0.5); border-radius: var(--radius-sm); padding: 12px 8px; text-align: center; }
+        .whoop-metric .v { font-size: 17px; font-weight: 800; color: var(--pink-2); }
+        .whoop-metric .l { font-size: 9px; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; }
 
-        /* ── You (Settings + Screen Time) ────────────────────────────────────── */
-        .screentime-ring-row { display: flex; align-items: center; gap: 18px; }
-        .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--hairline); }
-        .settings-row:last-child { border-bottom: none; }
-        .settings-row-label { display: flex; align-items: center; gap: 11px; font-size: 13px; }
-        .settings-row-label svg { width: 17px; height: 17px; color: var(--ink-faint); }
-        .settings-row .value { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); }
-
-        .toggle { width: 40px; height: 24px; border-radius: 12px; background: var(--surface-3); border: 1px solid var(--hairline-strong); position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
-        .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--ink-faint); transition: all 0.2s var(--ease); }
-        .toggle.on { background: var(--emerald-soft); border-color: var(--emerald); }
-        .toggle.on::after { transform: translateX(16px); background: var(--emerald); }
-
-        .zk-banner { display: flex; align-items: center; gap: 12px; background: var(--emerald-soft); border: 1px solid rgba(24,145,103,0.3); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px; }
-        .zk-banner svg { width: 20px; height: 20px; color: var(--emerald); flex-shrink: 0; }
+        .zk-banner { display: flex; align-items: center; gap: 12px; padding: 15px 16px; margin-bottom: 12px; }
+        .zk-banner .icon-chip { margin: 0; }
         .zk-banner p { font-size: 12px; line-height: 1.5; color: var(--ink-dim); }
-        .zk-banner strong { color: var(--emerald); }
+        .zk-banner strong { color: var(--ink); }
 
-        /* ── Tab Bar ────────────────────────────────────────────────────────── */
-        .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 74px; background: rgba(22,17,15,0.94); backdrop-filter: blur(14px); border-top: 1px solid var(--hairline); display: flex; align-items: stretch; justify-content: space-around; z-index: 40; }
-        .tab-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; cursor: pointer; flex: 1; position: relative; -webkit-tap-highlight-color: transparent; }
-        .tab-item::before { content: ''; position: absolute; top: 0; left: 32%; right: 32%; height: 1.5px; background: var(--gold); opacity: 0; transition: opacity 0.15s; }
-        .tab-item.active::before { opacity: 1; }
-        .tab-item svg { width: 19px; height: 19px; color: var(--ink-faint); transition: color 0.15s; }
-        .tab-item.active svg { color: var(--gold); }
-        .tab-item .tab-label { font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.4px; color: var(--ink-faint); transition: color 0.15s; text-transform: uppercase; }
-        .tab-item.active .tab-label { color: var(--ink); }
+        /* ── You (Settings) ──────────────────────────────────────────────────── */
+        .screentime-ring-row { display: flex; align-items: center; gap: 18px; }
+        .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(23,24,28,0.07); }
+        .settings-row:last-child { border-bottom: none; }
+        .settings-row-label { display: flex; align-items: center; gap: 12px; font-size: 13.5px; font-weight: 500; color: var(--ink); }
+        .settings-row .value { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
+
+        .toggle { width: 44px; height: 27px; border-radius: 14px; background: rgba(23,24,28,0.14); position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
+        .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 23px; height: 23px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); transition: all 0.2s var(--ease); }
+        .toggle.on { background: var(--green-2); }
+        .toggle.on::after { transform: translateX(17px); }
+
+        /* ── Tab Bar (floating glass pill) ───────────────────────────────────── */
+        .tab-bar { position: absolute; bottom: 18px; left: 16px; right: 16px; height: 68px; border-radius: var(--radius-pill); display: flex; align-items: stretch; justify-content: space-around; z-index: 50; transition: opacity 0.2s var(--ease), transform 0.2s var(--ease); }
+        /* No tab is "current" during onboarding/splash — hide the bar rather than show a misleading active tab */
+        #onboarding-screen.active ~ .tab-bar, #splash-screen.active ~ .tab-bar { opacity: 0; transform: translateY(12px); pointer-events: none; }
+        .tab-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; flex: 1; position: relative; -webkit-tap-highlight-color: transparent; }
+        .tab-item svg { width: 21px; height: 21px; color: var(--ink-faint); transition: color 0.15s, transform 0.15s; }
+        .tab-item.active svg { color: var(--red-2); transform: translateY(-1px); }
+        .tab-item .tab-label { font-size: 9.5px; font-weight: 600; color: var(--ink-faint); transition: color 0.15s; }
+        .tab-item.active .tab-label { color: var(--red-2); font-weight: 700; }
 
         /* ═══════════════════════════════════════════════════════════════════════
-           CONSOLE PANEL
+           CONSOLE PANEL (stage chrome — dark glass)
            ═══════════════════════════════════════════════════════════════════════ */
-        .console-panel { width: 420px; height: calc(var(--phone-height) + 16px); background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
-        .console-header { padding: 16px 18px; border-bottom: 1px solid var(--hairline); display: flex; align-items: center; justify-content: space-between; }
+        .console-panel {
+            width: 420px; height: calc(var(--phone-height) + 16px);
+            background: var(--stage-panel); backdrop-filter: blur(24px) saturate(160%);
+            -webkit-backdrop-filter: blur(24px) saturate(160%);
+            border: 1px solid var(--stage-border); border-radius: var(--radius-lg);
+            display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+        }
+        .console-header { padding: 16px 18px; border-bottom: 1px solid var(--stage-border); display: flex; align-items: center; justify-content: space-between; }
         .console-header .title-group { display: flex; align-items: center; gap: 8px; }
-        .console-header h3 { font-size: 10.5px; font-weight: 600; letter-spacing: 1.1px; color: var(--ink-dim); text-transform: uppercase; }
-        .console-header svg { width: 15px; height: 15px; color: var(--ink-faint); }
+        .console-header h3 { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; color: var(--stage-ink-dim); text-transform: uppercase; }
+        .console-header svg { width: 15px; height: 15px; color: var(--stage-ink-faint); }
         .console-tabs { display: flex; gap: 2px; }
-        .console-tab { padding: 5px 12px; border-radius: 5px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; cursor: pointer; color: var(--ink-faint); background: transparent; border: none; transition: all 0.15s; }
-        .console-tab.active { background: var(--surface-2); color: var(--gold); }
-        .console-body { flex: 1; overflow-y: auto; padding: 12px 16px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.85; scrollbar-width: thin; scrollbar-color: var(--hairline-strong) transparent; }
+        .console-tab { padding: 6px 13px; border-radius: var(--radius-pill); font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; cursor: pointer; color: var(--stage-ink-faint); background: transparent; border: none; transition: all 0.15s; }
+        .console-tab.active { background: rgba(255,255,255,0.12); color: #fff; }
+        .console-body { flex: 1; overflow-y: auto; padding: 14px 18px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.9; scrollbar-width: thin; }
         .console-line { display: flex; gap: 9px; padding: 1px 0; animation: console-in 0.15s; }
         @keyframes console-in { from { opacity: 0; } to { opacity: 1; } }
-        .console-line .timestamp { color: var(--ink-faint); white-space: nowrap; flex-shrink: 0; }
+        .console-line .timestamp { color: var(--stage-ink-faint); white-space: nowrap; flex-shrink: 0; }
         .console-line .method { font-weight: 700; flex-shrink: 0; }
-        .method-get { color: var(--gold); }
-        .method-post { color: var(--wine); }
-        .method-delete { color: var(--danger); }
-        .method-ws { color: var(--ink-faint); }
-        .console-line .path { color: var(--ink-dim); word-break: break-all; }
+        .method-get { color: #64d2ff; }
+        .method-post { color: #ff9f0a; }
+        .method-delete { color: #ff453a; }
+        .method-ws { color: var(--stage-ink-faint); }
+        .console-line .path { color: var(--stage-ink-dim); word-break: break-all; }
         .console-line .status { font-weight: 700; flex-shrink: 0; margin-left: auto; padding-left: 8px; }
-        .status-200, .status-201 { color: var(--emerald); }
-        .status-400, .status-401 { color: var(--danger); }
-        .status-409 { color: var(--warning); }
-        .status-500 { color: var(--danger); }
-        .console-line.info .msg { color: var(--gold); }
-        .console-line.error .msg { color: var(--danger); }
-        .console-line.warn .msg { color: var(--warning); }
-        .console-line .response-data { color: var(--ink-faint); word-break: break-all; }
+        .status-200, .status-201 { color: #30d158; }
+        .status-400, .status-401 { color: #ff453a; }
+        .status-409 { color: #ff9f0a; }
+        .status-500 { color: #ff453a; }
+        .console-line.info .msg { color: #64d2ff; }
+        .console-line.error .msg { color: #ff453a; }
+        .console-line.warn .msg { color: #ff9f0a; }
+        .console-line .response-data { color: var(--stage-ink-faint); word-break: break-all; }
 
         /* ═══════════════════════════════════════════════════════════════════════
            RESPONSIVE
@@ -520,45 +448,12 @@
     </style>
 </head>
 <body>
-    <!-- Abstract-expressionist canvas wash (fixed, behind everything) -->
-    <div class="canvas-wash" aria-hidden="true">
-        <svg width="900" height="900" style="top:-320px; left:-260px;" viewBox="0 0 900 900">
-            <defs>
-                <radialGradient id="washGold" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="#c9a24e" stop-opacity="0.16"/>
-                    <stop offset="100%" stop-color="#c9a24e" stop-opacity="0"/>
-                </radialGradient>
-            </defs>
-            <path fill="url(#washGold)" d="M420,120 C560,80 700,180 730,320 C760,470 660,600 520,650 C380,700 220,650 160,510 C100,370 160,220 280,150 C330,120 370,135 420,120 Z"/>
-        </svg>
-        <svg width="800" height="800" style="bottom:-300px; right:-240px;" viewBox="0 0 800 800">
-            <defs>
-                <radialGradient id="washEmerald" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="#189167" stop-opacity="0.14"/>
-                    <stop offset="100%" stop-color="#189167" stop-opacity="0"/>
-                </radialGradient>
-            </defs>
-            <path fill="url(#washEmerald)" d="M380,90 C520,60 640,160 680,290 C720,430 640,580 500,630 C370,680 220,630 150,500 C90,380 130,240 240,160 C290,120 330,105 380,90 Z"/>
-        </svg>
-        <svg width="700" height="700" style="top:200px; left:38%;" viewBox="0 0 700 700">
-            <defs>
-                <radialGradient id="washWine" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="#a8425b" stop-opacity="0.10"/>
-                    <stop offset="100%" stop-color="#a8425b" stop-opacity="0"/>
-                </radialGradient>
-            </defs>
-            <path fill="url(#washWine)" d="M340,70 C460,50 570,140 600,260 C630,390 550,510 430,550 C310,590 180,540 130,430 C80,320 120,200 220,140 C260,115 300,80 340,70 Z"/>
-        </svg>
-    </div>
-    <svg class="grain-overlay" aria-hidden="true">
-        <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter>
-        <rect width="100%" height="100%" filter="url(#grain)"/>
-    </svg>
+    <div class="stage-mesh" aria-hidden="true"></div>
 
     <!-- ═══════════ PAGE HEADER ═══════════ -->
     <header class="page-header">
         <div class="brand">
-            <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></div>
+            <div class="mark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div>
             <span class="wordmark">Lifeline</span>
             <span class="tagline">Private Health Companion</span>
         </div>
@@ -570,7 +465,6 @@
 
     <!-- ═══════════ MAIN LAYOUT ═══════════ -->
     <div class="simulator-container">
-        <!-- ── Device Frame ─────────────────────────────────────────────── -->
         <div class="device-column">
             <div class="device-label">
                 <span>iOS Simulator</span>
@@ -578,55 +472,60 @@
             </div>
             <div class="iphone-frame">
                 <div class="iphone-screen">
+                    <div class="product-mesh" aria-hidden="true"><span class="m1"></span><span class="m2"></span><span class="m3"></span><span class="m4"></span><span class="m5"></span></div>
+
                     <div class="ios-status-bar">
                         <span class="time tnum" id="iosTime">09:41</span>
                         <span class="icons">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20h2v-4H2v4zm5 0h2v-8H7v8zm5 0h2v-12h-2v12zm5 0h2v-16h-2v16z"/></svg>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M22 10v4" stroke-linecap="round"/></svg>
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h2v-4H2v4zm5 0h2v-8H7v8zm5 0h2v-12h-2v12zm5 0h2v-16h-2v16z"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="3"/><path d="M22 10v4" stroke-linecap="round"/></svg>
                         </span>
                     </div>
 
                     <div class="dynamic-island" id="dynamicIsland">
                         <div class="island-content" id="islandContent">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg>
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg>
                             <span id="islandText" class="tnum">Secure</span>
                         </div>
                     </div>
 
                     <!-- ═══ ONBOARDING ═══ -->
                     <div class="app-screen active" id="onboarding-screen">
-                        <div class="onboarding-hero">
-                            <svg class="onboarding-blob" viewBox="0 0 260 260"><defs><radialGradient id="obg" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c9a24e" stop-opacity="0.22"/><stop offset="100%" stop-color="#c9a24e" stop-opacity="0"/></radialGradient></defs><path fill="url(#obg)" d="M130,20 C180,10 220,50 230,100 C240,160 200,210 140,225 C85,238 35,205 20,150 C6,98 35,50 80,28 C95,20 115,24 130,20 Z"/></svg>
+                        <div>
                             <div class="onboarding-slide active" data-slide="0">
-                                <div class="onboarding-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></div>
+                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--red-1),var(--red-2)); box-shadow:0 20px 40px -14px rgba(255,45,85,0.5), inset 0 1px 0 rgba(255,255,255,0.4);">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg>
+                                </div>
                                 <div class="onboarding-title">A private companion for a <em>longer</em>, richer life</div>
                                 <div class="onboarding-copy">Lifeline turns daily habits into lasting change — with zero-knowledge encryption, so only you ever see your data.</div>
                             </div>
                             <div class="onboarding-slide" data-slide="1">
-                                <div class="onboarding-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div>
+                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--blue-1),var(--blue-2)); box-shadow:0 20px 40px -14px rgba(10,132,255,0.5), inset 0 1px 0 rgba(255,255,255,0.4);">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg>
+                                </div>
                                 <div class="onboarding-title">One vault for <em>every</em> signal</div>
                                 <div class="onboarding-copy">Connect Apple Health, Google Health, and Whoop — and bring your own lab results from your doctor — into a single, private picture.</div>
                             </div>
                             <div class="onboarding-slide" data-slide="2">
-                                <div class="onboarding-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M7.6 17l3-3.5M16.4 17l-3-3.5"/></svg></div>
+                                <div class="onboarding-icon" style="background:linear-gradient(155deg,var(--indigo-1),var(--indigo-2)); box-shadow:0 20px 40px -14px rgba(122,63,240,0.5), inset 0 1px 0 rgba(255,255,255,0.4);">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M7.6 17l3-3.5M16.4 17l-3-3.5"/></svg>
+                                </div>
                                 <div class="onboarding-title">Coaching that knows <em>when to stop</em></div>
                                 <div class="onboarding-copy">Clinical-first AI guidance, daily challenges that build real streaks, and a screen-time limit that quietly closes social apps when you've had enough.</div>
                             </div>
                         </div>
-                        <div>
-                            <div class="onboarding-dots" id="onboardingDots">
-                                <span class="active"></span><span></span><span></span>
-                            </div>
+                        <div style="width:100%;">
+                            <div class="onboarding-dots" id="onboardingDots"><span class="active"></span><span></span><span></span></div>
                             <div class="onboarding-actions">
-                                <button class="btn-gold" id="onboardingNextBtn">Continue</button>
-                                <button class="btn-ghost" id="onboardingSkipBtn">Skip</button>
+                                <button class="btn-primary" id="onboardingNextBtn">Continue</button>
+                                <button class="btn-glass" id="onboardingSkipBtn">Skip</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ═══ SPLASH SCREEN ═══ -->
+                    <!-- ═══ SPLASH ═══ -->
                     <div class="app-screen" id="splash-screen">
-                        <div class="splash-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg></div>
+                        <div class="splash-mark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div>
                         <div class="splash-title">Lifeline</div>
                         <div class="splash-subtitle">Establishing secure session</div>
                         <div class="splash-progress"><div class="splash-progress-bar" id="splashProgress"></div></div>
@@ -638,18 +537,18 @@
                         <div class="screen-pad">
                             <div class="dashboard-greeting" id="greetingText">Good morning</div>
                             <div class="screen-title">Your Vitals</div>
-                            <div style="height:20px;"></div>
+                            <div style="height:18px;"></div>
 
-                            <div class="panel">
+                            <div class="panel glass">
                                 <div class="score-row">
                                     <div class="ring-container">
-                                        <svg viewBox="0 0 92 92">
-                                            <circle class="ring-bg" cx="46" cy="46" r="39" stroke-width="6"/>
-                                            <circle class="ring-progress" cx="46" cy="46" r="39" stroke-width="6" stroke="url(#scoreGrad)" stroke-dasharray="245" stroke-dashoffset="245" id="healthRing"/>
+                                        <svg viewBox="0 0 90 90">
+                                            <circle class="ring-bg" cx="45" cy="45" r="38" stroke-width="7"/>
+                                            <circle class="ring-progress" cx="45" cy="45" r="38" stroke-width="7" stroke="url(#scoreGrad)" stroke-dasharray="238.8" stroke-dashoffset="238.8" id="healthRing"/>
                                             <defs>
                                                 <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                    <stop offset="0%" stop-color="#c9a24e"/>
-                                                    <stop offset="100%" stop-color="#189167"/>
+                                                    <stop offset="0%" stop-color="#ff5e7a"/>
+                                                    <stop offset="100%" stop-color="#ff2d55"/>
                                                 </linearGradient>
                                             </defs>
                                         </svg>
@@ -662,15 +561,15 @@
                                 </div>
                             </div>
 
-                            <div class="streak-banner">
-                                <div class="streak-flame"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div>
+                            <div class="streak-banner glass">
+                                <div class="icon-chip orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div>
                                 <div style="flex:1;">
                                     <div class="streak-count tnum" id="streakCount">12-day streak</div>
                                     <div class="streak-label">Longest run yet — keep it alive today</div>
                                 </div>
                             </div>
 
-                            <div class="panel">
+                            <div class="panel glass">
                                 <div class="panel-header"><h4>Today's Challenges</h4><span class="meta tnum" id="challengeProgress">0/3</span></div>
                                 <div id="challengeList">
                                     <div class="challenge-row" data-pts="10">
@@ -692,33 +591,33 @@
                             </div>
 
                             <div class="metrics-grid">
-                                <div class="metric-tile">
-                                    <div class="metric-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></div>
+                                <div class="metric-tile glass">
+                                    <div class="metric-top"><div class="icon-chip red"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div></div>
                                     <div class="metric-value tnum">72</div>
                                     <div class="metric-label">Heart Rate</div>
                                     <div class="metric-trend trend-down tnum">▼ 3 bpm</div>
                                 </div>
-                                <div class="metric-tile">
-                                    <div class="metric-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 12h4l2 8 4-16 2 8h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                                <div class="metric-tile glass">
+                                    <div class="metric-top"><div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 8 4-16 2 8h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
                                     <div class="metric-value tnum">8,247</div>
                                     <div class="metric-label">Steps</div>
                                     <div class="metric-trend trend-up tnum">▲ 12%</div>
                                 </div>
-                                <div class="metric-tile">
-                                    <div class="metric-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></div>
+                                <div class="metric-tile glass">
+                                    <div class="metric-top"><div class="icon-chip indigo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></div></div>
                                     <div class="metric-value tnum">7:24</div>
                                     <div class="metric-label">Sleep</div>
                                     <div class="metric-trend trend-up tnum">▲ 18 min</div>
                                 </div>
-                                <div class="metric-tile">
-                                    <div class="metric-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div>
+                                <div class="metric-tile glass">
+                                    <div class="metric-top"><div class="icon-chip orange"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-1-2.5-1-2.5S16 11 16 14a6 6 0 0 1-12 0C4 8 9 6 12 2z"/></svg></div></div>
                                     <div class="metric-value tnum">486</div>
                                     <div class="metric-label">Calories</div>
                                     <div class="metric-trend trend-up tnum">▲ 8%</div>
                                 </div>
                             </div>
 
-                            <div class="panel">
+                            <div class="panel glass">
                                 <div class="panel-header"><h4>Backend Link</h4><span class="badge neutral" id="serverBadge">OFFLINE</span></div>
                                 <div class="server-details">
                                     <div class="server-detail-row"><span class="label">Endpoint</span><span class="value">localhost:8443</span></div>
@@ -738,7 +637,7 @@
                         </div>
                         <div class="chat-messages" id="chatMessages">
                             <div class="chat-bubble system">End-to-end encrypted — no data retained</div>
-                            <div class="chat-bubble ai">
+                            <div class="chat-bubble ai glass">
                                 <div class="ai-label">LIFELINE AI</div>
                                 Hello — I'm your private health companion. I can analyze biometric data and provide clinical-first guidance. How can I help?
                             </div>
@@ -746,27 +645,27 @@
                         <div class="chat-input-bar">
                             <input type="text" id="chatInput" placeholder="Ask about your health…" autocomplete="off">
                             <button class="chat-send-btn" id="chatSendBtn" title="Send" aria-label="Send">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </button>
                         </div>
                     </div>
 
-                    <!-- ═══ VAULT (Sync + Lab Results) ═══ -->
+                    <!-- ═══ VAULT ═══ -->
                     <div class="app-screen" id="vault-screen">
                         <div class="screen-pad">
                             <div class="screen-title">Your Vault</div>
                             <div class="eyebrow" style="margin-top:6px;">ZERO-KNOWLEDGE E2EE STORAGE</div>
-                            <div style="height:18px;"></div>
+                            <div style="height:16px;"></div>
 
-                            <div class="segmented">
+                            <div class="segmented glass">
                                 <button class="active" data-vault="sync">Journal</button>
                                 <button data-vault="labs">Lab Results</button>
                             </div>
 
                             <div class="vault-pane active" id="vault-sync">
-                                <div class="doc-card">
+                                <div class="doc-card glass">
                                     <div class="doc-card-header">
-                                        <span class="doc-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Health Journal</span>
+                                        <span class="doc-name"><div class="icon-chip pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Health Journal</span>
                                         <span class="doc-version tnum" id="syncVersion">v0</span>
                                     </div>
                                     <div class="doc-meta">
@@ -774,9 +673,9 @@
                                         <span>last sync: <span id="lastSyncTime">never</span></span>
                                     </div>
                                 </div>
-                                <div class="doc-card">
+                                <div class="doc-card glass">
                                     <div class="doc-card-header">
-                                        <span class="doc-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Medication Log</span>
+                                        <span class="doc-name"><div class="icon-chip blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Medication Log</span>
                                         <span class="doc-version tnum">v0</span>
                                     </div>
                                     <div class="doc-meta">
@@ -785,27 +684,27 @@
                                     </div>
                                 </div>
                                 <button class="action-btn" id="syncNowBtn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     Sync now
                                 </button>
                             </div>
 
                             <div class="vault-pane" id="vault-labs">
                                 <div id="labResultsList">
-                                    <div class="empty-state" id="labsEmptyState">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg>
+                                    <div class="empty-state glass">
+                                        <div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div>
                                         <p>No lab results yet.<br>Upload a PDF or photo from your doctor — it's encrypted on-device before it ever leaves your phone.</p>
                                     </div>
                                 </div>
                                 <button class="action-btn" id="uploadLabBtn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0-12l4 4m-4-4L8 7M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0-12l4 4m-4-4L8 7M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     Upload lab results
                                 </button>
                             </div>
 
                             <div class="activity-log">
                                 <h3>Activity</h3>
-                                <div id="activityLog">
+                                <div class="panel glass" id="activityLog" style="padding:6px 14px;">
                                     <div class="log-entry">
                                         <div class="log-dot info"></div>
                                         <div class="log-text"><strong>Ready to sync</strong><span class="time">waiting for connection…</span></div>
@@ -815,41 +714,32 @@
                         </div>
                     </div>
 
-                    <!-- ═══ CONNECT (Integrations) ═══ -->
+                    <!-- ═══ CONNECT ═══ -->
                     <div class="app-screen" id="connect-screen">
                         <div class="screen-pad">
                             <div class="screen-title">Connect</div>
                             <div class="eyebrow" style="margin-top:6px;">BRING YOUR OWN HEALTH DATA</div>
-                            <div style="height:18px;"></div>
+                            <div style="height:16px;"></div>
 
-                            <div class="provider-card">
-                                <div class="provider-icon apple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></div>
-                                <div class="provider-info">
-                                    <h4>Apple Health</h4>
-                                    <p id="appleHealthStatus">not connected</p>
-                                </div>
+                            <div class="provider-card glass">
+                                <div class="provider-icon" style="background:linear-gradient(155deg,#3a3a3c,#1c1c1e);"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 6 3.5C14.5 6.2 16 5 18 5c3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg></div>
+                                <div class="provider-info"><h4>Apple Health</h4><p id="appleHealthStatus">not connected</p></div>
                                 <button class="provider-toggle" id="appleHealthToggle" data-provider="apple_health">Connect</button>
                             </div>
 
-                            <div class="provider-card">
-                                <div class="provider-icon google"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div>
-                                <div class="provider-info">
-                                    <h4>Google Health</h4>
-                                    <p id="googleHealthStatus">not connected</p>
-                                </div>
+                            <div class="provider-card glass">
+                                <div class="provider-icon blue" style="background:linear-gradient(155deg,var(--blue-1),var(--blue-2));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div>
+                                <div class="provider-info"><h4>Google Health</h4><p id="googleHealthStatus">not connected</p></div>
                                 <button class="provider-toggle" id="googleHealthToggle" data-provider="google_health">Connect</button>
                             </div>
 
-                            <div class="provider-card">
-                                <div class="provider-icon whoop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 4v2m0 12v2"/></svg></div>
-                                <div class="provider-info">
-                                    <h4>Whoop</h4>
-                                    <p id="whoopStatus">not connected</p>
-                                </div>
+                            <div class="provider-card glass">
+                                <div class="provider-icon" style="background:linear-gradient(155deg,var(--pink-1),var(--pink-2));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 4v2m0 12v2"/></svg></div>
+                                <div class="provider-info"><h4>Whoop</h4><p id="whoopStatus">not connected</p></div>
                                 <button class="provider-toggle" id="whoopToggle" data-provider="whoop">Connect</button>
                             </div>
 
-                            <div class="panel" id="whoopMetricsPanel" style="display:none;">
+                            <div class="panel glass" id="whoopMetricsPanel" style="display:none;">
                                 <div class="panel-header"><h4>Whoop Recovery</h4><span class="meta">MOCK</span></div>
                                 <div class="whoop-metrics-grid">
                                     <div class="whoop-metric"><div class="v tnum" id="whoopRecovery">—</div><div class="l">Recovery</div></div>
@@ -858,26 +748,27 @@
                                 </div>
                             </div>
 
-                            <div class="zk-banner">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg>
+                            <div class="zk-banner glass">
+                                <div class="icon-chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg></div>
                                 <p><strong>Apple Health &amp; Google Health</strong> are read on-device only — nothing leaves your phone. <strong>Whoop</strong> uses OAuth2; your token is encrypted at rest and never touches your other devices.</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ═══ YOU (Settings + Screen Time) ═══ -->
+                    <!-- ═══ YOU ═══ -->
                     <div class="app-screen" id="you-screen">
                         <div class="screen-pad">
                             <div class="screen-title">You</div>
-                            <div style="height:18px;"></div>
+                            <div style="height:16px;"></div>
 
-                            <div class="panel">
+                            <div class="panel glass">
                                 <div class="panel-header"><h4>Screen Time Limit</h4><span class="badge good" id="screenTimeBadge">ON</span></div>
                                 <div class="screentime-ring-row">
-                                    <div class="ring-container" style="width:72px;height:72px;">
-                                        <svg viewBox="0 0 72 72" style="width:72px;height:72px;">
-                                            <circle class="ring-bg" cx="36" cy="36" r="30" stroke-width="5"/>
-                                            <circle cx="36" cy="36" r="30" stroke-width="5" fill="none" stroke="var(--wine)" stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="66" id="screenTimeRing"/>
+                                    <div class="ring-container" style="width:74px;height:74px;">
+                                        <svg viewBox="0 0 74 74" style="width:74px;height:74px;">
+                                            <circle class="ring-bg" cx="37" cy="37" r="31" stroke-width="6"/>
+                                            <circle cx="37" cy="37" r="31" stroke-width="6" fill="none" stroke="url(#stGrad)" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="68" id="screenTimeRing"/>
+                                            <defs><linearGradient id="stGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#b06cf5"/><stop offset="100%" stop-color="#7a3ff0"/></linearGradient></defs>
                                         </svg>
                                         <div class="ring-center-text tnum" style="font-size:14px;">65%</div>
                                     </div>
@@ -887,60 +778,60 @@
                                 </div>
                             </div>
 
-                            <div class="panel">
+                            <div class="panel glass">
                                 <div class="settings-row">
-                                    <div class="settings-row-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Auto-lock social apps</div>
+                                    <div class="settings-row-label"><div class="icon-chip indigo" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>Auto-lock social apps</div>
                                     <div class="toggle on" id="screenTimeToggle"></div>
                                 </div>
                                 <div class="settings-row">
-                                    <div class="settings-row-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Streak reminders</div>
+                                    <div class="settings-row-label"><div class="icon-chip orange" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>Streak reminders</div>
                                     <div class="toggle on" id="remindersToggle"></div>
                                 </div>
                                 <div class="settings-row">
-                                    <div class="settings-row-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Daily digest</div>
+                                    <div class="settings-row-label"><div class="icon-chip blue" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>Daily digest</div>
                                     <div class="toggle" id="digestToggle"></div>
                                 </div>
                             </div>
 
-                            <div class="panel">
+                            <div class="panel glass">
                                 <div class="settings-row">
-                                    <div class="settings-row-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Privacy &amp; Security</div>
+                                    <div class="settings-row-label"><div class="icon-chip green" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>Privacy &amp; Security</div>
                                     <span class="value">Zero-knowledge</span>
                                 </div>
                                 <div class="settings-row">
-                                    <div class="settings-row-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg>Connected Accounts</div>
+                                    <div class="settings-row-label"><div class="icon-chip pink" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg></div>Connected Accounts</div>
                                     <span class="value tnum" id="connectedCount">0 connected</span>
                                 </div>
                                 <div class="settings-row">
-                                    <div class="settings-row-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Lab Results</div>
+                                    <div class="settings-row-label"><div class="icon-chip red" style="width:28px;height:28px;border-radius:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Lab Results</div>
                                     <span class="value tnum" id="settingsLabCount">0 uploaded</span>
                                 </div>
                             </div>
 
-                            <button class="btn-ghost" id="restartOnboardingBtn">Replay onboarding</button>
+                            <button class="btn-glass" id="restartOnboardingBtn">Replay onboarding</button>
                         </div>
                     </div>
 
                     <!-- ═══ TAB BAR ═══ -->
-                    <div class="tab-bar">
+                    <div class="tab-bar glass">
                         <div class="tab-item active" data-tab="dashboard">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 12h4l2 7 4-14 2 7h6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 7 4-14 2 7h6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             <span class="tab-label">Vitals</span>
                         </div>
                         <div class="tab-item" data-tab="chat">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M7.6 17l3-3.5M16.4 17l-3-3.5"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><path d="M12 8v5M7.6 17l3-3.5M16.4 17l-3-3.5"/></svg>
                             <span class="tab-label">AI</span>
                         </div>
                         <div class="tab-item" data-tab="vault">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16" stroke-linecap="round"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M9 4v16" stroke-linecap="round"/></svg>
                             <span class="tab-label">Vault</span>
                         </div>
                         <div class="tab-item" data-tab="connect">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A5 5 0 0 0 6.5 19h11z"/></svg>
                             <span class="tab-label">Connect</span>
                         </div>
                         <div class="tab-item" data-tab="you">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" stroke-linecap="round"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" stroke-linecap="round"/></svg>
                             <span class="tab-label">You</span>
                         </div>
                     </div>
@@ -1147,7 +1038,7 @@
             setTimeout(() => {
                 const score = 87;
                 $('#healthScore').textContent = score;
-                const circumference = 245;
+                const circumference = 238.8;
                 $('#healthRing').style.strokeDashoffset = circumference - (circumference * score / 100);
             }, 200);
 
@@ -1155,7 +1046,7 @@
             $('#deviceIdLabel').textContent = state.deviceId.substring(0, 8);
             if (state.sessionToken) {
                 $('#sessionStatus').textContent = 'active';
-                $('#sessionStatus').style.color = 'var(--emerald)';
+                $('#sessionStatus').style.color = '#30d158';
                 showIsland('Session active', 2400);
             } else {
                 showIsland('Demo mode', 2400);
@@ -1261,7 +1152,7 @@
         function addChatBubble(role, text) {
             const container = $('#chatMessages');
             const bubble = document.createElement('div');
-            bubble.className = `chat-bubble ${role}`;
+            bubble.className = `chat-bubble ${role}` + (role === 'ai' ? ' glass' : '');
             if (role === 'ai') bubble.innerHTML = `<div class="ai-label">LIFELINE AI</div>${escapeHtml(text)}`;
             else bubble.textContent = text;
             container.appendChild(bubble);
@@ -1271,7 +1162,7 @@
             const container = $('#chatMessages');
             const id = 'typing-' + Date.now();
             const el = document.createElement('div');
-            el.className = 'chat-bubble ai';
+            el.className = 'chat-bubble ai glass';
             el.id = id;
             el.innerHTML = `<div class="ai-label">LIFELINE AI</div><div class="typing-indicator"><span></span><span></span><span></span></div>`;
             container.appendChild(el);
@@ -1385,8 +1276,8 @@
 
             const list = $('#labResultsList');
             if (docs.length === 0) {
-                list.innerHTML = `<div class="empty-state" id="labsEmptyState">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg>
+                list.innerHTML = `<div class="empty-state glass">
+                    <div class="icon-chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div>
                     <p>No lab results yet.<br>Upload a PDF or photo from your doctor — it's encrypted on-device before it ever leaves your phone.</p>
                 </div>`;
                 return;
@@ -1395,9 +1286,9 @@
                 const meta = uploadedLabTitles[doc.document_id] || { title: 'Lab Result', lab: 'External Lab' };
                 const date = new Date(doc.created_at).toLocaleDateString();
                 return `
-                    <div class="doc-card">
+                    <div class="doc-card glass">
                         <div class="doc-card-header">
-                            <span class="doc-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg>${escapeHtml(meta.title)}</span>
+                            <span class="doc-name"><div class="icon-chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2M9 2h6M8 15h8"/></svg></div>${escapeHtml(meta.title)}</span>
                             <span class="badge good">Reviewed</span>
                         </div>
                         <div class="doc-meta">
