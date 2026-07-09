@@ -660,3 +660,39 @@ async fn test_device_registration_cannot_be_hijacked() {
     assert_eq!(device.public_key_der, key_a);
     assert_eq!(device.sign_counter, 7);
 }
+
+#[tokio::test]
+async fn test_insights_config_ships_rules_only() {
+    // The insights config is what makes the on-device longevity features work
+    // without breaking zero-knowledge: it must be reachable without a session
+    // and must carry only rules (coefficients, reference ranges), never user
+    // data.
+    let (state, _db) = create_test_state();
+    let app = create_router(state);
+    let mock_addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12347));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/insights/config")
+                .extension(axum::extract::ConnectInfo(mock_addr))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), 20000)
+        .await
+        .unwrap();
+    let cfg: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+    // The five rule blocks the client needs are all present.
+    assert!(cfg["biological_age"]["signals"]["resting_heart_rate"].is_object());
+    assert!(cfg["readiness"]["components"]["hrv"].is_object());
+    assert!(cfg["biomarkers"]["ldl_cholesterol"].is_object());
+    assert!(cfg["correlation"]["habits"]["winddown_routine"].is_object());
+    assert!(cfg["circadian"]["chronotypes"]["neutral"].is_object());
+    assert_eq!(cfg["version"], "1.0.0");
+}

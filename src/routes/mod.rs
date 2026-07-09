@@ -16,6 +16,7 @@ use crate::state::AppState;
 pub mod ai;
 pub mod auth;
 pub mod health;
+pub mod insights;
 pub mod integrations;
 pub mod stream;
 pub mod sync;
@@ -132,6 +133,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         )
         .route("/auth/assert", post(auth::assert_handler))
         .route("/ai/policy-matrix", get(ai::policy_matrix_handler))
+        // Rules-only insights config for the on-device longevity engine; ships
+        // no user data, so it's public + cacheable like the policy matrix.
+        .route("/insights/config", get(insights::insights_config_handler))
         .route("/stream", get(stream::ws_upgrade_handler))
         // Whoop redirects the user's own browser here after consent — no
         // Authorization header is present, so this cannot sit behind
