@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
                 .context("Failed to run database migrations")?;
             tracing::info!("Database migrations applied successfully");
 
-            Arc::new(db::PostgresDatabase::new(pool))
+            Arc::new(db::PostgresDatabase::new(pool, &config.auth.server_secret))
         }
         Err(e) => {
             if config.auth.environment == "development" {
@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
                     error = %e,
                     "PostgreSQL connection failed. Falling back to In-Memory MockDatabase for development mode..."
                 );
-                Arc::new(db::MockDatabase::new())
+                Arc::new(db::MockDatabase::new(&config.auth.server_secret))
             } else {
                 return Err(e).context("Database connection failed");
             }
@@ -129,13 +129,22 @@ async fn main() -> anyhow::Result<()> {
         .await
         .with_context(|| format!("Failed to bind to {bind_addr}"))?;
 
-    tracing::info!("Antigravity server listening on https://{}", bind_addr);
+    // NOTE: This process speaks plain HTTP. TLS must be terminated in front of
+    // it (e.g. a load balancer, reverse proxy, or platform ingress) — the
+    // engine does not perform TLS termination itself.
+    tracing::info!("Antigravity server listening on http://{}", bind_addr);
 
-    // Run Axum server with graceful shutdown
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .context("Server execution error")?;
+    // Run Axum server with graceful shutdown.
+    // `into_make_service_with_connect_info` is required so that tower_governor's
+    // PeerIpKeyExtractor can read the client's socket address — without it every
+    // request fails at the rate-limiting layer ("Unable To Extract Key!").
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .context("Server execution error")?;
 
     Ok(())
 }
@@ -160,8 +169,8 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
+        () = ctrl_c => {},
+        () = terminate => {},
     }
 
     tracing::info!("Shutdown signal received. Starting graceful shutdown...");

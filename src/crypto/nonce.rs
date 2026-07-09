@@ -11,7 +11,8 @@ pub struct NonceCache {
 }
 
 impl NonceCache {
-    /// Create a new NonceCache with the specified time-to-live in seconds.
+    /// Create a new `NonceCache` with the specified time-to-live in seconds.
+    #[must_use]
     pub fn new(ttl_seconds: u64) -> Self {
         let cache = Cache::builder()
             .time_to_live(Duration::from_secs(ttl_seconds))

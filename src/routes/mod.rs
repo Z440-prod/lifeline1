@@ -1,3 +1,4 @@
+use axum::http::{HeaderName, Method};
 use axum::{
     middleware,
     routing::{get, post},
@@ -23,11 +24,29 @@ pub mod sync;
 /// Infrastructure endpoints (`/health`, `/metrics`) are mounted at the root level,
 /// exempt from authentication.
 pub fn create_router(state: Arc<AppState>) -> Router {
-    // CORS layer for development — allows the demo web app to connect
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    // ── CORS ──────────────────────────────────────────────────────────────────
+    // The primary client is a native iOS app, which never sends an `Origin`
+    // header and is therefore unaffected by this policy. A wildcard origin
+    // combined with wildcard headers only matters for browser-based callers
+    // (e.g. the local demo page) and would otherwise let any website make
+    // authenticated cross-origin requests against a leaked bearer token.
+    // Wide open only in development; locked down to just what the API needs
+    // in every other environment.
+    let cors = if state.config.auth.environment == "development" {
+        CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any)
+    } else {
+        CorsLayer::new()
+            .allow_methods([Method::GET, Method::POST])
+            .allow_headers([
+                HeaderName::from_static("authorization"),
+                HeaderName::from_static("content-type"),
+                HeaderName::from_static("x-device-id"),
+                HeaderName::from_static("x-assertion-token"),
+            ])
+    };
 
     // ── Rate Limiting (per-IP, token bucket) ─────────────────────────────────
     // Uses tower_governor with the default PeerIpKeyExtractor.

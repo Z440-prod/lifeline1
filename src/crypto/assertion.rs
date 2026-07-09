@@ -11,8 +11,8 @@ pub struct VerifiedAssertion {
 /// Steps:
 /// 1. Decode CBOR assertion object to extract authenticatorData and signature
 /// 2. Parse authenticatorData to verify rpIdHash and flags
-/// 3. Verify that the assertion's signCount is strictly greater than the stored_counter
-/// 4. Reconstruct clientDataHash = SHA-256(challenge || request_body_hash)
+/// 3. Verify that the assertion's signCount is strictly greater than the `stored_counter`
+/// 4. Reconstruct clientDataHash = SHA-256(challenge || `request_body_hash`)
 /// 5. Verify ECDSA signature over (authenticatorData || clientDataHash)
 pub fn verify_assertion(
     config: &AppConfig,
@@ -85,12 +85,12 @@ pub fn verify_assertion(
     let rp_id_hash = &authenticator_data_bytes[0..32];
     let flags = authenticator_data_bytes[32];
 
-    let sign_count = u32::from_be_bytes([
+    let sign_count = i64::from(u32::from_be_bytes([
         authenticator_data_bytes[33],
         authenticator_data_bytes[34],
         authenticator_data_bytes[35],
         authenticator_data_bytes[36],
-    ]) as i64;
+    ]));
 
     // Verify rpIdHash matches SHA-256 of App ID
     let expected_app_id = config.auth.app_id();

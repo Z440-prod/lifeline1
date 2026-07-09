@@ -7,7 +7,7 @@ use uuid::Uuid;
 /// are opaque ciphertext encrypted on-device in the Secure Enclave.
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SyncDocument {
-    /// Client-assigned document identifier (UUIDv4).
+    /// Client-assigned document identifier (`UUIDv4`).
     pub document_id: Uuid,
     /// The device that owns and authored this version.
     pub device_id: Uuid,

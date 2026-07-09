@@ -43,6 +43,7 @@ pub struct AuthConfig {
 impl AuthConfig {
     /// Returns the full Apple App ID used for RP-ID hashing.
     /// Format: `{TeamID}.{BundleID}`
+    #[must_use]
     pub fn app_id(&self) -> String {
         format!("{}.{}", self.apple_team_id, self.apple_bundle_id)
     }

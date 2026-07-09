@@ -42,11 +42,16 @@ pub trait Database: Send + Sync {
 /// Postgres implementation of the Database trait.
 pub struct PostgresDatabase {
     pub pool: sqlx::PgPool,
+    audit_key: ring::hmac::Key,
 }
 
 impl PostgresDatabase {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        Self { pool }
+    #[must_use]
+    pub fn new(pool: sqlx::PgPool, server_secret: &str) -> Self {
+        Self {
+            pool,
+            audit_key: audit::derive_audit_key(server_secret),
+        }
     }
 
     async fn try_insert_audit_log(
@@ -73,13 +78,16 @@ impl PostgresDatabase {
         let id = Uuid::new_v4();
         let event_time = chrono::Utc::now();
         let signature = audit::compute_signature(
-            id,
-            event_time,
-            action,
-            actor_id,
-            target_id,
-            payload_hash,
-            &prev_sig,
+            &self.audit_key,
+            &audit::AuditRecordFields {
+                id,
+                event_time,
+                action,
+                actor_id,
+                target_id,
+                payload_hash,
+                prev_signature: &prev_sig,
+            },
         );
 
         sqlx::query(
@@ -155,7 +163,8 @@ impl Database for PostgresDatabase {
                         attempt = attempts,
                         "Postgres serialization conflict on audit log. Retrying..."
                     );
-                    tokio::time::sleep(std::time::Duration::from_millis(5 * attempts as u64)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(5 * u64::from(attempts)))
+                        .await;
                     continue;
                 }
                 Err(e) => return Err(e),
@@ -169,26 +178,23 @@ pub struct MockDatabase {
     devices: Mutex<HashMap<Uuid, AttestedDevice>>,
     documents: Mutex<HashMap<Uuid, Vec<SyncDocument>>>,
     audit_logs: Mutex<Vec<audit::AuditLogEntry>>,
+    audit_key: ring::hmac::Key,
 }
 
 impl MockDatabase {
-    pub fn new() -> Self {
+    #[must_use]
+    pub fn new(server_secret: &str) -> Self {
         Self {
             devices: Mutex::new(HashMap::new()),
             documents: Mutex::new(HashMap::new()),
             audit_logs: Mutex::new(Vec::new()),
+            audit_key: audit::derive_audit_key(server_secret),
         }
     }
 
     pub fn get_audit_logs(&self) -> Vec<audit::AuditLogEntry> {
         let guard = self.audit_logs.lock().unwrap();
         guard.clone()
-    }
-}
-
-impl Default for MockDatabase {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -252,19 +258,21 @@ impl Database for MockDatabase {
         let mut guard = self.audit_logs.lock().unwrap();
         let prev_sig = guard
             .last()
-            .map(|entry| entry.signature.clone())
-            .unwrap_or_else(|| vec![0u8; 32]);
+            .map_or_else(|| vec![0u8; 32], |entry| entry.signature.clone());
 
         let id = Uuid::new_v4();
         let event_time = chrono::Utc::now();
         let signature = audit::compute_signature(
-            id,
-            event_time,
-            action,
-            actor_id,
-            target_id,
-            payload_hash,
-            &prev_sig,
+            &self.audit_key,
+            &audit::AuditRecordFields {
+                id,
+                event_time,
+                action,
+                actor_id,
+                target_id,
+                payload_hash,
+                prev_signature: &prev_sig,
+            },
         );
 
         guard.push(audit::AuditLogEntry {

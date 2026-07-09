@@ -39,7 +39,7 @@ pub fn create_session_token(
     let encoded_payload = engine.encode(&payload_bytes);
     let encoded_signature = engine.encode(signature.as_ref());
 
-    Ok(format!("{}.{}", encoded_payload, encoded_signature))
+    Ok(format!("{encoded_payload}.{encoded_signature}"))
 }
 
 /// Verify an HMAC-signed session token and return the authenticated `device_id`.
