@@ -16,6 +16,12 @@ pub struct AppState {
     /// HMAC-SHA256 key derived from `config.auth.server_secret`.
     /// Used to sign and verify server-issued session tokens.
     pub hmac_key: hmac::Key,
+    /// HMAC-SHA256 key used to sign/verify OAuth `state` parameters (Whoop connect flow).
+    /// Domain-separated from `hmac_key`.
+    pub oauth_state_key: hmac::Key,
+    /// AEAD key used to encrypt third-party OAuth refresh tokens at rest (Whoop).
+    /// Domain-separated from `hmac_key`.
+    pub token_vault_key: ring::aead::LessSafeKey,
     /// In-memory TTL/size cache for E2EE Sync Documents (cache-aside read optimizer)
     pub doc_cache: moka::sync::Cache<uuid::Uuid, crate::models::sync_document::SyncDocument>,
 }

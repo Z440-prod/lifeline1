@@ -1,5 +1,6 @@
 use crate::errors::AppError;
 use crate::models::device::AttestedDevice;
+use crate::models::provider_connection::ProviderConnection;
 use crate::models::sync_document::SyncDocument;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -8,6 +9,7 @@ use uuid::Uuid;
 
 pub mod audit;
 pub mod devices;
+pub mod integrations;
 pub mod sync;
 
 /// Abstract database interface for all persistence operations.
@@ -30,6 +32,11 @@ pub trait Database: Send + Sync {
         document_id: Uuid,
     ) -> Result<Option<SyncDocument>, AppError>;
     async fn get_document_history(&self, document_id: Uuid) -> Result<Vec<SyncDocument>, AppError>;
+    async fn list_documents_by_type(
+        &self,
+        device_id: Uuid,
+        document_type: &str,
+    ) -> Result<Vec<SyncDocument>, AppError>;
     async fn insert_audit_log(
         &self,
         action: &str,
@@ -37,6 +44,30 @@ pub trait Database: Send + Sync {
         target_id: Uuid,
         payload_hash: &[u8],
     ) -> Result<(), AppError>;
+
+    async fn list_provider_connections(
+        &self,
+        device_id: Uuid,
+    ) -> Result<Vec<ProviderConnection>, AppError>;
+    async fn upsert_provider_connection(
+        &self,
+        device_id: Uuid,
+        provider: &str,
+        status: &str,
+        external_account_id: Option<&str>,
+        encrypted_refresh_token: Option<&[u8]>,
+    ) -> Result<(), AppError>;
+    async fn delete_provider_connection(
+        &self,
+        device_id: Uuid,
+        provider: &str,
+    ) -> Result<(), AppError>;
+    async fn get_encrypted_refresh_token(
+        &self,
+        device_id: Uuid,
+        provider: &str,
+    ) -> Result<Option<Vec<u8>>, AppError>;
+    async fn touch_last_synced(&self, device_id: Uuid, provider: &str) -> Result<(), AppError>;
 }
 
 /// Postgres implementation of the Database trait.
@@ -139,6 +170,14 @@ impl Database for PostgresDatabase {
         sync::get_document_history(&self.pool, document_id).await
     }
 
+    async fn list_documents_by_type(
+        &self,
+        device_id: Uuid,
+        document_type: &str,
+    ) -> Result<Vec<SyncDocument>, AppError> {
+        sync::list_latest_documents_by_type(&self.pool, device_id, document_type).await
+    }
+
     async fn insert_audit_log(
         &self,
         action: &str,
@@ -171,7 +210,58 @@ impl Database for PostgresDatabase {
             }
         }
     }
+
+    async fn list_provider_connections(
+        &self,
+        device_id: Uuid,
+    ) -> Result<Vec<ProviderConnection>, AppError> {
+        integrations::list_provider_connections(&self.pool, device_id).await
+    }
+
+    async fn upsert_provider_connection(
+        &self,
+        device_id: Uuid,
+        provider: &str,
+        status: &str,
+        external_account_id: Option<&str>,
+        encrypted_refresh_token: Option<&[u8]>,
+    ) -> Result<(), AppError> {
+        integrations::upsert_provider_connection(
+            &self.pool,
+            device_id,
+            provider,
+            status,
+            external_account_id,
+            encrypted_refresh_token,
+        )
+        .await
+    }
+
+    async fn delete_provider_connection(
+        &self,
+        device_id: Uuid,
+        provider: &str,
+    ) -> Result<(), AppError> {
+        integrations::delete_provider_connection(&self.pool, device_id, provider).await
+    }
+
+    async fn get_encrypted_refresh_token(
+        &self,
+        device_id: Uuid,
+        provider: &str,
+    ) -> Result<Option<Vec<u8>>, AppError> {
+        integrations::get_encrypted_refresh_token(&self.pool, device_id, provider).await
+    }
+
+    async fn touch_last_synced(&self, device_id: Uuid, provider: &str) -> Result<(), AppError> {
+        integrations::touch_last_synced(&self.pool, device_id, provider).await
+    }
 }
+
+/// A stored provider connection paired with its encrypted refresh token (if
+/// any). Kept separate from the public `ProviderConnection` type, mirroring
+/// how the Postgres schema never returns the token over the API.
+type ProviderConnectionRecord = (ProviderConnection, Option<Vec<u8>>);
 
 /// In-memory thread-safe Mock database for offline development and local debugging.
 pub struct MockDatabase {
@@ -179,6 +269,8 @@ pub struct MockDatabase {
     documents: Mutex<HashMap<Uuid, Vec<SyncDocument>>>,
     audit_logs: Mutex<Vec<audit::AuditLogEntry>>,
     audit_key: ring::hmac::Key,
+    // Keyed by (device_id, provider).
+    provider_connections: Mutex<HashMap<(Uuid, String), ProviderConnectionRecord>>,
 }
 
 impl MockDatabase {
@@ -189,6 +281,7 @@ impl MockDatabase {
             documents: Mutex::new(HashMap::new()),
             audit_logs: Mutex::new(Vec::new()),
             audit_key: audit::derive_audit_key(server_secret),
+            provider_connections: Mutex::new(HashMap::new()),
         }
     }
 
@@ -248,6 +341,25 @@ impl Database for MockDatabase {
         Ok(guard.get(&document_id).cloned().unwrap_or_default())
     }
 
+    async fn list_documents_by_type(
+        &self,
+        device_id: Uuid,
+        document_type: &str,
+    ) -> Result<Vec<SyncDocument>, AppError> {
+        let guard = self.documents.lock().unwrap();
+        let docs = guard
+            .values()
+            .filter_map(|history| {
+                history
+                    .iter()
+                    .filter(|d| d.device_id == device_id && d.document_type == document_type)
+                    .max_by_key(|d| d.version_sequence)
+                    .cloned()
+            })
+            .collect();
+        Ok(docs)
+    }
+
     async fn insert_audit_log(
         &self,
         action: &str,
@@ -286,5 +398,90 @@ impl Database for MockDatabase {
             signature,
         });
         Ok(())
+    }
+
+    async fn list_provider_connections(
+        &self,
+        device_id: Uuid,
+    ) -> Result<Vec<ProviderConnection>, AppError> {
+        let guard = self.provider_connections.lock().unwrap();
+        let mut conns: Vec<ProviderConnection> = guard
+            .values()
+            .filter(|(conn, _)| conn.device_id == device_id)
+            .map(|(conn, _)| conn.clone())
+            .collect();
+        conns.sort_by(|a, b| a.provider.cmp(&b.provider));
+        Ok(conns)
+    }
+
+    async fn upsert_provider_connection(
+        &self,
+        device_id: Uuid,
+        provider: &str,
+        status: &str,
+        external_account_id: Option<&str>,
+        encrypted_refresh_token: Option<&[u8]>,
+    ) -> Result<(), AppError> {
+        let mut guard = self.provider_connections.lock().unwrap();
+        let key = (device_id, provider.to_owned());
+        let existing = guard.get(&key);
+
+        let connected_at = existing.map_or_else(chrono::Utc::now, |(conn, _)| conn.connected_at);
+        let external_account_id = external_account_id
+            .map(str::to_owned)
+            .or_else(|| existing.and_then(|(conn, _)| conn.external_account_id.clone()));
+        let token = encrypted_refresh_token
+            .map(<[u8]>::to_vec)
+            .or_else(|| existing.and_then(|(_, tok)| tok.clone()));
+        let last_synced_at = existing.and_then(|(conn, _)| conn.last_synced_at);
+
+        guard.insert(
+            key,
+            (
+                ProviderConnection {
+                    device_id,
+                    provider: provider.to_owned(),
+                    status: status.to_owned(),
+                    external_account_id,
+                    connected_at,
+                    last_synced_at,
+                },
+                token,
+            ),
+        );
+        Ok(())
+    }
+
+    async fn delete_provider_connection(
+        &self,
+        device_id: Uuid,
+        provider: &str,
+    ) -> Result<(), AppError> {
+        let mut guard = self.provider_connections.lock().unwrap();
+        guard.remove(&(device_id, provider.to_owned()));
+        Ok(())
+    }
+
+    async fn get_encrypted_refresh_token(
+        &self,
+        device_id: Uuid,
+        provider: &str,
+    ) -> Result<Option<Vec<u8>>, AppError> {
+        let guard = self.provider_connections.lock().unwrap();
+        Ok(guard
+            .get(&(device_id, provider.to_owned()))
+            .and_then(|(_, tok)| tok.clone()))
+    }
+
+    async fn touch_last_synced(&self, device_id: Uuid, provider: &str) -> Result<(), AppError> {
+        let mut guard = self.provider_connections.lock().unwrap();
+        if let Some((conn, _)) = guard.get_mut(&(device_id, provider.to_owned())) {
+            conn.last_synced_at = Some(chrono::Utc::now());
+            Ok(())
+        } else {
+            Err(AppError::BadRequest(
+                "No provider connection to update".to_owned(),
+            ))
+        }
     }
 }

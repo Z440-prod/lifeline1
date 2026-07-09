@@ -28,7 +28,15 @@ A privacy-first gateway to Claude 3.5 Sonnet.
 *   **Metadata Stripping:** Completely strips client-identifying details (IP addresses, device IDs, browser user-agents, etc.) before calling upstream LLM services.
 *   **Policy Matrix Enforcement:** Implements behavior model checks and clinical-first assistance prompts locally on the server.
 
-### 4. ⚡ Production-Ready Performance & Security
+### 4. 🔗 Health Platform Integrations
+Connect Apple Health, Google Health Connect, and Whoop.
+*   **On-Device Providers:** Apple HealthKit and Google Health Connect are read locally on the client — the server only records that a device authorized access, never the underlying data.
+*   **Whoop OAuth2:** The one provider requiring a server-held credential. Refresh tokens are encrypted at rest with a key derived from the server secret (`crypto::token_vault`) and the authorize/callback flow is bound to the requesting device with a signed, short-lived `state` parameter (`crypto::oauth_state`).
+
+### 5. 🧪 Doctor-Provided Lab Results
+Uploaded through the same zero-knowledge E2EE sync pipeline as any other document — the server stores an opaque, client-encrypted blob tagged with a `document_type` category (e.g. `lab_result`) purely for UI grouping, and never sees test values or provider names.
+
+### 6. ⚡ Production-Ready Performance & Security
 *   **Rate Limiting:** IP-based rate limiting via a token bucket algorithm powered by `tower-governor`.
 *   **Structured Errors:** Clean domain-specific error handling utilizing the `thiserror` and `anyhow` crates.
 *   **Observability:** Out-of-the-box `/health` liveness checks and Prometheus scraping `/metrics` endpoints tracking request latencies.

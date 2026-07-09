@@ -96,6 +96,8 @@ async fn main() -> anyhow::Result<()> {
         ring::hmac::HMAC_SHA256,
         config.auth.server_secret.as_bytes(),
     );
+    let oauth_state_key = crypto::oauth_state::derive_oauth_state_key(&config.auth.server_secret);
+    let token_vault_key = crypto::token_vault::derive_token_vault_key(&config.auth.server_secret);
     tracing::info!("HMAC server secret key derived");
 
     // 8. Instantiate Outbound HTTP Client for external services (AI proxy)
@@ -117,6 +119,8 @@ async fn main() -> anyhow::Result<()> {
         config: config.clone(),
         http_client,
         hmac_key,
+        oauth_state_key,
+        token_vault_key,
         doc_cache,
     });
 

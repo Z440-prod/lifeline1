@@ -22,6 +22,10 @@ pub struct SyncDocument {
     /// ECDSA P-256 signature computed by the device over the payload,
     /// verifiable using the device's attested public key.
     pub client_signature: Vec<u8>,
+    /// Client-assigned category (e.g. "generic", "`lab_result`") used only for
+    /// UI grouping — the server cannot see and does not need to see document
+    /// contents to know what kind of record it is.
+    pub document_type: String,
     /// Timestamp when this version was persisted on the backend.
     pub created_at: DateTime<Utc>,
 }

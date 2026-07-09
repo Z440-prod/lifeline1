@@ -10,6 +10,7 @@ pub struct AppConfig {
     pub auth: AuthConfig,
     pub ai: AiConfig,
     pub rate_limit: RateLimitConfig,
+    pub integrations: IntegrationsConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -62,6 +63,32 @@ pub struct RateLimitConfig {
     pub requests_per_second: u64,
     /// Maximum burst size — the number of requests allowed in a quick burst.
     pub burst_size: u32,
+}
+
+/// Third-party health data provider integration settings.
+///
+/// Apple Health and Google Health Connect are on-device SDKs: the client
+/// reads them locally and the server only records connection status. Whoop
+/// is a cloud API and needs a real `OAuth2` client registered at
+/// <https://developer.whoop.com>.
+#[derive(Debug, Clone, Deserialize)]
+pub struct IntegrationsConfig {
+    pub whoop_client_id: String,
+    pub whoop_client_secret: String,
+    pub whoop_authorize_url: String,
+    pub whoop_token_url: String,
+    pub whoop_api_base: String,
+    pub whoop_redirect_uri: String,
+}
+
+impl IntegrationsConfig {
+    /// Whoop OAuth is only usable once a real client id/secret is configured.
+    /// Without them, Whoop endpoints fall back to a mocked flow in
+    /// development, mirroring the AI proxy's dev-mode behavior.
+    #[must_use]
+    pub fn whoop_configured(&self) -> bool {
+        !self.whoop_client_id.is_empty() && !self.whoop_client_secret.is_empty()
+    }
 }
 
 /// Load configuration from `config/default.toml` with environment overrides.
