@@ -30,16 +30,16 @@ pub enum AppError {
     /// 409 — Assertion counter is not strictly greater than the stored value.
     #[error("Replay attack detected: counter not advancing")]
     ReplayDetected,
-    /// 404 — The requested device_id has no attestation record.
+    /// 404 — The requested `device_id` has no attestation record.
     #[error("Device not found in attestation registry")]
     DeviceNotFound,
     /// 400 — Generic malformed request body.
     #[error("BadRequest: {0}")]
     BadRequest(String),
-    /// 409 — Optimistic concurrency conflict on sync version_sequence.
+    /// 409 — Optimistic concurrency conflict on sync `version_sequence`.
     #[error("Conflict: {0}")]
     Conflict(String),
-    /// 409 — PostgreSQL SERIALIZABLE transaction serialization failure (code 40001).
+    /// 409 — `PostgreSQL` SERIALIZABLE transaction serialization failure (code 40001).
     /// Caller should retry.
     #[error("Serialization conflict — retry transaction")]
     SerializationConflict,

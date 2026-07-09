@@ -172,7 +172,17 @@ pub async fn get_document_handler(
         db_doc
     };
 
-    // 2. Log compliance Audit Trail
+    // 2. Enforce that the requesting device owns this document.
+    // Without this check any authenticated device could read another
+    // device's document metadata/ciphertext and history by guessing/enumerating a UUID.
+    // Return the same "not found" error as a missing document so the response
+    // does not act as an oracle for document existence/ownership.
+    if doc.device_id != verified_device.device_id {
+        metrics::counter!("antigravity_api_errors_total", "endpoint" => "/sync/document/{id}", "error" => "unauthorized").increment(1);
+        return Err(AppError::BadRequest("Document not found".to_owned()));
+    }
+
+    // 3. Log compliance Audit Trail
     let payload_hash = {
         use ring::digest::{digest, SHA256};
         digest(&SHA256, &doc.encrypted_blob).as_ref().to_vec()
@@ -220,6 +230,17 @@ pub async fn get_document_history_handler(
     let docs = state.db.get_document_history(document_id).await?;
     metrics::histogram!("antigravity_db_latency_seconds", "operation" => "get_document_history")
         .record(db_start.elapsed().as_secs_f64());
+
+    // Enforce that the requesting device owns this document (same IDOR
+    // protection as get_document_handler). An empty history is indistinguishable
+    // from an unowned one to avoid leaking existence to non-owners.
+    if !docs
+        .iter()
+        .all(|doc| doc.device_id == verified_device.device_id)
+    {
+        metrics::counter!("antigravity_api_errors_total", "endpoint" => "/sync/document/{id}/history", "error" => "unauthorized").increment(1);
+        return Err(AppError::BadRequest("Document not found".to_owned()));
+    }
 
     // Audit log history read action
     state

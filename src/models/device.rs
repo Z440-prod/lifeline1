@@ -7,7 +7,7 @@ use uuid::Uuid;
 /// and the monotonic sign counter used for replay protection.
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct AttestedDevice {
-    /// Unique device identifier (UUIDv4), provided by the client.
+    /// Unique device identifier (`UUIDv4`), provided by the client.
     pub device_id: Uuid,
     /// DER-encoded uncompressed EC P-256 public key (65 bytes: 0x04 || x || y).
     pub public_key_der: Vec<u8>,

@@ -71,7 +71,11 @@ A privacy-first gateway to Claude 3.5 Sonnet.
     ```bash
     cargo run
     ```
-    The server will start listening at `https://0.0.0.0:8443` (port configurable in `.env`).
+    The server will start listening at `http://0.0.0.0:8443` (port configurable in `.env`).
+
+    > **TLS:** Antigravity speaks plain HTTP. In production it must sit behind a TLS-terminating
+    > reverse proxy, load balancer, or platform ingress (e.g. nginx, Caddy, an AWS/GCP load
+    > balancer) — it does not perform TLS termination itself.
 
 ---
 

@@ -45,7 +45,7 @@ fn create_test_state() -> (Arc<AppState>, Arc<MockDatabase>) {
         },
     };
 
-    let db = Arc::new(MockDatabase::new());
+    let db = Arc::new(MockDatabase::new(&config.auth.server_secret));
     let nonce_cache = antigravity::crypto::nonce::NonceCache::new(config.auth.nonce_ttl_seconds);
     let hmac_key = ring::hmac::Key::new(
         ring::hmac::HMAC_SHA256,
@@ -225,25 +225,88 @@ async fn test_end_to_end_flow() {
     assert_eq!(read_log.prev_signature, write_log.signature);
 
     // Recompute signatures to verify tamper-resistance integrity
+    let audit_key = antigravity::db::audit::derive_audit_key(&state.config.auth.server_secret);
     let recomputed_write_sig = antigravity::db::audit::compute_signature(
-        write_log.id,
-        write_log.event_time,
-        &write_log.action,
-        write_log.actor_id,
-        write_log.target_id,
-        &write_log.payload_hash,
-        &write_log.prev_signature,
+        &audit_key,
+        &antigravity::db::audit::AuditRecordFields {
+            id: write_log.id,
+            event_time: write_log.event_time,
+            action: &write_log.action,
+            actor_id: write_log.actor_id,
+            target_id: write_log.target_id,
+            payload_hash: &write_log.payload_hash,
+            prev_signature: &write_log.prev_signature,
+        },
     );
     assert_eq!(write_log.signature, recomputed_write_sig);
 
     let recomputed_read_sig = antigravity::db::audit::compute_signature(
-        read_log.id,
-        read_log.event_time,
-        &read_log.action,
-        read_log.actor_id,
-        read_log.target_id,
-        &read_log.payload_hash,
-        &read_log.prev_signature,
+        &audit_key,
+        &antigravity::db::audit::AuditRecordFields {
+            id: read_log.id,
+            event_time: read_log.event_time,
+            action: &read_log.action,
+            actor_id: read_log.actor_id,
+            target_id: read_log.target_id,
+            payload_hash: &read_log.payload_hash,
+            prev_signature: &read_log.prev_signature,
+        },
     );
     assert_eq!(read_log.signature, recomputed_read_sig);
+
+    // ── 6. IDOR regression: a different authenticated device must not be able
+    // to read this device's document or history ──────────────────────────────
+    let other_device_id = Uuid::new_v4();
+    let other_device = AttestedDevice {
+        device_id: other_device_id,
+        public_key_der: key_pair.public_key().as_ref().to_vec(),
+        sign_counter: 0,
+        registered_at: chrono::Utc::now(),
+    };
+    db.insert_device(&other_device).await.unwrap();
+    let other_session_token =
+        antigravity::crypto::session::create_session_token(&state.hmac_key, other_device_id, 3600)
+            .unwrap();
+
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!("/api/v1/sync/document/{document_id}"))
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {other_session_token}"),
+                )
+                .extension(axum::extract::ConnectInfo(mock_addr))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        response.status(),
+        StatusCode::BAD_REQUEST,
+        "a device must not be able to read another device's document"
+    );
+
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!("/api/v1/sync/document/{document_id}/history"))
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {other_session_token}"),
+                )
+                .extension(axum::extract::ConnectInfo(mock_addr))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        response.status(),
+        StatusCode::BAD_REQUEST,
+        "a device must not be able to read another device's document history"
+    );
 }

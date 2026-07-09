@@ -3,7 +3,7 @@ use crate::models::sync_document::SyncDocument;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-/// Inserts a new sync document version. Uses PostgreSQL SERIALIZABLE isolation level
+/// Inserts a new sync document version. Uses `PostgreSQL` SERIALIZABLE isolation level
 /// and retries the transaction if a serialization failure (SQLSTATE 40001) occurs.
 pub async fn upsert_sync_document(pool: &PgPool, doc: &SyncDocument) -> Result<(), AppError> {
     let mut attempts = 0;
@@ -20,7 +20,7 @@ pub async fn upsert_sync_document(pool: &PgPool, doc: &SyncDocument) -> Result<(
                     attempt = attempts,
                     "Postgres serialization conflict (40001). Retrying transaction..."
                 );
-                tokio::time::sleep(std::time::Duration::from_millis(5 * attempts as u64)).await;
+                tokio::time::sleep(std::time::Duration::from_millis(5 * u64::from(attempts))).await;
                 continue;
             }
             Err(e) => return Err(e),

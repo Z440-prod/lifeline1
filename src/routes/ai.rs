@@ -56,12 +56,11 @@ pub async fn ai_proxy_handler(
                     "output_tokens": 35
                 }
             })));
-        } else {
-            metrics::counter!("antigravity_api_errors_total", "endpoint" => "/ai/proxy", "error" => "missing_api_key").increment(1);
-            return Err(AppError::ExternalServiceError(
-                "Anthropic API key is not configured".to_owned(),
-            ));
         }
+        metrics::counter!("antigravity_api_errors_total", "endpoint" => "/ai/proxy", "error" => "missing_api_key").increment(1);
+        return Err(AppError::ExternalServiceError(
+            "Anthropic API key is not configured".to_owned(),
+        ));
     }
 
     // outbound messages request structure for Claude API

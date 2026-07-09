@@ -62,7 +62,7 @@ async fn handle_socket(mut socket: WebSocket, device_id: Uuid) {
                     Some(Ok(Message::Text(text))) => {
                         tracing::info!(device_id = %device_id, "Received text frame: {text}");
                         // Simple echo response for connection testing
-                        let response_text = format!("Echo: {}", text);
+                        let response_text = format!("Echo: {text}");
                         if let Err(e) = socket.send(Message::Text(response_text.into())).await {
                             tracing::error!(device_id = %device_id, "Failed to send echo response: {e}");
                             break;
