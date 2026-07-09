@@ -1,11 +1,13 @@
 use axum::http::{HeaderName, Method};
 use axum::{
     middleware,
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
-use axum_prometheus::PrometheusMetricLayer;
-use std::sync::Arc;
+use axum_prometheus::{
+    metrics_exporter_prometheus::PrometheusHandle, PrometheusMetricLayerBuilder,
+};
+use std::sync::{Arc, OnceLock};
 use tower_governor::governor::GovernorConfigBuilder;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -14,8 +16,17 @@ use crate::state::AppState;
 pub mod ai;
 pub mod auth;
 pub mod health;
+pub mod integrations;
 pub mod stream;
 pub mod sync;
+
+/// Process-wide Prometheus recorder handle. `axum_prometheus`'s default
+/// handle installs a *global* `metrics` recorder on creation, which panics
+/// if attempted twice in the same process — so `create_router` must only
+/// ever trigger that installation once, even though it may legitimately be
+/// called more than once per process (multiple `#[tokio::test]`s in one
+/// binary each build their own router).
+static METRIC_HANDLE: OnceLock<PrometheusHandle> = OnceLock::new();
 
 /// Assemble the application router.
 /// Defines all endpoints under the `/api/v1` namespace and applies `attest_guard` middleware
@@ -63,7 +74,15 @@ pub fn create_router(state: Arc<AppState>) -> Router {
     };
 
     // ── Prometheus Metrics ───────────────────────────────────────────────────
-    let (prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
+    // The exporter handle (used to render `/metrics`) is installed at most
+    // once per process via `METRIC_HANDLE`; the recording layer itself is
+    // cheap and stateless, so it's safe to build fresh on every call.
+    let metric_handle = METRIC_HANDLE
+        .get_or_init(|| axum_prometheus::Handle::default().0)
+        .clone();
+    let (prometheus_layer, _) = PrometheusMetricLayerBuilder::new()
+        .with_metrics_from_fn(|| metric_handle.clone())
+        .build_pair();
 
     // Define the core API v1 routes.
     // We separate them into public routes (challenges, attestations, stream)
@@ -75,7 +94,31 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/sync/document/{id}/history",
             get(sync::get_document_history_handler),
         )
+        .route(
+            "/sync/documents/{document_type}",
+            get(sync::list_documents_by_type_handler),
+        )
         .route("/ai/proxy", post(ai::ai_proxy_handler))
+        .route(
+            "/integrations",
+            get(integrations::list_integrations_handler),
+        )
+        .route(
+            "/integrations/{provider}/connect",
+            post(integrations::connect_on_device_handler),
+        )
+        .route(
+            "/integrations/{provider}",
+            delete(integrations::disconnect_handler),
+        )
+        .route(
+            "/integrations/whoop/authorize",
+            get(integrations::whoop_authorize_handler),
+        )
+        .route(
+            "/integrations/whoop/metrics",
+            get(integrations::whoop_metrics_handler),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             crate::middleware::attest_guard::attest_guard,
@@ -89,7 +132,15 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         )
         .route("/auth/assert", post(auth::assert_handler))
         .route("/ai/policy-matrix", get(ai::policy_matrix_handler))
-        .route("/stream", get(stream::ws_upgrade_handler));
+        .route("/stream", get(stream::ws_upgrade_handler))
+        // Whoop redirects the user's own browser here after consent — no
+        // Authorization header is present, so this cannot sit behind
+        // attest_guard. The signed `state` param (see crypto::oauth_state)
+        // is what authenticates the callback instead.
+        .route(
+            "/integrations/whoop/callback",
+            get(integrations::whoop_callback_handler),
+        );
 
     // ── Infrastructure endpoints (no auth) ───────────────────────────────────
     let infra_routes = Router::new()

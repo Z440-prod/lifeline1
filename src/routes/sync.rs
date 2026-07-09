@@ -12,6 +12,30 @@ use crate::middleware::attest_guard::VerifiedDevice;
 use crate::models::sync_document::SyncDocument;
 use crate::state::AppState;
 
+const DEFAULT_DOCUMENT_TYPE: &str = "generic";
+const MAX_DOCUMENT_TYPE_LEN: usize = 30;
+
+/// Validates a client-supplied document type: lowercase ASCII letters and
+/// underscores only, bounded length. This is purely a UI grouping label the
+/// server stores but never interprets, so the only real requirement is that
+/// it can't be used to smuggle oversized or malformed data into the column.
+fn validate_document_type(document_type: &str) -> Result<(), AppError> {
+    if document_type.is_empty() || document_type.len() > MAX_DOCUMENT_TYPE_LEN {
+        return Err(AppError::BadRequest(format!(
+            "document_type must be 1-{MAX_DOCUMENT_TYPE_LEN} characters"
+        )));
+    }
+    if !document_type
+        .bytes()
+        .all(|b| b.is_ascii_lowercase() || b == b'_')
+    {
+        return Err(AppError::BadRequest(
+            "document_type must contain only lowercase letters and underscores".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Debug, Deserialize)]
 pub struct SyncDeltaRequest {
     pub document_id: Uuid,
@@ -21,6 +45,9 @@ pub struct SyncDeltaRequest {
     pub auth_tag: String,              // Base64 encoded
     pub client_signature: String,      // Base64 encoded (ECDSA ASN.1)
     pub device_id: Uuid,
+    /// Client-assigned category, e.g. "`lab_result`". Defaults to "generic".
+    #[serde(default)]
+    pub document_type: Option<String>,
 }
 
 /// Handler for `POST /api/v1/sync/delta`.
@@ -43,7 +70,14 @@ pub async fn sync_delta_handler(
         ));
     }
 
-    // 2. Decode the incoming base64 fields
+    // 2. Validate the document_type category label, if supplied
+    let document_type = payload
+        .document_type
+        .clone()
+        .unwrap_or_else(|| DEFAULT_DOCUMENT_TYPE.to_owned());
+    validate_document_type(&document_type)?;
+
+    // 3. Decode the incoming base64 fields
     let engine = base64::prelude::BASE64_STANDARD;
     use base64::Engine;
 
@@ -63,14 +97,14 @@ pub async fn sync_delta_handler(
         .decode(&payload.client_signature)
         .map_err(|e| AppError::BadRequest(format!("Invalid client_signature encoding: {e}")))?;
 
-    // 3. Fetch device's registered public key
+    // 4. Fetch device's registered public key
     let device = state
         .db
         .get_device(payload.device_id)
         .await?
         .ok_or(AppError::DeviceNotFound)?;
 
-    // 4. Reconstruct the message over which the signature was generated
+    // 5. Reconstruct the message over which the signature was generated
     let mut signed_data = Vec::with_capacity(
         16 + 8 + encrypted_blob_bytes.len() + iv_bytes.len() + auth_tag_bytes.len(),
     );
@@ -80,7 +114,7 @@ pub async fn sync_delta_handler(
     signed_data.extend_from_slice(&iv_bytes);
     signed_data.extend_from_slice(&auth_tag_bytes);
 
-    // 5. Verify the signature using the device's public key
+    // 6. Verify the signature using the device's public key
     let peer = ring::signature::UnparsedPublicKey::new(
         &ring::signature::ECDSA_P256_SHA256_ASN1,
         &device.public_key_der,
@@ -89,7 +123,7 @@ pub async fn sync_delta_handler(
         AppError::InvalidAssertion("Invalid client signature on sync payload".to_owned())
     })?;
 
-    // 6. Assemble the model and upsert via serializable transaction with automatic retry
+    // 7. Assemble the model and upsert via serializable transaction with automatic retry
     let doc = SyncDocument {
         document_id: payload.document_id,
         device_id: payload.device_id,
@@ -98,6 +132,7 @@ pub async fn sync_delta_handler(
         initialization_vector: iv_bytes,
         auth_tag: auth_tag_bytes,
         client_signature: signature_bytes,
+        document_type,
         created_at: chrono::Utc::now(),
     };
 
@@ -106,11 +141,11 @@ pub async fn sync_delta_handler(
     metrics::histogram!("antigravity_db_latency_seconds", "operation" => "upsert_sync_document")
         .record(db_start.elapsed().as_secs_f64());
 
-    // 7. Write-through to the memory Cache
+    // 8. Write-through to the memory Cache
     state.doc_cache.insert(doc.document_id, doc.clone());
     metrics::counter!("antigravity_cache_updates_total", "operation" => "sync_delta").increment(1);
 
-    // 8. Record cryptographically chained Audit Log
+    // 9. Record cryptographically chained Audit Log
     let payload_hash = {
         use ring::digest::{digest, SHA256};
         digest(&SHA256, &doc.encrypted_blob).as_ref().to_vec()
@@ -131,6 +166,7 @@ pub async fn sync_delta_handler(
     Ok(Json(json!({
         "document_id": doc.document_id,
         "version_sequence": doc.version_sequence,
+        "document_type": doc.document_type,
         "status": "synced"
     })))
 }
@@ -211,6 +247,7 @@ pub async fn get_document_handler(
         "initialization_vector": engine.encode(&doc.initialization_vector),
         "auth_tag": engine.encode(&doc.auth_tag),
         "client_signature": engine.encode(&doc.client_signature),
+        "document_type": doc.document_type,
         "created_at": doc.created_at,
     })))
 }
@@ -267,6 +304,7 @@ pub async fn get_document_history_handler(
                 "initialization_vector": engine.encode(&doc.initialization_vector),
                 "auth_tag": engine.encode(&doc.auth_tag),
                 "client_signature": engine.encode(&doc.client_signature),
+                "document_type": doc.document_type,
                 "created_at": doc.created_at,
             })
         })
@@ -278,5 +316,58 @@ pub async fn get_document_history_handler(
         "document_id": document_id,
         "total_versions": versions.len(),
         "versions": versions,
+    })))
+}
+
+/// Handler for `GET /api/v1/sync/documents/:document_type`.
+/// Lists the latest version of every document the authenticated device owns
+/// in a given category — e.g. `lab_result` for the Lab Results screen. Since
+/// documents are already scoped to `verified_device.device_id` at the query
+/// level, there is no cross-device data to filter out here.
+#[tracing::instrument(skip(state), fields(document_type = %document_type))]
+pub async fn list_documents_by_type_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(verified_device): Extension<VerifiedDevice>,
+    Path(document_type): Path<String>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/sync/documents/{type}")
+        .increment(1);
+    let start_time = std::time::Instant::now();
+
+    validate_document_type(&document_type)?;
+
+    let db_start = std::time::Instant::now();
+    let docs = state
+        .db
+        .list_documents_by_type(verified_device.device_id, &document_type)
+        .await?;
+    metrics::histogram!("antigravity_db_latency_seconds", "operation" => "list_documents_by_type")
+        .record(db_start.elapsed().as_secs_f64());
+
+    let engine = base64::prelude::BASE64_STANDARD;
+    use base64::Engine;
+
+    let documents: Vec<serde_json::Value> = docs
+        .iter()
+        .map(|doc| {
+            json!({
+                "document_id": doc.document_id,
+                "version_sequence": doc.version_sequence,
+                "encrypted_blob": engine.encode(&doc.encrypted_blob),
+                "initialization_vector": engine.encode(&doc.initialization_vector),
+                "auth_tag": engine.encode(&doc.auth_tag),
+                "client_signature": engine.encode(&doc.client_signature),
+                "document_type": doc.document_type,
+                "created_at": doc.created_at,
+            })
+        })
+        .collect();
+
+    metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/sync/documents/{type}").record(start_time.elapsed().as_secs_f64());
+
+    Ok(Json(json!({
+        "document_type": document_type,
+        "count": documents.len(),
+        "documents": documents,
     })))
 }

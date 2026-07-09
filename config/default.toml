@@ -34,3 +34,15 @@ requests_per_second = 1
 # Effectively allows up to 60 requests per minute with burst tolerance.
 burst_size = 60
 
+[integrations]
+# Whoop is the only provider requiring server-side OAuth2 (Apple Health and
+# Google Health Connect are on-device SDKs the client reads locally — the
+# server only records that a device has authorized them).
+# Register an app at https://developer.whoop.com to obtain these.
+whoop_client_id = ""
+whoop_client_secret = ""
+whoop_authorize_url = "https://api.prod.whoop.com/oauth/oauth2/auth"
+whoop_token_url = "https://api.prod.whoop.com/oauth/oauth2/token"
+whoop_api_base = "https://api.prod.whoop.com/developer"
+whoop_redirect_uri = "http://localhost:8443/api/v1/integrations/whoop/callback"
+
