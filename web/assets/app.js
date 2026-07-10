@@ -55,6 +55,7 @@ const I = {
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3.2"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.06-.4.1-.8.1-1.2z" stroke-linejoin="round"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke-linecap="round"/></svg>',
+    flame: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c4.4 0 7.5-2.9 7.5-7.2 0-3.1-1.7-5.4-3.4-7.3-.4 1.2-1.2 2.3-2.2 2.9.2-2.5-.8-6-3.9-8.4.3 3-1.2 4.6-2.7 6.4C5.7 10.2 4.5 12 4.5 14.8 4.5 19.1 7.6 22 12 22zm0-2.2c-1.8 0-3-1.2-3-2.9 0-1.3.7-2.1 1.5-3 .6-.7 1.3-1.4 1.6-2.4 1.7 1.2 2.9 3.2 2.9 5C15 18.6 13.8 19.8 12 19.8z"/></svg>',
     eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/><path d="M4 4l16 16" stroke-linecap="round"/></svg>',
     device: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="7" y="2.5" width="10" height="19" rx="2.8"/><path d="M11 18.5h2" stroke-linecap="round"/></svg>',
     logo: '<svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--surface)" stroke="var(--hairline)"/><path d="M5 18h5.5l2.8-7.5 3.8 11 2.8-5.5H27" fill="none" stroke="var(--pulse)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -63,7 +64,7 @@ const PIGMENT = { cardio: 'var(--cardio)', sleep: 'var(--sleep)', activity: 'var
 
 /* ── Routes ───────────────────────────────────────────────────────────────── */
 const ROUTES = [
-    { id: 'portrait', label: 'Portrait', icon: I.portrait },
+    { id: 'portrait', label: 'Today', icon: I.portrait },
     { id: 'arena', label: 'Arena', icon: I.arena },
     { id: 'coach', label: 'Coach', icon: I.coach },
     { id: 'vault', label: 'Vault', icon: I.vault },
@@ -71,36 +72,83 @@ const ROUTES = [
     { id: 'plans', label: 'Plans', icon: I.plans },
     { id: 'settings', label: 'Settings', icon: I.settings },
 ];
+const MORE_ROUTES = ['sources', 'plans', 'settings'];
 const routeId = () => (location.hash.replace(/^#\/?/, '') || 'portrait').split('?')[0];
+const TITLES = { portrait: 'Today', arena: 'The Arena', coach: 'Coach', vault: 'The Vault', sources: 'Sources', plans: 'Plans', settings: 'Settings' };
 
 /* ── Frame ────────────────────────────────────────────────────────────────── */
+const MORE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2.1"/><circle cx="12" cy="12" r="2.1"/><circle cx="19" cy="12" r="2.1"/></svg>';
+
 function renderFrame() {
     $('#app').innerHTML = `
     <div class="frame">
-        <aside class="sidebar">
-            <div class="brand">${I.logo}<div class="word">Lifeline<small>LONGEVITY ENGINE</small></div></div>
-            <nav class="nav">
-                ${ROUTES.map((r) => `<button class="nav-item" data-nav="${r.id}">${r.icon}${r.label}</button>`).join('')}
-            </nav>
-            <div class="conn" id="connBadge"><span class="dot"></span><span class="t">connecting…</span></div>
-        </aside>
+        <header class="topbar" id="topbar"><span class="t" id="topbarTitle">Today</span><span class="dot" id="topbarDot"></span></header>
         <main class="main"><div class="content" id="view"></div></main>
         <nav class="tabbar">
-            ${ROUTES.slice(0, 5).map((r) => `<button class="tab" data-nav="${r.id}">${r.icon}<span>${r.label}</span></button>`).join('')}
-            <button class="tab" data-nav="settings">${I.settings}<span>More</span></button>
+            ${ROUTES.slice(0, 4).map((r) => `<button class="tab" data-nav="${r.id}">${r.icon}<span>${r.label}</span></button>`).join('')}
+            <button class="tab" id="moreTab">${MORE_ICON}<span>More</span></button>
         </nav>
     </div>`;
     $$('[data-nav]').forEach((b) => b.addEventListener('click', () => { location.hash = `#/${b.dataset.nav}`; }));
+    $('#moreTab').addEventListener('click', openMoreSheet);
     onConnection((s) => {
-        const el = $('#connBadge');
-        if (!el) return;
-        el.classList.toggle('online', s.online && s.authed);
-        $('.t', el).textContent = s.online ? (s.authed ? 'connected · attested session' : 'connected · no session') : 'backend offline';
+        const dot = $('#topbarDot');
+        if (dot) dot.classList.toggle('on', s.online && s.authed);
     });
+    // Scroll-edge effect: the large title hands off to a compact glass bar.
+    window.addEventListener('scroll', () => {
+        $('#topbar')?.classList.toggle('showing', window.scrollY > 74);
+    }, { passive: true });
 }
 
 function setActiveNav(id) {
     $$('[data-nav]').forEach((b) => b.classList.toggle('active', b.dataset.nav === id));
+    $('#moreTab')?.classList.toggle('active', MORE_ROUTES.includes(id));
+    const t = $('#topbarTitle');
+    if (t) t.textContent = TITLES[id] || 'Lifeline';
+}
+
+/* iOS bottom sheet for the secondary destinations. */
+function openMoreSheet() {
+    const host = $('#overlays');
+    const rows = [
+        { id: 'sources', name: 'Sources', sub: 'Apple · Google · Whoop', color: 'var(--sleep)', icon: I.sources },
+        { id: 'plans', name: 'Plans', sub: store.sub?.tier === 'free' || !store.sub ? 'Free plan' : `${cap(store.sub.tier)} member`, color: 'var(--recovery)', icon: I.plans },
+        { id: 'settings', name: 'Settings', sub: 'Identity, theme & privacy', color: 'var(--ink-3)', icon: I.settings },
+    ];
+    host.innerHTML = `
+        <div class="sheet-dim" id="sheetDim"></div>
+        <div class="sheet" role="dialog" aria-label="More">
+            <div class="grab"></div>
+            <h3>More</h3>
+            <div class="sheet-group">
+                ${rows.map((r) => `<button class="sheet-row" data-go="${r.id}">
+                    <span class="mark" style="background:${r.color}">${r.icon}</span>
+                    <span>${r.name}<br><small style="color:var(--ink-3); font-weight:500; font-size:var(--fs-micro)">${esc(r.sub)}</small></span>
+                    <svg class="chev" width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1l6 6-6 6" stroke-linecap="round"/></svg>
+                </button>`).join('')}
+            </div>
+        </div>`;
+    const close = () => { host.innerHTML = ''; };
+    $('#sheetDim').addEventListener('click', close);
+    $$('.sheet-row', host).forEach((b) => b.addEventListener('click', () => { close(); location.hash = `#/${b.dataset.go}`; }));
+}
+
+/* Confetti — because logging your score should feel like something. */
+function confetti(x = innerWidth / 2, y = innerHeight * 0.7) {
+    const colors = ['var(--tint)', 'var(--energy)', 'var(--activity)', 'var(--sleep)', 'var(--recovery)'];
+    for (let i = 0; i < 26; i++) {
+        const bit = document.createElement('span');
+        bit.className = 'confetti-bit';
+        const ang = (Math.random() - 0.5) * Math.PI;
+        const dist = 90 + Math.random() * 200;
+        bit.style.cssText = `left:${x}px; top:${y}px; background:${colors[i % colors.length]};` +
+            `--dx:${Math.sin(ang) * dist}px; --dy:${140 + Math.random() * 260}px;` +
+            `--rot:${(Math.random() - 0.5) * 900}deg; --dur:${0.9 + Math.random() * 0.7}s;`;
+        document.body.appendChild(bit);
+        setTimeout(() => bit.remove(), 1800);
+    }
+    if (navigator.vibrate) navigator.vibrate(18);
 }
 
 function offlineBanner() {
@@ -129,18 +177,19 @@ function viewPortrait(el) {
     <div class="page-head">
         <div class="eyebrow">${esc(dateStr)}</div>
         <h1>${hello}.</h1>
-        <div class="sub">Computed on this device from your signals — the server never sees a heartbeat.</div>
+        <div class="sub">Drawn fresh on your device, from your signals. The server never sees a heartbeat.</div>
     </div>
     <div class="grid">
         <div class="card hero col-12">
             <div class="vitality-hero">
                 <div class="vitality-num">
                     <span class="n tnum">${v}</span>
-                    <span class="cap">today's vitality — the one number that ever leaves this device</span>
+                    <span class="cap">today's vitality — the only number that ever leaves your hands</span>
                 </div>
                 <div class="vitality-trace">${charts.pulseTrace({ vitality: v, rhr: s.resting_heart_rate })}</div>
                 <div class="vitality-side">
-                    ${lg ? `<span class="chip"><span class="d" style="background:${charts.LEAGUE_COLORS[lg.id]}"></span>${esc(lg.name)} league</span>` : ''}
+                    ${lg ? `<span class="chip sticker"><span class="d" style="background:${charts.LEAGUE_COLORS[lg.id]}"></span>${esc(lg.name)} league</span>` : ''}
+                    ${store.profile?.streak_days ? `<span class="chip"><span class="flame">${I.flame}${store.profile.streak_days}</span>&nbsp;day streak</span>` : ''}
                     <button class="btn btn-pulse btn-sm" id="logScoreBtn">Log today's score</button>
                 </div>
             </div>
@@ -157,9 +206,9 @@ function viewPortrait(el) {
             <div class="card-title">Lifeline Age</div>
             <div class="card-sub">transparent additive model — inspect it in Settings</div>
             <div class="tiles">
-                <div class="tile"><div class="v tnum">${la.age}</div><div class="l">biological</div>
-                    <div class="delta" style="color:${la.offset <= 0 ? 'var(--ok)' : 'var(--warn)'}">${la.offset <= 0 ? '▼' : '▲'} ${Math.abs(la.offset)} yrs vs calendar</div></div>
-                <div class="tile"><div class="v tnum">${s.chrono_age}</div><div class="l">calendar</div></div>
+                <div class="tile"><div class="v tnum">${la.age}</div><div class="l">your body says</div>
+                    <div class="delta" style="color:${la.offset <= 0 ? 'var(--ok)' : 'var(--warn-deep)'}">${Math.abs(la.offset)} yrs ${la.offset <= 0 ? 'younger' : 'older'} than your passport</div></div>
+                <div class="tile"><div class="v tnum">${s.chrono_age}</div><div class="l">your passport says</div></div>
             </div>
         </div>
 
@@ -221,7 +270,8 @@ async function submitScoreFlow(handle) {
     const res = await api.submitScore(v, handle);
     if (res.status === 200) {
         store.profile = res.data;
-        toast(`Logged ${v} — ${res.data.league} league, #${res.data.rank} worldwide`);
+        confetti();
+        toast(`Logged ${v} — ${cap(res.data.league)} league, #${res.data.rank} worldwide`);
         await refreshArena();
         if (routeId() === 'arena' || routeId() === 'portrait') render();
     } else if (res.status === 409) {
@@ -254,7 +304,7 @@ function viewArena(el) {
                 <div class="arena-meta">
                     ${p ? `
                     <div class="league">${esc(cap(p.league))}</div>
-                    <div class="standing">as <b>${esc(p.handle)}</b> · level ${p.level} · ${p.streak_days}-day streak</div>
+                    <div class="standing">as <b>${esc(p.handle)}</b> · level ${p.level} · <span class="flame">${I.flame}${p.streak_days}-day streak</span></div>
                     <div class="standing">rank <b>#${p.rank}</b> of ${p.population} · top ${Math.max(1, Math.round(100 - p.percentile) || 1)}%</div>
                     <div class="xp-wrap">
                         <div class="meter" style="height:8px"><i style="width:${Math.min(100, Math.round((xpInto / xpSpan) * 100))}%; background:linear-gradient(90deg, var(--energy), var(--pulse))"></i></div>
