@@ -69,6 +69,17 @@ pub async fn submit_score_handler(
     metrics::counter!("antigravity_api_requests_total", "endpoint" => "/game/score").increment(1);
 
     let device_id = verified_device.device_id;
+
+    // Competing in weekly seasons is a paid entitlement — the free tier's
+    // catalog promise is "global leaderboard, view only". Enforced here so a
+    // patched client cannot bypass what the UI gates.
+    let tier = crate::routes::billing::effective_tier(state.as_ref(), device_id).await?;
+    if !tier.entitlements().competitive_seasons {
+        return Err(AppError::Forbidden(
+            "Competing in weekly seasons is a Pro feature — upgrade to log your score.".to_owned(),
+        ));
+    }
+
     let vitality = payload.vitality_score.clamp(0, 100);
     let today = chrono::Utc::now().date_naive();
     let season = game::season_id_for(today);

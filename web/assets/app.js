@@ -33,6 +33,12 @@ const saveLabMeta = () => localStorage.setItem('lifeline.labs', JSON.stringify(s
 const whoopConnected = () => store.connections.whoop?.status === 'connected';
 const vitalityNow = () => store.insights ? engine.vitality(store.insights, store.signals, { whoop: whoopConnected() }) : 0;
 
+/* Effective entitlements: whatever /billing/subscription said, else the free
+   defaults. The server enforces all of this independently — the client only
+   uses it to show the right doors. */
+const FREE_ENTITLEMENTS = { history_days: 7, ai_coach_daily_limit: 3, all_integrations: false, biomarker_tracking: false, competitive_seasons: false, ad_free: false, beta_access: false, early_features: false };
+const can = () => store.sub?.entitlements || FREE_ENTITLEMENTS;
+
 /* ── Toasts ───────────────────────────────────────────────────────────────── */
 function toast(text, tone = 'var(--ok)') {
     let host = $('.toasts');
@@ -262,6 +268,11 @@ async function refreshArena() {
 
 async function submitScoreFlow(handle) {
     const v = vitalityNow();
+    if (!can().competitive_seasons) {
+        toast('Competing is a Pro feature — pick a plan to enter the Arena', 'var(--warn-deep)');
+        location.hash = '#/plans';
+        return;
+    }
     if (!store.profile && !handle) {
         location.hash = '#/arena';
         toast('Claim a handle first to join the Arena', 'var(--warn)');
@@ -274,6 +285,9 @@ async function submitScoreFlow(handle) {
         toast(`Logged ${v} — ${cap(res.data.league)} league, #${res.data.rank} worldwide`);
         await refreshArena();
         if (routeId() === 'arena' || routeId() === 'portrait') render();
+    } else if (res.status === 403) {
+        toast(res.data?.error?.message || 'Upgrade to compete', 'var(--warn-deep)');
+        location.hash = '#/plans';
     } else if (res.status === 409) {
         toast(res.data?.error?.message || 'Handle taken', 'var(--err)');
     } else {
@@ -309,16 +323,19 @@ function viewArena(el) {
                     <div class="xp-wrap">
                         <div class="meter" style="height:8px"><i style="width:${Math.min(100, Math.round((xpInto / xpSpan) * 100))}%; background:linear-gradient(90deg, var(--energy), var(--pulse))"></i></div>
                         <div class="xp-caption"><span>level ${p.level}</span><span>${Math.max(0, xpSpan - xpInto)} XP → ${p.level + 1}</span></div>
-                    </div>` : `
+                    </div>` : can().competitive_seasons ? `
                     <div class="league">Unranked</div>
                     <div class="standing">Claim a handle and log your first vitality score to enter the global ladder.</div>
                     <div style="display:flex; gap:8px; margin-top:12px; max-width:340px;">
                         <input class="field" id="handleInput" maxlength="20" placeholder="pick a handle (3–20, a–z 0–9 _)" spellcheck="false">
                         <button class="btn btn-pulse" id="joinBtn">Join</button>
-                    </div>`}
+                    </div>` : `
+                    <div class="league">Spectator</div>
+                    <div class="standing">The free plan watches the ladder. <b>Pro</b> competes on it — score, streaks, leagues, weekly seasons.</div>
+                    <div style="margin-top:12px;"><button class="btn btn-pulse" id="unlockArenaBtn">Unlock the Arena</button></div>`}
                 </div>
             </div>
-            ${p ? `<div style="margin-top:16px; display:flex; gap:9px;">
+            ${p && can().competitive_seasons ? `<div style="margin-top:16px; display:flex; gap:9px;">
                 <button class="btn btn-pulse" id="logBtn">Log today's score · ${vitalityNow()}</button>
             </div>` : ''}
         </div>
@@ -348,6 +365,7 @@ function viewArena(el) {
         if (!/^[A-Za-z0-9_]{3,20}$/.test(h)) { toast('Handle must be 3–20 letters, numbers, or _', 'var(--warn)'); return; }
         await submitScoreFlow(h);
     });
+    $('#unlockArenaBtn')?.addEventListener('click', () => { location.hash = '#/plans'; });
     $('#handleInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#joinBtn').click(); });
     $('#logBtn')?.addEventListener('click', () => submitScoreFlow());
 }
@@ -405,7 +423,9 @@ function viewCoach(el) {
             const res = await api.aiProxy(text, ch.data?.challenge || 'token');
             reply = res.status === 200
                 ? (res.data?.content?.[0]?.text || res.data?.content || 'Understood.')
-                : `The proxy answered ${res.status}: ${res.data?.error?.message || 'unavailable'}.`;
+                : res.status === 403
+                    ? `${res.data?.error?.message || 'Daily free limit reached.'} You'll find the plans under More → Plans.`
+                    : `The proxy answered ${res.status}: ${res.data?.error?.message || 'unavailable'}.`;
         } catch { reply = 'Could not reach the backend.'; }
         document.getElementById(tid)?.remove();
         store.coachLog.push({ role: 'ai', text: reply });

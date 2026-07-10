@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark light">
+    <title>Lifeline — Privacy Policy</title>
+    <style>
+        :root { --bg:#000; --card:#1c1c1e; --ink:#fff; --ink2:rgba(235,235,245,.62); --tint:#ff4f5e; --line:rgba(84,84,88,.4); }
+        @media (prefers-color-scheme: light) { :root { --bg:#f2f2f7; --card:#fff; --ink:#000; --ink2:rgba(60,60,67,.62); --tint:#eb3b48; --line:rgba(60,60,67,.2); } }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--ink); line-height:1.65; padding:40px 20px calc(60px + env(safe-area-inset-bottom)); }
+        main { max-width:640px; margin:0 auto; }
+        h1 { font-size:2rem; letter-spacing:-.03em; font-weight:800; }
+        .sub { color:var(--ink2); margin:8px 0 28px; }
+        section { background:var(--card); border-radius:20px; padding:20px; margin-bottom:14px; }
+        h2 { font-size:1.05rem; font-weight:700; margin-bottom:8px; }
+        p, li { color:var(--ink2); font-size:.94rem; }
+        ul { padding-left:20px; margin-top:6px; }
+        b { color:var(--ink); }
+        a { color:var(--tint); }
+        .stamp { color:var(--ink2); font-size:.8rem; margin-top:26px; text-align:center; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Privacy Policy</h1>
+    <p class="sub">Lifeline — the zero-knowledge longevity engine</p>
+
+    <section>
+        <h2>The short version</h2>
+        <p>Lifeline is built so that <b>we cannot read your health data — even if we wanted to</b>. Your biometrics are read and processed on your device. What reaches our servers is either ciphertext we cannot decrypt or a single opaque score you chose to share.</p>
+    </section>
+
+    <section>
+        <h2>What stays on your device</h2>
+        <ul>
+            <li>All raw health signals (heart rate, HRV, sleep, steps, workouts) read from Apple Health, Health Connect, or connected wearables.</li>
+            <li>All insight computation: your vitality score, Lifeline Age, readiness, correlations, and circadian windows are calculated locally from rules our servers publish.</li>
+            <li>Your encryption keys. Vault documents are encrypted with keys that never leave your device.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>What our servers store</h2>
+        <ul>
+            <li><b>Encrypted vault documents</b> — ciphertext, an initialization vector, and an authentication tag. We cannot decrypt them.</li>
+            <li><b>Your Arena profile</b> — a pseudonymous handle you chose, your league, level, streak, and the opaque 0–100 vitality score you submit. No biometric can be reconstructed from it.</li>
+            <li><b>A device attestation record</b> — a random device identifier and a public key, established via Apple App Attest. No account, no e-mail, no name, no password.</li>
+            <li><b>Subscription state</b> — your plan tier and billing references (see Payments).</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>AI coach</h2>
+        <p>Coach messages are routed through our privacy proxy, which strips your IP address, device identifiers, and all metadata before the model sees a word. Conversations are not stored and are never used for training.</p>
+    </section>
+
+    <section>
+        <h2>Payments</h2>
+        <p>Subscriptions purchased in our iOS and Android apps are processed by Apple and Google respectively; on the web they are processed by <b>Stripe</b>. Card details never touch Lifeline's servers. We store only the plan you're on, its status, and provider references needed to manage it. Payment providers process your data under their own policies.</p>
+    </section>
+
+    <section>
+        <h2>Third-party connections</h2>
+        <p>Connecting Apple Health or Health Connect grants <b>on-device</b> read access only — our servers just record that you consented. Connecting Whoop uses OAuth2; the access token is encrypted at rest on our servers and is never returned to any client.</p>
+    </section>
+
+    <section>
+        <h2>What we never do</h2>
+        <ul>
+            <li>No selling or sharing of personal data. Ever.</li>
+            <li>No advertising identifiers, no cross-app tracking.</li>
+            <li>No third-party analytics SDKs in the app.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Your controls</h2>
+        <p>Resetting your device identity in Settings severs the link to everything stored server-side; encrypted documents and the arena profile tied to the old identity become permanently orphaned ciphertext. You can also disconnect any source, or cancel your subscription, at any time in the app.</p>
+    </section>
+
+    <section>
+        <h2>Contact</h2>
+        <p>Questions about this policy: <a href="mailto:privacy@lifeline.health">privacy@lifeline.health</a>.</p>
+    </section>
+
+    <p class="stamp">Last updated July 2026 · <a href="/">Back to Lifeline</a></p>
+</main>
+</body>
+</html>

@@ -112,6 +112,12 @@ async fn main() -> anyhow::Result<()> {
         .time_to_idle(std::time::Duration::from_secs(600))
         .build();
 
+    // 8.6 Daily AI-coach usage meter (free-tier limit enforcement)
+    let ai_usage = moka::sync::Cache::builder()
+        .max_capacity(100_000)
+        .time_to_live(std::time::Duration::from_secs(26 * 3600))
+        .build();
+
     // 9. Assemble Shared Application State
     let app_state = Arc::new(AppState {
         db,
@@ -122,6 +128,7 @@ async fn main() -> anyhow::Result<()> {
         oauth_state_key,
         token_vault_key,
         doc_cache,
+        ai_usage,
     });
 
     // 10. Build router with all submodules nested under `/api/v1`

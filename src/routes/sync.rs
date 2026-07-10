@@ -337,12 +337,23 @@ pub async fn list_documents_by_type_handler(
     validate_document_type(&document_type)?;
 
     let db_start = std::time::Instant::now();
-    let docs = state
+    let mut docs = state
         .db
         .list_documents_by_type(verified_device.device_id, &document_type)
         .await?;
     metrics::histogram!("antigravity_db_latency_seconds", "operation" => "list_documents_by_type")
         .record(db_start.elapsed().as_secs_f64());
+
+    // Tier history window: the free plan lists the last N days of documents
+    // (the ciphertext itself is never deleted — upgrading restores the full
+    // timeline instantly).
+    let tier =
+        crate::routes::billing::effective_tier(state.as_ref(), verified_device.device_id).await?;
+    let history_days = tier.entitlements().history_days;
+    if history_days >= 0 {
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(i64::from(history_days));
+        docs.retain(|d| d.created_at >= cutoff);
+    }
 
     let engine = base64::prelude::BASE64_STANDARD;
     use base64::Engine;
