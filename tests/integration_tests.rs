@@ -1267,3 +1267,83 @@ async fn test_free_tier_entitlements_enforced_server_side() {
     .await;
     assert_eq!(status, StatusCode::OK, "pro coach is unlimited");
 }
+
+#[tokio::test]
+async fn test_donation_flow_and_config() {
+    // The donate button's contract: presets in the public config, a bounded
+    // one-time amount, simulated Checkout until Stripe keys exist — and it
+    // never touches the tier (donations unlock nothing).
+    let (state, db) = create_test_state();
+    let (_device_id, token) = register_device_with_token(&state, &db).await;
+    let app = create_router(state.clone());
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12380));
+
+    let (status, cfg) = read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/billing/config")
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(cfg["donate"]["presets_usd"], json!([3, 5, 10]));
+
+    let donate = |cents: i64| {
+        let app = app.clone();
+        let token = token.clone();
+        async move {
+            read_json(
+                app.oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/v1/billing/donate")
+                        .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .extension(axum::extract::ConnectInfo(addr))
+                        .body(Body::from(json!({ "amount_usd_cents": cents }).to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap(),
+            )
+            .await
+        }
+    };
+
+    let (status, body) = donate(500).await;
+    assert_eq!(status, StatusCode::OK, "donation failed: {body:?}");
+    assert_eq!(body["simulated"], true);
+    assert_eq!(body["amount_usd_cents"], 500);
+
+    let (status, _) = donate(50).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "below $1 must be rejected");
+    let (status, _) = donate(9_000_000).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "above $500 must be rejected"
+    );
+
+    // Donating grants no entitlements.
+    let (_s, sub) = read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/billing/subscription")
+                    .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(sub["tier"], "free", "donations must not change the tier");
+}

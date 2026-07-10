@@ -131,6 +131,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/billing/subscription", get(billing::subscription_handler))
         .route("/billing/checkout", post(billing::checkout_handler))
         .route("/billing/portal", post(billing::portal_handler))
+        .route("/billing/donate", post(billing::donate_handler))
         .route(
             "/billing/beta-features",
             get(billing::beta_features_handler),

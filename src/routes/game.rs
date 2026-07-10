@@ -46,6 +46,10 @@ fn profile_json(profile: &GameProfile, rank: i64, total: i64) -> Value {
         "league": profile.league,
         "streak_days": profile.streak_days,
         "longest_streak": profile.longest_streak,
+        // The client renders "logged today ✓" and the streak-at-risk banner
+        // from this — without it, the UI can't tell a kept streak from one
+        // in danger.
+        "last_submission_date": profile.last_submission_date,
         "season_id": profile.season_id,
         "season_xp": profile.season_xp,
         "rank": rank,

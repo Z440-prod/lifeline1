@@ -66,4 +66,8 @@ cancel_url = "http://localhost:8443/billing/cancel"
 portal_return_url = "http://localhost:8443/billing/portal-return"
 # Stripe API base — overridable for tests; defaults to the live host.
 api_base = "https://api.stripe.com"
+# Optional pre-created Stripe Payment Link for donations ("Support Lifeline").
+# When empty, POST /billing/donate creates a one-time Checkout Session with
+# the caller-chosen amount instead (simulated until Stripe keys are set).
+donate_url = ""
 

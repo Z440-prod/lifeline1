@@ -7,6 +7,12 @@
 import { api, connect, keepAlive, identity, onConnection, status, deviceCrypto } from './api.js';
 import * as engine from './engine.js';
 import * as charts from './charts.js';
+import { sound, armGlobalSounds } from './sound.js';
+
+/* Native store shells (Capacitor) must not show web-payment surfaces —
+   subscriptions go through StoreKit / Play Billing there, and donations are
+   web-only (Apple 3.2.1 / Play Payments). */
+const IN_STORE_SHELL = typeof window.Capacitor !== 'undefined';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -177,6 +183,10 @@ function viewPortrait(el) {
     const chrono = engine.chronotype(cfg, s);
     const lg = store.game ? engine.leagueFor(store.game, v) : null;
     const dateStr = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    // Loss aversion, honestly applied: only warn about a streak that exists.
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const loggedToday = store.profile?.last_submission_date === todayIso;
+    const streakAtRisk = !!store.profile && !loggedToday && store.profile.streak_days > 0 && can().competitive_seasons;
 
     el.innerHTML = `
     ${offlineBanner()}
@@ -185,6 +195,7 @@ function viewPortrait(el) {
         <h1>${hello}.</h1>
         <div class="sub">Drawn fresh on your device, from your signals. The server never sees a heartbeat.</div>
     </div>
+    ${streakAtRisk ? `<div class="streak-warn"><span class="flame">${I.flame}</span><span>Your <b>${store.profile.streak_days}-day streak</b> is on the line — log today's score to keep it alive.</span></div>` : ''}
     <div class="grid">
         <div class="card hero col-12">
             <div class="vitality-hero">
@@ -196,7 +207,9 @@ function viewPortrait(el) {
                 <div class="vitality-side">
                     ${lg ? `<span class="chip sticker"><span class="d" style="background:${charts.LEAGUE_COLORS[lg.id]}"></span>${esc(lg.name)} league</span>` : ''}
                     ${store.profile?.streak_days ? `<span class="chip"><span class="flame">${I.flame}${store.profile.streak_days}</span>&nbsp;day streak</span>` : ''}
-                    <button class="btn btn-pulse btn-sm" id="logScoreBtn">Log today's score</button>
+                    ${loggedToday
+                        ? `<button class="btn btn-ghost btn-sm" id="logScoreBtn">Logged today ✓ · see the Arena</button>`
+                        : `<button class="btn btn-pulse btn-sm" id="logScoreBtn">Log today's score</button>`}
                 </div>
             </div>
         </div>
@@ -253,7 +266,24 @@ function viewPortrait(el) {
         <div class="col-12"><div class="note"><b>Zero-knowledge by design.</b> These panels are computed here, in your browser, from the rules the server publishes. Your raw signals never leave the device — only today's opaque vitality integer does, and only if you log it to the Arena.</div></div>
     </div>`;
 
-    $('#logScoreBtn')?.addEventListener('click', () => submitScoreFlow());
+    $('#logScoreBtn')?.addEventListener('click', () => {
+        if (loggedToday) { location.hash = '#/arena'; return; }
+        submitScoreFlow();
+    });
+
+    // Count-up on the hero number — the little dopamine ramp.
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const numEl = $('.vitality-num .n', el);
+        if (numEl) {
+            const start = performance.now(), dur = 700;
+            const step = (t) => {
+                const k = Math.min(1, (t - start) / dur);
+                numEl.textContent = Math.round(v * (1 - Math.pow(1 - k, 3)));
+                if (k < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        }
+    }
 }
 
 /* ═══ VIEW: ARENA ══════════════════════════════════════════════════════════ */
@@ -282,7 +312,10 @@ async function submitScoreFlow(handle) {
     if (res.status === 200) {
         store.profile = res.data;
         confetti();
-        toast(`Logged ${v} — ${cap(res.data.league)} league, #${res.data.rank} worldwide`);
+        sound.whoosh(); sound.pop(6); sound.chime();
+        // Variable reward: the numbers are always honest, the praise rotates.
+        const praise = ['Clean.', 'Machine.', 'That’s a statement.'][Math.floor(Math.random() * 3)];
+        toast(`${praise} ${v} logged — ${cap(res.data.league)} league, #${res.data.rank} worldwide`);
         await refreshArena();
         if (routeId() === 'arena' || routeId() === 'portrait') render();
     } else if (res.status === 403) {
@@ -319,7 +352,7 @@ function viewArena(el) {
                     ${p ? `
                     <div class="league">${esc(cap(p.league))}</div>
                     <div class="standing">as <b>${esc(p.handle)}</b> · level ${p.level} · <span class="flame">${I.flame}${p.streak_days}-day streak</span></div>
-                    <div class="standing">rank <b>#${p.rank}</b> of ${p.population} · top ${Math.max(1, Math.round(100 - p.percentile) || 1)}%</div>
+                    <div class="standing">rank <b>#${p.rank}</b> of ${p.population} worldwide · top ${Math.max(1, Math.round(100 - p.percentile) || 1)}% · best ${p.best_vitality_score}</div>
                     <div class="xp-wrap">
                         <div class="meter" style="height:8px"><i style="width:${Math.min(100, Math.round((xpInto / xpSpan) * 100))}%; background:linear-gradient(90deg, var(--energy), var(--pulse))"></i></div>
                         <div class="xp-caption"><span>level ${p.level}</span><span>${Math.max(0, xpSpan - xpInto)} XP → ${p.level + 1}</span></div>
@@ -335,8 +368,9 @@ function viewArena(el) {
                     <div style="margin-top:12px;"><button class="btn btn-pulse" id="unlockArenaBtn">Unlock the Arena</button></div>`}
                 </div>
             </div>
-            ${p && can().competitive_seasons ? `<div style="margin-top:16px; display:flex; gap:9px;">
+            ${p && can().competitive_seasons ? `<div style="margin-top:16px; display:flex; gap:9px; flex-wrap:wrap;">
                 <button class="btn btn-pulse" id="logBtn">Log today's score · ${vitalityNow()}</button>
+                <button class="btn btn-ghost" id="flexBtn">Flex it 💪</button>
             </div>` : ''}
         </div>
 
@@ -347,13 +381,12 @@ function viewArena(el) {
                 <div class="tile"><div class="v tnum">${vitalityNow()}</div><div class="l">vitality</div></div>
                 <div class="tile"><div class="v tnum">${p ? p.streak_days : 0}</div><div class="l">day streak</div></div>
                 <div class="tile"><div class="v tnum">${p ? Number(p.season_xp).toLocaleString() : 0}</div><div class="l">season xp</div></div>
-                <div class="tile"><div class="v tnum">${p ? p.best_vitality_score : '—'}</div><div class="l">best score</div></div>
             </div>
             <div class="note" style="margin-top:14px;"><b>One submission a day counts.</b> XP = 40 + 2·score + 5·streak (streak capped at 30). Leagues are score bands: ${g ? g.leagues.map((l) => `${l.name} ${l.min_score}+`).join(' · ') : '—'}.</div>
         </div>
 
         <div class="card col-12">
-            <div class="card-title">Global leaderboard <span class="hint">live from /game/leaderboard</span></div>
+            <div class="card-title">Global leaderboard <span class="hint">🌍 every device on earth · one ladder · live</span></div>
             <div class="board" id="board">
                 ${boardRows(board, p)}
             </div>
@@ -366,6 +399,16 @@ function viewArena(el) {
         await submitScoreFlow(h);
     });
     $('#unlockArenaBtn')?.addEventListener('click', () => { location.hash = '#/plans'; });
+    $('#flexBtn')?.addEventListener('click', async () => {
+        const me = store.profile;
+        if (!me) return;
+        const line = `I'm #${me.rank} worldwide on Lifeline — ${cap(me.league)} league, vitality ${me.vitality_score}, ${me.streak_days}-day streak. Come take it from me. 🫀`;
+        confetti(); sound.chime();
+        try {
+            if (navigator.share) { await navigator.share({ text: line }); toast('Flexed. 💪'); }
+            else { await navigator.clipboard.writeText(line); toast('Flex copied — paste it anywhere 💪'); }
+        } catch { /* user dismissed the share sheet */ }
+    });
     $('#handleInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#joinBtn').click(); });
     $('#logBtn')?.addEventListener('click', () => submitScoreFlow());
 }
@@ -660,6 +703,7 @@ function paintPlans() {
             const price = t.price_monthly_usd === 0 ? 'Free' : `$${t.price_monthly_usd.toFixed(2)}<small> /mo</small>`;
             return `<div class="plan ${isCur ? 'current' : ''} ${t.tier === 'elite' && !isCur ? 'featured' : ''}">
                 ${t.tier === 'elite' ? '<span class="flag">most complete</span>' : ''}
+                ${t.tier === 'pro' && !isCur ? '<span class="flag pop">most popular</span>' : ''}
                 <h3>${esc(t.name)}</h3>
                 <div class="price tnum">${price}</div>
                 <div class="tag">${esc(t.tagline)}</div>
@@ -677,13 +721,23 @@ function paintPlans() {
     <div style="display:flex; gap:10px; margin-top:16px; align-items:center; flex-wrap:wrap;">
         ${cur !== 'free' ? '<button class="btn btn-ghost" id="portalBtn">Manage subscription</button>' : ''}
         <span style="font-size:var(--fs-micro); color:var(--ink-3);">${live ? 'Live billing via Stripe Checkout.' : 'Stripe test mode — upgrades are simulated server-side, no card charged.'}</span>
-    </div>`;
+    </div>
+    ${IN_STORE_SHELL ? '' : `
+    <div class="card donate-card">
+        <div class="card-title">Fuel the mission ☕</div>
+        <div class="card-sub">Donations unlock nothing — they just keep the free tier free, for everyone, forever.</div>
+        <div class="donate-row">
+            ${(store.billing?.donate?.presets_usd || [3, 5, 10]).map((usd) => `<button class="btn btn-ghost donate-amt ${usd === 5 ? 'sel' : ''}" data-usd="${usd}">$${usd}</button>`).join('')}
+            <button class="btn btn-pulse" id="donateBtn">Donate <span class="tnum" id="donateLabel">$5</span> ❤️</button>
+        </div>
+    </div>`}`;
 
     $$('#plansHost [data-up]').forEach((b) => b.addEventListener('click', async () => {
         b.disabled = true;
         const res = await api.checkout(b.dataset.up);
         if (res.status === 200) {
             if (res.data.simulated) {
+                sound.chime(); confetti();
                 toast(`Upgraded to ${b.dataset.up} — simulated checkout`);
                 await refreshBillingState();
                 paintPlans();
@@ -693,6 +747,28 @@ function paintPlans() {
             }
         } else toast(res.data?.error?.message || `Checkout failed (${res.status})`, 'var(--err)');
     }));
+
+    // Donate: preset selection (rule of three) + one warm button.
+    let donateUsd = 5;
+    $$('#plansHost .donate-amt').forEach((b) => b.addEventListener('click', () => {
+        donateUsd = Number(b.dataset.usd);
+        $$('#plansHost .donate-amt').forEach((x) => x.classList.toggle('sel', x === b));
+        const lbl = $('#donateLabel');
+        if (lbl) lbl.textContent = `$${donateUsd}`;
+    }));
+    $('#donateBtn')?.addEventListener('click', async () => {
+        const preset = store.billing?.donate?.url;
+        if (preset) { window.open(preset, '_blank'); return; }
+        const res = await api.donate(donateUsd * 100);
+        if (res.status === 200) {
+            if (res.data.simulated) {
+                sound.coin(); confetti();
+                toast('❤️ Thank you — every coffee keeps the free tier free');
+            } else if (res.data.checkout_url) {
+                window.open(res.data.checkout_url, '_blank');
+            }
+        } else toast(res.data?.error?.message || 'Donation failed', 'var(--err)');
+    });
     $('#portalBtn')?.addEventListener('click', async () => {
         const res = await api.portal();
         if (res.status === 200 && res.data?.portal_url) {
@@ -733,11 +809,12 @@ async function viewSettings(el) {
             <div class="kv"><span class="k">Season</span><span class="v">${esc(store.game?.season?.current || '—')}</span></div>
         </div>
         <div class="card col-6">
-            <div class="card-title">Appearance</div>
+            <div class="card-title">Appearance &amp; feel</div>
             <div class="card-sub">the light theme is designed, not inverted</div>
             <div class="seg" id="themeSeg">
                 ${['auto', 'light', 'dark'].map((t) => `<button data-th="${t}" class="${theme === t ? 'active' : ''}">${cap(t)}</button>`).join('')}
             </div>
+            <div class="kv" style="margin-top:10px;"><span class="k">Sounds</span><span class="switch ${sound.enabled ? 'on' : ''}" id="soundSwitch" role="switch" aria-checked="${sound.enabled}" tabindex="0"></span></div>
         </div>
         <div class="card col-6">
             <div class="card-title">Privacy model</div>
@@ -757,6 +834,11 @@ async function viewSettings(el) {
         applyTheme();
         $$('#themeSeg button').forEach((x) => x.classList.toggle('active', x === b));
     }));
+    $('#soundSwitch')?.addEventListener('click', (e) => {
+        sound.setEnabled(!sound.enabled);
+        e.currentTarget.classList.toggle('on', sound.enabled);
+        e.currentTarget.setAttribute('aria-checked', String(sound.enabled));
+    });
 }
 
 function applyTheme() {
@@ -852,6 +934,7 @@ async function bootSequence(withGate) {
 
 async function main() {
     applyTheme();
+    armGlobalSounds();
     renderFrame();
     const first = !localStorage.getItem('lifeline.onboarded');
     if (first) {

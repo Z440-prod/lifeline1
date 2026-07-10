@@ -107,6 +107,10 @@ pub struct BillingConfig {
     pub portal_return_url: String,
     /// Stripe API base. Overridable for tests; defaults to the live host.
     pub api_base: String,
+    /// Optional pre-created Stripe Payment Link for donations. When set, the
+    /// client's donate button opens it directly; when empty, POST
+    /// /billing/donate creates a one-time Checkout Session instead.
+    pub donate_url: String,
 }
 
 impl BillingConfig {
