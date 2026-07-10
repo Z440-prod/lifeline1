@@ -46,7 +46,7 @@
     --wallpaper-b: rgba(120, 90, 255, 0.11);
 
     --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-    --font-round: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-round: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Google Sans', Roboto, 'Segoe UI', sans-serif;
     --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
 
     --fs-large-title: clamp(2rem, 5.5vw, 2.55rem);

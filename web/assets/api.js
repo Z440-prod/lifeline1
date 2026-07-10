@@ -176,6 +176,8 @@ export const api = {
     checkout: (tier) => post('/billing/checkout', { tier }),
     portal: () => post('/billing/portal'),
     donate: (amount_usd_cents) => post('/billing/donate', { amount_usd_cents }),
+    storeReceipt: (platform, tier, receipt) =>
+        post('/billing/store-receipt', { platform, tier, receipt }),
     betaFeatures: () => get('/billing/beta-features'),
 
     integrations: () => get('/integrations'),

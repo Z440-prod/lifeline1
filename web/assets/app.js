@@ -709,7 +709,9 @@ function paintPlans() {
                 <div class="tag">${esc(t.tagline)}</div>
                 <ul>${t.features.map((f) => `<li>${I.check}${esc(f)}</li>`).join('')}</ul>
                 ${isCur ? '<div class="cur">✓ Your current plan</div>'
-                    : isUp ? `<button class="btn btn-pulse btn-block" data-up="${t.tier}">Upgrade</button>`
+                    : isUp ? (IN_STORE_SHELL
+                        ? `<button class="btn btn-pulse btn-block" data-iap="${t.tier}">Subscribe</button>`
+                        : `<button class="btn btn-pulse btn-block" data-up="${t.tier}">Upgrade</button>`)
                     : '<div class="below">Included in your plan</div>'}
             </div>`;
         }).join('')}
@@ -719,8 +721,10 @@ function paintPlans() {
         ${(store.beta.builds || []).map((b) => `<div class="beta-row"><span>${esc(b.notes)}</span><span class="ver">${esc(b.version)}</span></div>`).join('')}
     </div>` : ''}
     <div style="display:flex; gap:10px; margin-top:16px; align-items:center; flex-wrap:wrap;">
-        ${cur !== 'free' ? '<button class="btn btn-ghost" id="portalBtn">Manage subscription</button>' : ''}
-        <span style="font-size:var(--fs-micro); color:var(--ink-3);">${live ? 'Live billing via Stripe Checkout.' : 'Stripe test mode — upgrades are simulated server-side, no card charged.'}</span>
+        ${cur !== 'free' && !IN_STORE_SHELL ? '<button class="btn btn-ghost" id="portalBtn">Manage subscription</button>' : ''}
+        <span style="font-size:var(--fs-micro); color:var(--ink-3);">${IN_STORE_SHELL
+            ? 'Purchases are handled by the App Store / Google Play. Manage or cancel in your store subscription settings.'
+            : live ? 'Live billing via Stripe Checkout.' : 'Stripe test mode — upgrades are simulated server-side, no card charged.'}</span>
     </div>
     ${IN_STORE_SHELL ? '' : `
     <div class="card donate-card">
@@ -746,6 +750,34 @@ function paintPlans() {
                 toast('Stripe Checkout opened in a new tab');
             }
         } else toast(res.data?.error?.message || `Checkout failed (${res.status})`, 'var(--err)');
+    }));
+
+    // Native purchases (store shells): StoreKit / Play Billing via the
+    // window.LifelineIAP bridge, then server-side receipt redemption. The
+    // same entitlement machinery as Stripe — only the money moves elsewhere.
+    $$('#plansHost [data-iap]').forEach((b) => b.addEventListener('click', async () => {
+        const tier = b.dataset.iap;
+        const bridge = window.LifelineIAP;
+        if (!bridge?.purchase) {
+            toast('In-app purchase is available in the store build', 'var(--warn-deep)');
+            return;
+        }
+        b.disabled = true;
+        try {
+            const r = await bridge.purchase(tier); // → { platform, receipt }
+            const res = await api.storeReceipt(r.platform, tier, r.receipt);
+            if (res.status === 200) {
+                sound.chime(); confetti();
+                toast(`Welcome to ${cap(tier)} — verified with the store`);
+                await refreshBillingState();
+                paintPlans();
+            } else {
+                toast(res.data?.error?.message || 'Purchase could not be verified', 'var(--err)');
+            }
+        } catch {
+            toast('Purchase cancelled', 'var(--warn)');
+        }
+        b.disabled = false;
     }));
 
     // Donate: preset selection (rule of three) + one warm button.
