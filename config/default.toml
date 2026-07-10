@@ -46,3 +46,24 @@ whoop_token_url = "https://api.prod.whoop.com/oauth/oauth2/token"
 whoop_api_base = "https://api.prod.whoop.com/developer"
 whoop_redirect_uri = "http://localhost:8443/api/v1/integrations/whoop/callback"
 
+[billing]
+# Stripe drives all subscription checkout and billing. Leave the secrets empty
+# for local development — the billing endpoints then return a simulated
+# checkout URL so the upgrade flow can be previewed without real charges.
+# Set these via ANTIGRAVITY__BILLING__* env vars in production; never commit
+# live keys.
+#   ANTIGRAVITY__BILLING__STRIPE_SECRET_KEY=sk_live_...
+#   ANTIGRAVITY__BILLING__STRIPE_WEBHOOK_SECRET=whsec_...
+stripe_secret_key = ""
+stripe_webhook_secret = ""
+# Stripe Price ids for the two paid tiers (create them in the Stripe dashboard).
+price_pro = ""
+price_elite = ""
+# Redirect targets for Stripe Checkout / billing portal. Point these at your
+# app's deep links or web return pages in production.
+success_url = "http://localhost:8443/billing/success"
+cancel_url = "http://localhost:8443/billing/cancel"
+portal_return_url = "http://localhost:8443/billing/portal-return"
+# Stripe API base — overridable for tests; defaults to the live host.
+api_base = "https://api.stripe.com"
+

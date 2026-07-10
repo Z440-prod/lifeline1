@@ -11,6 +11,8 @@ pub struct AppConfig {
     pub ai: AiConfig,
     pub rate_limit: RateLimitConfig,
     pub integrations: IntegrationsConfig,
+    #[serde(default)]
+    pub billing: BillingConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -79,6 +81,63 @@ pub struct IntegrationsConfig {
     pub whoop_token_url: String,
     pub whoop_api_base: String,
     pub whoop_redirect_uri: String,
+}
+
+/// Stripe billing settings. All fields default to empty so the server boots
+/// (and tests run) without any Stripe credentials — in that state the billing
+/// endpoints fall back to a mocked checkout flow, mirroring the AI proxy and
+/// Whoop dev-mode behavior. Set the secrets via `ANTIGRAVITY__BILLING__*` env
+/// vars in production; never commit live keys.
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(default)]
+pub struct BillingConfig {
+    /// Stripe secret key (`sk_live_…` / `sk_test_…`).
+    pub stripe_secret_key: String,
+    /// Stripe webhook signing secret (`whsec_…`) for verifying event callbacks.
+    pub stripe_webhook_secret: String,
+    /// Stripe Price id for the Pro subscription.
+    pub price_pro: String,
+    /// Stripe Price id for the Elite subscription.
+    pub price_elite: String,
+    /// Where Stripe returns the user after a successful checkout.
+    pub success_url: String,
+    /// Where Stripe returns the user if they cancel checkout.
+    pub cancel_url: String,
+    /// Where the Stripe billing portal returns the user afterward.
+    pub portal_return_url: String,
+    /// Stripe API base. Overridable for tests; defaults to the live host.
+    pub api_base: String,
+}
+
+impl BillingConfig {
+    /// Stripe endpoints are only live once a secret key is configured. Without
+    /// it, checkout returns a simulated URL and the client can preview the
+    /// upgrade flow without real charges.
+    #[must_use]
+    pub fn stripe_configured(&self) -> bool {
+        !self.stripe_secret_key.is_empty()
+    }
+
+    /// The configured Stripe API base, defaulting to the live host.
+    #[must_use]
+    pub fn api_base_url(&self) -> &str {
+        if self.api_base.is_empty() {
+            "https://api.stripe.com"
+        } else {
+            &self.api_base
+        }
+    }
+
+    /// The Stripe Price id for a given paid tier, if configured.
+    #[must_use]
+    pub fn price_for(&self, tier: &str) -> Option<&str> {
+        let id = match tier {
+            "pro" => &self.price_pro,
+            "elite" => &self.price_elite,
+            _ => return None,
+        };
+        (!id.is_empty()).then_some(id.as_str())
+    }
 }
 
 impl IntegrationsConfig {
