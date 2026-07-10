@@ -15,6 +15,33 @@ use crate::state::AppState;
 
 const WHOOP_STATE_TTL_SECONDS: u64 = 600;
 
+/// Free-tier gate: "basic readiness from one source". A device without the
+/// `all_integrations` entitlement may hold at most one connected provider, so
+/// connecting a second (distinct) source requires an upgrade. Enforced at
+/// every connection entry point — a patched client cannot route around it.
+async fn ensure_source_capacity(
+    state: &AppState,
+    device_id: Uuid,
+    provider: &str,
+) -> Result<(), AppError> {
+    let tier = crate::routes::billing::effective_tier(state, device_id).await?;
+    if tier.entitlements().all_integrations {
+        return Ok(());
+    }
+    let existing = state.db.list_provider_connections(device_id).await?;
+    let others = existing
+        .iter()
+        .filter(|c| c.status == "connected" && c.provider != provider)
+        .count();
+    if others >= 1 {
+        return Err(AppError::Forbidden(
+            "The free plan fuses one source. Upgrade to connect Apple, Google, and Whoop together."
+                .to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 /// Handler for `GET /api/v1/integrations`.
 /// Lists every provider connection the authenticated device has.
 #[tracing::instrument(skip(state))]
@@ -65,6 +92,7 @@ pub async fn connect_on_device_handler(
             "authorized must be true to record a connection".to_owned(),
         ));
     }
+    ensure_source_capacity(state.as_ref(), verified_device.device_id, provider.as_str()).await?;
 
     state
         .db
@@ -134,6 +162,8 @@ pub async fn whoop_authorize_handler(
     Extension(verified_device): Extension<VerifiedDevice>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     metrics::counter!("antigravity_api_requests_total", "endpoint" => "/integrations/whoop/authorize").increment(1);
+
+    ensure_source_capacity(state.as_ref(), verified_device.device_id, "whoop").await?;
 
     let state_token = oauth_state::create_state_token(
         &state.oauth_state_key,

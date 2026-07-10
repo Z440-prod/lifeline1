@@ -72,6 +72,7 @@ fn create_test_state_with_env(environment: &str) -> (Arc<AppState>, Arc<MockData
         antigravity::crypto::token_vault::derive_token_vault_key(&config.auth.server_secret);
     let http_client = reqwest::Client::new();
     let doc_cache = moka::sync::Cache::new(100);
+    let ai_usage = moka::sync::Cache::new(1000);
 
     let state = Arc::new(AppState {
         db: db.clone(),
@@ -82,6 +83,7 @@ fn create_test_state_with_env(environment: &str) -> (Arc<AppState>, Arc<MockData
         oauth_state_key,
         token_vault_key,
         doc_cache,
+        ai_usage,
     });
 
     (state, db)
@@ -365,6 +367,9 @@ async fn test_integrations_and_lab_results_flow() {
             .unwrap();
 
     let auth_header = format!("Bearer {session_token}");
+
+    // Connecting multiple sources at once is a paid entitlement.
+    simulated_upgrade(&app, &session_token, mock_addr, "pro").await;
 
     // ── 1. Connect Apple Health (on-device provider, no OAuth) ────────────────
     let response = app
@@ -729,6 +734,33 @@ async fn read_json(response: axum::response::Response) -> (StatusCode, serde_jso
     (status, json)
 }
 
+/// Upgrade a device via the simulated (no-Stripe-keys) checkout so it gains
+/// paid entitlements — competing in the arena requires at least Pro.
+async fn simulated_upgrade(
+    app: &axum::Router,
+    token: &str,
+    addr: std::net::SocketAddr,
+    tier: &str,
+) {
+    let (status, body) = read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/billing/checkout")
+                    .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::from(json!({ "tier": tier }).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "upgrade to {tier} failed: {body:?}");
+}
+
 #[tokio::test]
 async fn test_game_flow_ranks_streaks_and_leaderboard() {
     // Gamification must rank an opaque, on-device-derived vitality score without
@@ -737,6 +769,9 @@ async fn test_game_flow_ranks_streaks_and_leaderboard() {
     let (_device_id, token) = register_device_with_token(&state, &db).await;
     let app = create_router(state.clone());
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12350));
+
+    // Competing requires a paid plan (free is leaderboard view-only).
+    simulated_upgrade(&app, &token, addr, "pro").await;
 
     // First submission requires a handle; a high score lands a top league.
     let (status, body) = read_json(
@@ -787,6 +822,7 @@ async fn test_game_flow_ranks_streaks_and_leaderboard() {
 
     // A second competitor with a lower score ranks below.
     let (_d2, token2) = register_device_with_token(&state, &db).await;
+    simulated_upgrade(&app, &token2, addr, "pro").await;
     let (status, body2) = read_json(
         app.clone()
             .oneshot(
@@ -811,6 +847,7 @@ async fn test_game_flow_ranks_streaks_and_leaderboard() {
 
     // Handle collision must be rejected.
     let (_d3, token3) = register_device_with_token(&state, &db).await;
+    simulated_upgrade(&app, &token3, addr, "pro").await;
     let (status, _) = read_json(
         app.clone()
             .oneshot(
@@ -1037,7 +1074,30 @@ async fn test_dev_session_full_flow_and_production_gate() {
     assert_eq!(status, StatusCode::OK, "dev session failed: {body:?}");
     let token = body["token"].as_str().unwrap().to_owned();
 
-    // The minted token opens a protected endpoint (game score submission).
+    // The minted token opens protected endpoints — but the free tier is
+    // leaderboard view-only, so scoring is forbidden until an upgrade…
+    let (status, _) = read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/game/score")
+                    .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::from(
+                        json!({ "vitality_score": 77, "handle": "dev_session_user" }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "free tier must not compete");
+
+    // …after which the same call succeeds.
+    simulated_upgrade(&app, &token, addr, "pro").await;
     let (status, scored) = read_json(
         app.clone()
             .oneshot(
@@ -1096,4 +1156,114 @@ async fn test_dev_session_full_flow_and_production_gate() {
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN, "must be dev-only");
+}
+
+#[tokio::test]
+async fn test_free_tier_entitlements_enforced_server_side() {
+    // The tier catalog's promises must be enforced by the server, not just
+    // hidden in the UI: free = view-only arena, limited daily coach messages,
+    // and a single fused source.
+    let (state, db) = create_test_state();
+    let (_device_id, token) = register_device_with_token(&state, &db).await;
+    let app = create_router(state.clone());
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12370));
+
+    let call = |method: &'static str, uri: String, body: Option<serde_json::Value>| {
+        let token = token.clone();
+        let app = app.clone();
+        async move {
+            let mut req = Request::builder()
+                .method(method)
+                .uri(uri)
+                .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                .extension(axum::extract::ConnectInfo(addr));
+            let body = match body {
+                Some(b) => {
+                    req = req.header(header::CONTENT_TYPE, "application/json");
+                    Body::from(b.to_string())
+                }
+                None => Body::empty(),
+            };
+            read_json(app.oneshot(req.body(body).unwrap()).await.unwrap()).await
+        }
+    };
+
+    // 1. Arena is view-only on free: scoring is forbidden, the board readable.
+    let (status, body) = call(
+        "POST",
+        "/api/v1/game/score".into(),
+        Some(json!({ "vitality_score": 88, "handle": "freeloader" })),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "free must not score: {body:?}"
+    );
+    let (status, _) = call("GET", "/api/v1/game/leaderboard".into(), None).await;
+    assert_eq!(status, StatusCode::OK, "free may view the leaderboard");
+
+    // 2. Coach: exactly the free daily limit of messages, then 403.
+    let limit = antigravity::models::subscription::Tier::Free
+        .entitlements()
+        .ai_coach_daily_limit;
+    for i in 0..limit {
+        let (status, body) = call(
+            "POST",
+            "/api/v1/ai/proxy".into(),
+            Some(json!({ "prompt": "hi", "execution_token": "t" })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "message {i} within limit: {body:?}");
+    }
+    let (status, _) = call(
+        "POST",
+        "/api/v1/ai/proxy".into(),
+        Some(json!({ "prompt": "one more", "execution_token": "t" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "over-limit coach must 403");
+
+    // 3. Sources: the first connects, a second distinct source is forbidden
+    //    (both the on-device path and the Whoop OAuth entry point).
+    let (status, _) = call(
+        "POST",
+        "/api/v1/integrations/apple_health/connect".into(),
+        Some(json!({ "authorized": true })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "first source is free");
+    let (status, _) = call(
+        "POST",
+        "/api/v1/integrations/google_health/connect".into(),
+        Some(json!({ "authorized": true })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "second source needs Pro");
+    let (status, _) = call("GET", "/api/v1/integrations/whoop/authorize".into(), None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "whoop entry point gated too");
+
+    // 4. Upgrading (simulated checkout) lifts every gate at once.
+    simulated_upgrade(&app, &token, addr, "pro").await;
+    let (status, _) = call(
+        "POST",
+        "/api/v1/game/score".into(),
+        Some(json!({ "vitality_score": 88, "handle": "freeloader" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "pro may compete");
+    let (status, _) = call(
+        "POST",
+        "/api/v1/integrations/google_health/connect".into(),
+        Some(json!({ "authorized": true })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "pro fuses all sources");
+    let (status, _) = call(
+        "POST",
+        "/api/v1/ai/proxy".into(),
+        Some(json!({ "prompt": "unlimited now", "execution_token": "t" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "pro coach is unlimited");
 }

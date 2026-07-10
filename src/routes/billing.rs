@@ -61,7 +61,11 @@ const TIER_CARDS: [TierCard; 3] = [
 
 /// Resolve the effective tier for a device: the stored tier if its Stripe
 /// status still grants access, otherwise the free tier.
-async fn effective_tier(state: &AppState, device_id: Uuid) -> Result<Tier, AppError> {
+///
+/// Public because every tier-gated endpoint (arena scoring, AI coach limits,
+/// source fusion, history windows) resolves entitlements through this one
+/// function, so billing state is enforced identically everywhere.
+pub async fn effective_tier(state: &AppState, device_id: Uuid) -> Result<Tier, AppError> {
     match state.db.get_subscription(device_id).await? {
         Some(sub) if status_grants_access(&sub.status) => {
             Ok(sub.tier.parse().unwrap_or(Tier::Free))

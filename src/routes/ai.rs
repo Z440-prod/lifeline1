@@ -26,7 +26,29 @@ pub async fn ai_proxy_handler(
     metrics::counter!("antigravity_api_requests_total", "endpoint" => "/ai/proxy").increment(1);
     let start_time = std::time::Instant::now();
 
-    // 1. Audit log the access of the AI proxy
+    // 1. Enforce the tier's daily coach limit (free = a few messages a day,
+    //    paid = unlimited). Metered in-process with a day-scoped key; applies
+    //    in every environment so the limit is honest and testable.
+    let tier =
+        crate::routes::billing::effective_tier(state.as_ref(), verified_device.device_id).await?;
+    let daily_limit = tier.entitlements().ai_coach_daily_limit;
+    if daily_limit >= 0 {
+        let key = format!(
+            "{}:{}",
+            verified_device.device_id,
+            chrono::Utc::now().date_naive()
+        );
+        let used = state.ai_usage.get(&key).unwrap_or(0);
+        #[allow(clippy::cast_sign_loss)]
+        if used >= daily_limit as u32 {
+            return Err(AppError::Forbidden(format!(
+                "You've used all {daily_limit} free coach messages today — upgrade for unlimited coaching."
+            )));
+        }
+        state.ai_usage.insert(key, used + 1);
+    }
+
+    // 1.5 Audit log the access of the AI proxy
     state
         .db
         .insert_audit_log("AI_PROXY", verified_device.device_id, Uuid::nil(), &[])

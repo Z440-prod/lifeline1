@@ -1,0 +1,19 @@
+{
+    "appId": "health.lifeline.app",
+    "appName": "Lifeline",
+    "webDir": "../web",
+    "server": {
+        "//": "Thin-client mode: the shells load the production web app so every release ships instantly to both stores. Point this at your deployed engine (TLS required by both platforms).",
+        "url": "https://app.lifeline.health",
+        "cleartext": false
+    },
+    "ios": {
+        "contentInset": "always",
+        "backgroundColor": "#000000",
+        "preferredContentMode": "mobile"
+    },
+    "android": {
+        "backgroundColor": "#000000",
+        "allowMixedContent": false
+    }
+}

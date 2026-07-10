@@ -24,4 +24,8 @@ pub struct AppState {
     pub token_vault_key: ring::aead::LessSafeKey,
     /// In-memory TTL/size cache for E2EE Sync Documents (cache-aside read optimizer)
     pub doc_cache: moka::sync::Cache<uuid::Uuid, crate::models::sync_document::SyncDocument>,
+    /// Daily AI-coach usage counter for free-tier limits, keyed
+    /// `"{device_id}:{yyyy-mm-dd}"`. TTL slightly over a day so entries
+    /// self-evict after the window they meter.
+    pub ai_usage: moka::sync::Cache<String, u32>,
 }

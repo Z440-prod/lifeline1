@@ -184,6 +184,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
     // client-side routes deep-link correctly.
     let assets = tower_http::services::ServeDir::new("web/assets");
     let manifest = tower_http::services::ServeFile::new("web/manifest.webmanifest");
+    // Store listings (App Store / Google Play) require a public privacy
+    // policy URL — served by the same binary at /privacy.
+    let privacy = tower_http::services::ServeFile::new("web/privacy.html");
     let shell = tower_http::services::ServeFile::new("web/index.html");
 
     // Combine routes with middleware layers.
@@ -194,6 +197,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1", protected_routes)
         .nest_service("/assets", assets)
         .route_service("/manifest.webmanifest", manifest)
+        .route_service("/privacy", privacy)
         .fallback_service(shell)
         .layer(prometheus_layer)
         .layer(governor_layer)
