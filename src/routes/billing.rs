@@ -478,6 +478,182 @@ pub async fn webhook_handler(
     Ok(Json(json!({ "received": true })))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct StoreReceiptRequest {
+    /// "apple" (StoreKit) or "google" (Play Billing).
+    pub platform: String,
+    /// The tier being redeemed — used for the development simulation and
+    /// cross-checked against the verified product id in production.
+    pub tier: String,
+    /// Base64 App Store receipt, or Play purchase token.
+    pub receipt: String,
+}
+
+/// Handler for `POST /api/v1/billing/store-receipt`.
+///
+/// The native-store half of billing: store builds purchase subscriptions via
+/// StoreKit / Play Billing (Apple 3.1.1 and Play Payments both require it),
+/// then redeem the receipt here. Verification happens **server-side** and
+/// feeds the same `upsert_subscription` as the Stripe webhook, so tier gating
+/// is identical no matter where the money moved.
+///
+/// * development — the receipt is accepted as-is (simulated), so the full
+///   purchase loop is testable without a store sandbox.
+/// * production, `apple` — verified against Apple's `verifyReceipt` using the
+///   configured shared secret (sandbox retry on status 21007); the product id
+///   must map to the claimed tier and be unexpired.
+/// * production, `google` — requires Play Developer API credentials; until
+///   they're configured this returns an explicit configuration error rather
+///   than trusting the client.
+#[tracing::instrument(skip(state, payload), fields(device_id = %verified_device.device_id, platform = %payload.platform))]
+pub async fn store_receipt_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(verified_device): Extension<VerifiedDevice>,
+    Json(payload): Json<StoreReceiptRequest>,
+) -> Result<Json<Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/billing/store-receipt")
+        .increment(1);
+
+    let device_id = verified_device.device_id;
+    let tier: Tier = payload.tier.parse()?;
+    if tier == Tier::Free {
+        return Err(AppError::BadRequest(
+            "Receipts redeem paid tiers only (pro, elite).".to_owned(),
+        ));
+    }
+    if payload.platform != "apple" && payload.platform != "google" {
+        return Err(AppError::BadRequest(
+            "platform must be 'apple' or 'google'".to_owned(),
+        ));
+    }
+    if payload.receipt.trim().is_empty() {
+        return Err(AppError::BadRequest("receipt must not be empty".to_owned()));
+    }
+
+    let now = chrono::Utc::now();
+    let (verified_tier, period_end, action) = if state.config.auth.environment == "development" {
+        // Simulated redemption: the whole native purchase loop is exercisable
+        // without a store sandbox. Never reachable in production.
+        (
+            tier,
+            now + chrono::Duration::days(30),
+            "STORE_RECEIPT_SIMULATED",
+        )
+    } else if payload.platform == "apple" {
+        let (product_id, expires) = verify_apple_receipt(state.as_ref(), &payload.receipt).await?;
+        let mapped = state
+            .config
+            .billing
+            .tier_for_apple_product(&product_id)
+            .ok_or_else(|| {
+                AppError::BadRequest(format!("Unknown StoreKit product '{product_id}'"))
+            })?;
+        let mapped: Tier = mapped.parse()?;
+        if mapped != tier {
+            return Err(AppError::BadRequest(
+                "Receipt product does not match the claimed tier.".to_owned(),
+            ));
+        }
+        if expires <= now {
+            return Err(AppError::BadRequest(
+                "This subscription receipt has expired.".to_owned(),
+            ));
+        }
+        (mapped, expires, "STORE_RECEIPT_APPLE")
+    } else {
+        return Err(AppError::ExternalServiceError(
+            "Google Play verification is not configured — set up a Play Developer API service \
+             account and validate purchase tokens before granting tiers."
+                .to_owned(),
+        ));
+    };
+
+    state
+        .db
+        .upsert_subscription(&Subscription {
+            device_id,
+            tier: verified_tier.as_str().to_owned(),
+            status: "active".to_owned(),
+            stripe_customer_id: None,
+            stripe_subscription_id: None,
+            current_period_end: Some(period_end),
+            created_at: now,
+            updated_at: now,
+        })
+        .await?;
+    state
+        .db
+        .insert_audit_log(
+            action,
+            device_id,
+            device_id,
+            verified_tier.as_str().as_bytes(),
+        )
+        .await?;
+
+    Ok(Json(json!({
+        "verified": action != "STORE_RECEIPT_SIMULATED",
+        "simulated": action == "STORE_RECEIPT_SIMULATED",
+        "tier": verified_tier.as_str(),
+        "current_period_end": period_end.to_rfc3339(),
+    })))
+}
+
+/// Verify an App Store receipt via Apple's `verifyReceipt`, retrying against
+/// the sandbox host when Apple answers 21007 (sandbox receipt sent to prod).
+/// Returns the newest transaction's product id and expiry.
+async fn verify_apple_receipt(
+    state: &AppState,
+    receipt: &str,
+) -> Result<(String, chrono::DateTime<chrono::Utc>), AppError> {
+    let billing = &state.config.billing;
+    if billing.apple_shared_secret.is_empty() {
+        return Err(AppError::ExternalServiceError(
+            "Apple receipt verification is not configured (apple_shared_secret).".to_owned(),
+        ));
+    }
+
+    let call = |url: String| {
+        let body = json!({
+            "receipt-data": receipt,
+            "password": billing.apple_shared_secret,
+            "exclude-old-transactions": true,
+        });
+        let client = state.http_client.clone();
+        async move {
+            let resp = client.post(&url).json(&body).send().await?;
+            resp.json::<Value>().await.map_err(AppError::from)
+        }
+    };
+
+    let mut resp = call(billing.apple_verify_url_or_default().to_owned()).await?;
+    if resp["status"].as_i64() == Some(21007) {
+        resp = call("https://sandbox.itunes.apple.com/verifyReceipt".to_owned()).await?;
+    }
+    if resp["status"].as_i64() != Some(0) {
+        return Err(AppError::BadRequest(format!(
+            "Apple rejected the receipt (status {}).",
+            resp["status"]
+        )));
+    }
+
+    let latest = resp["latest_receipt_info"]
+        .as_array()
+        .and_then(|a| a.last())
+        .ok_or_else(|| AppError::BadRequest("Receipt carries no transactions.".to_owned()))?;
+    let product_id = latest["product_id"]
+        .as_str()
+        .ok_or_else(|| AppError::BadRequest("Receipt transaction has no product id.".to_owned()))?
+        .to_owned();
+    let expires_ms: i64 = latest["expires_date_ms"]
+        .as_str()
+        .and_then(|s| s.parse().ok())
+        .ok_or_else(|| AppError::BadRequest("Receipt transaction has no expiry.".to_owned()))?;
+    let expires = chrono::DateTime::from_timestamp_millis(expires_ms)
+        .ok_or_else(|| AppError::BadRequest("Receipt expiry is out of range.".to_owned()))?;
+    Ok((product_id, expires))
+}
+
 // ── Stripe REST helpers ──────────────────────────────────────────────────────
 
 async fn create_stripe_customer(state: &AppState, device_id: Uuid) -> Result<String, AppError> {

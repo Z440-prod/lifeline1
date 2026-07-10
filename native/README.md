@@ -42,18 +42,37 @@ The backend is already shaped for this: entitlements hang off a `tier` per
 device, and Stripe is just one writer of that state. Launch plan:
 
 1. Create matching subscription products in App Store Connect and Play Console
-   (`pro_monthly` $7.99, `elite_monthly` $14.99).
-2. In the shells, purchase via StoreKit 2 / Play Billing.
-3. Add a receipt-validation endpoint (`POST /api/v1/billing/store-receipt`)
-   that verifies the App Store / Play receipt server-side and calls the same
-   `upsert_subscription` the Stripe webhook uses. Tier logic, gating, and the
-   entitlement checks need no changes.
-4. Hide the Stripe checkout buttons when running inside a shell
-   (`window.Capacitor` is defined) and show the native purchase sheet instead.
-5. **Donations are web-only.** The app already hides the donate card inside
-   store shells (`IN_STORE_SHELL` gate) — keep it that way: Apple treats
-   in-app donations to the developer as digital purchases (3.1.1), and Play's
-   payment policy is equivalent.
+   (`health.lifeline.app.pro_monthly` $7.99,
+   `health.lifeline.app.elite_monthly` $14.99).
+2. In the shells, purchase via StoreKit 2 / Play Billing, then expose the
+   result to the web layer as the **`window.LifelineIAP` bridge**:
+
+   ```js
+   window.LifelineIAP = {
+     // Runs the native purchase sheet for "pro" | "elite" and resolves with
+     // the proof the backend verifies. Reject on cancel.
+     purchase: async (tier) => ({
+       platform: 'apple',            // or 'google'
+       receipt: '<base64 App Store receipt | Play purchase token>',
+     }),
+   };
+   ```
+
+   The web app already does the rest: inside a shell the Plans page shows
+   **Subscribe** buttons that call this bridge and redeem the result at
+   `POST /api/v1/billing/store-receipt` (implemented). The endpoint verifies
+   Apple receipts server-side via `verifyReceipt` (set
+   `ANTIGRAVITY__BILLING__APPLE_SHARED_SECRET`; sandbox receipts retry
+   automatically) and feeds the same `upsert_subscription` the Stripe webhook
+   uses — gating is identical everywhere. Google Play verification requires a
+   Play Developer API service account; until configured the endpoint refuses
+   rather than trusting the client.
+3. Stripe surfaces are already hidden inside shells (`IN_STORE_SHELL` gate):
+   upgrade buttons become native Subscribe buttons, the billing portal is
+   replaced by "manage in your store settings", and the donate card is
+   removed entirely.
+4. **Donations are web-only.** Apple treats in-app donations to the developer
+   as digital purchases (3.1.1), and Play's payment policy is equivalent.
 
 ## Store assets
 

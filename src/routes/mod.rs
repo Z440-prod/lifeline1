@@ -133,6 +133,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/billing/portal", post(billing::portal_handler))
         .route("/billing/donate", post(billing::donate_handler))
         .route(
+            "/billing/store-receipt",
+            post(billing::store_receipt_handler),
+        )
+        .route(
             "/billing/beta-features",
             get(billing::beta_features_handler),
         )

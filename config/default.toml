@@ -70,4 +70,8 @@ api_base = "https://api.stripe.com"
 # When empty, POST /billing/donate creates a one-time Checkout Session with
 # the caller-chosen amount instead (simulated until Stripe keys are set).
 donate_url = ""
+apple_shared_secret = ""
+apple_verify_url = ""
+apple_product_pro = ""
+apple_product_elite = ""
 

@@ -1347,3 +1347,99 @@ async fn test_donation_flow_and_config() {
     .await;
     assert_eq!(sub["tier"], "free", "donations must not change the tier");
 }
+
+#[tokio::test]
+async fn test_store_receipt_native_purchase_loop() {
+    // The native (App Store / Play) purchase loop: a store build redeems a
+    // receipt and gains the same entitlements Stripe grants. Development
+    // simulates redemption; production refuses unverifiable receipts.
+    let (state, db) = create_test_state();
+    let (_device_id, token) = register_device_with_token(&state, &db).await;
+    let app = create_router(state.clone());
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12390));
+
+    let redeem = |platform: &'static str, tier: &'static str, receipt: &'static str| {
+        let app = app.clone();
+        let token = token.clone();
+        async move {
+            read_json(
+                app.oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/v1/billing/store-receipt")
+                        .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .extension(axum::extract::ConnectInfo(addr))
+                        .body(Body::from(
+                            json!({ "platform": platform, "tier": tier, "receipt": receipt })
+                                .to_string(),
+                        ))
+                        .unwrap(),
+                )
+                .await
+                .unwrap(),
+            )
+            .await
+        }
+    };
+
+    // Bad inputs are rejected.
+    let (status, _) = redeem("apple", "free", "r").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "free tier not redeemable");
+    let (status, _) = redeem("amazon", "pro", "r").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "unknown platform rejected");
+    let (status, _) = redeem("apple", "pro", "  ").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "empty receipt rejected");
+
+    // Dev-simulated redemption grants the tier and its entitlements…
+    let (status, body) = redeem("apple", "elite", "storekit-sandbox-receipt").await;
+    assert_eq!(status, StatusCode::OK, "redeem failed: {body:?}");
+    assert_eq!(body["simulated"], true);
+    assert_eq!(body["tier"], "elite");
+
+    // …visible through the ordinary subscription + gated endpoints.
+    let (_s, sub) = read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/billing/subscription")
+                    .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(sub["tier"], "elite");
+    assert_eq!(sub["entitlements"]["beta_access"], true);
+
+    // Production without a configured verifier must refuse, not trust.
+    let (prod_state, prod_db) = create_test_state_with_env("production");
+    let (_d2, prod_token) = register_device_with_token(&prod_state, &prod_db).await;
+    let prod_app = create_router(prod_state);
+    let (status, _) = read_json(
+        prod_app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/billing/store-receipt")
+                    .header(header::AUTHORIZATION, format!("Bearer {prod_token}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::from(
+                        json!({ "platform": "apple", "tier": "pro", "receipt": "r" }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_GATEWAY,
+        "unverifiable production receipt must be refused"
+    );
+}

@@ -111,6 +111,17 @@ pub struct BillingConfig {
     /// client's donate button opens it directly; when empty, POST
     /// /billing/donate creates a one-time Checkout Session instead.
     pub donate_url: String,
+
+    /// App Store shared secret for receipt verification (App Store Connect →
+    /// App Information → App-Specific Shared Secret). Store builds purchase
+    /// via StoreKit and redeem through POST /billing/store-receipt.
+    pub apple_shared_secret: String,
+    /// Apple verifyReceipt endpoint. Defaults to the production host;
+    /// overridable for tests and sandbox runs.
+    pub apple_verify_url: String,
+    /// StoreKit product identifiers mapped to tiers.
+    pub apple_product_pro: String,
+    pub apple_product_elite: String,
 }
 
 impl BillingConfig {
@@ -141,6 +152,39 @@ impl BillingConfig {
             _ => return None,
         };
         (!id.is_empty()).then_some(id.as_str())
+    }
+
+    /// Apple receipt verification endpoint (production default).
+    #[must_use]
+    pub fn apple_verify_url_or_default(&self) -> &str {
+        if self.apple_verify_url.is_empty() {
+            "https://buy.itunes.apple.com/verifyReceipt"
+        } else {
+            &self.apple_verify_url
+        }
+    }
+
+    /// Map a StoreKit product id to a tier string, honoring config overrides
+    /// with sensible defaults matching the shells' bundle id.
+    #[must_use]
+    pub fn tier_for_apple_product(&self, product_id: &str) -> Option<&'static str> {
+        let pro = if self.apple_product_pro.is_empty() {
+            "health.lifeline.app.pro_monthly"
+        } else {
+            self.apple_product_pro.as_str()
+        };
+        let elite = if self.apple_product_elite.is_empty() {
+            "health.lifeline.app.elite_monthly"
+        } else {
+            self.apple_product_elite.as_str()
+        };
+        if product_id == pro {
+            Some("pro")
+        } else if product_id == elite {
+            Some("elite")
+        } else {
+            None
+        }
     }
 }
 
