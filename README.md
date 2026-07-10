@@ -81,6 +81,15 @@ Uploaded through the same zero-knowledge E2EE sync pipeline as any other documen
     ```
     The server will start listening at `http://0.0.0.0:8443` (port configurable in `.env`).
 
+4.  **Open the Lifeline web app:**
+    The full product front end lives in `web/` and is served by the same binary —
+    open **http://localhost:8443/** and you're in the app. In development the
+    browser authenticates via `POST /auth/dev-session` (registers a real WebCrypto
+    P-256 key for this browser, so vault documents are genuinely encrypted and
+    signed client-side). The endpoint is hard-disabled outside
+    `ENVIRONMENT=development`; on iOS hardware the native client uses Apple App
+    Attest against the same API.
+
     > **TLS:** Antigravity speaks plain HTTP. In production it must sit behind a TLS-terminating
     > reverse proxy, load balancer, or platform ingress (e.g. nginx, Caddy, an AWS/GCP load
     > balancer) — it does not perform TLS termination itself.

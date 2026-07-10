@@ -147,6 +147,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             post(auth::verify_attestation_handler),
         )
         .route("/auth/assert", post(auth::assert_handler))
+        // Development-only session mint for clients without App Attest (the
+        // browser app). The handler hard-rejects outside development.
+        .route("/auth/dev-session", post(auth::dev_session_handler))
         .route("/ai/policy-matrix", get(ai::policy_matrix_handler))
         // Rules-only insights config for the on-device longevity engine; ships
         // no user data, so it's public + cacheable like the policy matrix.
@@ -174,12 +177,24 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/health", get(health::health_handler))
         .route("/metrics", get(|| async move { metric_handle.render() }));
 
+    // ── Web app (static SPA) ─────────────────────────────────────────────────
+    // The Lifeline web app lives in `web/` and is served by this same binary,
+    // so `cargo run` gives the complete product at http://host:port/. Assets
+    // resolve exactly; every other non-API path serves index.html with 200 so
+    // client-side routes deep-link correctly.
+    let assets = tower_http::services::ServeDir::new("web/assets");
+    let manifest = tower_http::services::ServeFile::new("web/manifest.webmanifest");
+    let shell = tower_http::services::ServeFile::new("web/index.html");
+
     // Combine routes with middleware layers.
     // Layer application order (outermost first): CORS → rate limiting → metrics.
     Router::new()
         .merge(infra_routes)
         .nest("/api/v1", public_routes)
         .nest("/api/v1", protected_routes)
+        .nest_service("/assets", assets)
+        .route_service("/manifest.webmanifest", manifest)
+        .fallback_service(shell)
         .layer(prometheus_layer)
         .layer(governor_layer)
         .layer(cors)

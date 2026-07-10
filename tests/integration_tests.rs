@@ -17,6 +17,11 @@ use antigravity::state::AppState;
 
 /// Creates a mock `AppState` for testing.
 fn create_test_state() -> (Arc<AppState>, Arc<MockDatabase>) {
+    create_test_state_with_env("development")
+}
+
+/// Creates a mock `AppState` with an explicit `auth.environment`.
+fn create_test_state_with_env(environment: &str) -> (Arc<AppState>, Arc<MockDatabase>) {
     let config = AppConfig {
         server: antigravity::config::ServerConfig {
             host: "127.0.0.1".to_string(),
@@ -32,7 +37,7 @@ fn create_test_state() -> (Arc<AppState>, Arc<MockDatabase>) {
             nonce_ttl_seconds: 60,
             session_token_ttl_seconds: 3600,
             server_secret: "super_secret_signing_key_at_least_32_bytes".to_string(),
-            environment: "development".to_string(),
+            environment: environment.to_string(),
         },
         ai: antigravity::config::AiConfig {
             anthropic_api_url: "http://localhost:1234/v1/messages".to_string(),
@@ -1001,4 +1006,94 @@ async fn test_billing_tiers_gating_and_simulated_upgrade() {
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_dev_session_full_flow_and_production_gate() {
+    // The dev-session endpoint is what makes the browser app work end to end
+    // without iOS hardware. It must (a) mint a real, working session token in
+    // development, (b) be idempotent for the same device, and (c) be hard-off
+    // outside development.
+    let (state, _db) = create_test_state();
+    let app = create_router(state.clone());
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12360));
+    let device_id = Uuid::new_v4();
+
+    let (status, body) = read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/auth/dev-session")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::from(json!({ "device_id": device_id }).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "dev session failed: {body:?}");
+    let token = body["token"].as_str().unwrap().to_owned();
+
+    // The minted token opens a protected endpoint (game score submission).
+    let (status, scored) = read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/game/score")
+                    .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::from(
+                        json!({ "vitality_score": 77, "handle": "dev_session_user" }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "token must work: {scored:?}");
+    assert_eq!(scored["league"], "platinum");
+
+    // Idempotent for the same device id (same synthetic key).
+    let (status, _) = read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/auth/dev-session")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::from(json!({ "device_id": device_id }).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    // Outside development the endpoint is a hard 403.
+    let (prod_state, _db2) = create_test_state_with_env("production");
+    let prod_app = create_router(prod_state);
+    let (status, _) = read_json(
+        prod_app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/auth/dev-session")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::from(json!({ "device_id": device_id }).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "must be dev-only");
 }
