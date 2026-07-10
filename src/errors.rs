@@ -14,6 +14,9 @@ pub enum AppError {
     /// 401 — Missing or invalid authentication credentials.
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
+    /// 403 — Authenticated, but the subscription tier doesn't permit this.
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
     /// 400 — The attestation object failed cryptographic verification.
     #[error("InvalidAttestation: {0}")]
     InvalidAttestation(String),
@@ -61,6 +64,7 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, code, message) = match &self {
             Self::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, "UNAUTHORIZED", msg.clone()),
+            Self::Forbidden(msg) => (StatusCode::FORBIDDEN, "FORBIDDEN", msg.clone()),
             Self::InvalidAttestation(msg) => {
                 (StatusCode::BAD_REQUEST, "INVALID_ATTESTATION", msg.clone())
             }

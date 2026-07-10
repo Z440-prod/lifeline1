@@ -364,6 +364,63 @@
             .simulator-container { flex-direction: column; align-items: center; padding: 24px 16px; }
             .console-panel { width: 100%; max-width: var(--phone-w); height: 380px; }
         }
+
+        /* ═══ ARENA (gamified global health ranking) ═══════════════════════════ */
+        .rank-hero { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
+        .league-emblem { width: 84px; height: 84px; flex-shrink: 0; }
+        .rank-hero-meta { flex: 1; min-width: 0; }
+        .rank-league { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 600; color: var(--ink); line-height: 1.05; letter-spacing: -.01em; }
+        .rank-sub { font-family: var(--font-hand); font-size: 1.05rem; color: var(--ink-2); margin-top: 2px; }
+        .rank-standing { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; }
+        .rank-standing .num { font-family: var(--font-mono); font-size: 1.15rem; font-weight: 600; color: var(--accent); }
+        .rank-standing .lbl { font-size: var(--fs-small); color: var(--ink-3); }
+        .vitality-line { display: flex; align-items: baseline; justify-content: space-between; margin: 16px 0 4px; }
+        .vitality-line .v { font-family: var(--font-mono); font-size: 2.1rem; font-weight: 600; color: var(--ink); }
+        .vitality-line .cap { font-family: var(--font-hand); font-size: 1.05rem; color: var(--ink-2); text-align: right; max-width: 56%; line-height: 1.15; }
+        .xp-bar { position: relative; height: 8px; border-radius: 99px; background: var(--rule-soft); overflow: hidden; margin-top: 10px; }
+        .xp-bar > i { position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: linear-gradient(90deg, var(--energy), var(--accent)); transition: width 1s var(--ease); }
+        .xp-meta { display: flex; justify-content: space-between; margin-top: 6px; font-size: var(--fs-small); color: var(--ink-3); }
+        .arena-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0 4px; }
+        .arena-stat { background: var(--card); border: 1px solid var(--rule-soft); border-radius: 14px; padding: 12px 8px; text-align: center; }
+        .arena-stat .v { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 600; color: var(--ink); }
+        .arena-stat .l { font-family: var(--font-hand); font-size: .95rem; color: var(--ink-3); margin-top: 2px; }
+        .season-chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-micro); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); border: 1px solid var(--rule); border-radius: 99px; padding: 4px 10px; }
+        .season-chip .dot { width: 6px; height: 6px; border-radius: 99px; background: var(--activity); }
+        .lb-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--rule-soft); }
+        .lb-row.me { background: color-mix(in srgb, var(--accent) 7%, transparent); border-radius: 10px; padding: 9px 8px; border-bottom-color: transparent; margin: 0 -8px; }
+        .lb-rank { font-family: var(--font-mono); font-size: .9rem; color: var(--ink-3); width: 26px; text-align: right; flex-shrink: 0; }
+        .lb-rank.podium { color: var(--accent); font-weight: 600; }
+        .lb-dot { width: 9px; height: 9px; border-radius: 99px; flex-shrink: 0; }
+        .lb-handle { font-family: var(--font-ui); font-weight: 500; font-size: var(--fs-body); color: var(--ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-handle .lv { font-family: var(--font-hand); font-size: .9rem; color: var(--ink-3); margin-left: 6px; }
+        .lb-xp { font-family: var(--font-mono); font-size: .85rem; color: var(--ink-2); flex-shrink: 0; }
+        .handle-setup { display: flex; gap: 8px; margin-top: 10px; }
+        .handle-setup input { flex: 1; background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; font-family: var(--font-mono); font-size: var(--fs-body); color: var(--ink); outline: none; }
+        .handle-setup input:focus { border-color: var(--accent); }
+
+        /* ═══ PLANS (subscription tiers) ═══════════════════════════════════════ */
+        .tier-chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-micro); letter-spacing: .08em; text-transform: uppercase; font-weight: 600; padding: 4px 10px; border-radius: 99px; }
+        .tier-chip.free { color: var(--ink-2); border: 1px solid var(--rule); }
+        .tier-chip.pro { color: #fff; background: var(--accent); }
+        .tier-chip.elite { color: #fff; background: linear-gradient(120deg, var(--recovery), var(--accent)); }
+        .plan-card { position: relative; background: var(--card); border: 1px solid var(--rule); border-radius: 18px; padding: 16px; margin-top: 12px; transition: border-color .2s var(--ease), transform .2s var(--ease); }
+        .plan-card.current { border-color: var(--accent); }
+        .plan-card.featured { border-color: color-mix(in srgb, var(--recovery) 50%, var(--rule)); }
+        .plan-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+        .plan-name { font-family: var(--font-serif); font-size: 1.2rem; font-weight: 600; color: var(--ink); }
+        .plan-price { font-family: var(--font-mono); font-size: 1rem; color: var(--ink); white-space: nowrap; }
+        .plan-price small { font-size: .7rem; color: var(--ink-3); }
+        .plan-tag { font-family: var(--font-hand); font-size: 1rem; color: var(--ink-2); margin-top: 2px; }
+        .plan-features { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+        .plan-features li { display: flex; gap: 8px; align-items: flex-start; font-size: var(--fs-small); color: var(--ink-2); line-height: 1.3; }
+        .plan-features li svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; color: var(--activity); }
+        .plan-cta { margin-top: 14px; width: 100%; }
+        .plan-badge { position: absolute; top: -9px; right: 16px; font-family: var(--font-hand); font-size: .9rem; color: #fff; background: var(--recovery); padding: 2px 10px; border-radius: 99px; }
+        .plan-current-note { text-align: center; font-family: var(--font-hand); font-size: 1.05rem; color: var(--activity); margin-top: 12px; }
+        .beta-card { margin-top: 12px; border: 1px dashed color-mix(in srgb, var(--recovery) 50%, var(--rule)); border-radius: 16px; padding: 14px; }
+        .beta-card h4 { font-family: var(--font-serif); font-size: 1.05rem; color: var(--ink); margin-bottom: 4px; }
+        .beta-build { display: flex; justify-content: space-between; gap: 8px; font-size: var(--fs-small); color: var(--ink-2); padding: 5px 0; border-top: 1px solid var(--rule-soft); }
+        .beta-build .ver { font-family: var(--font-mono); color: var(--recovery); }
     </style>
 </head>
 <body>
@@ -526,6 +583,47 @@
                         </div>
                     </div>
 
+                    <!-- ═══ ARENA (global health ranking) ═══ -->
+                    <div class="app-screen" id="arena-screen">
+                        <div class="screen-pad">
+                            <div class="journal-title">The Arena</div>
+                            <div class="journal-date">COMPETE ON HEALTH — NOT HYPE</div>
+                            <hr class="rule dotted" style="margin:14px 0 12px;">
+
+                            <div class="rank-hero">
+                                <div class="league-emblem" id="leagueEmblem"></div>
+                                <div class="rank-hero-meta">
+                                    <div class="rank-league" id="rankLeague">Gold</div>
+                                    <div class="rank-sub" id="rankSub">level 7 · 6-day streak</div>
+                                    <div class="rank-standing"><span class="num" id="rankGlobal">#4</span><span class="lbl" id="rankGlobalSub">of 12 this season · top 8%</span></div>
+                                </div>
+                            </div>
+
+                            <div class="vitality-line">
+                                <span class="v tnum" id="vitalityVal">—</span>
+                                <span class="cap">today's <b>vitality score</b> — derived on-device from your portrait. Only this one number is ever shared.</span>
+                            </div>
+                            <div class="xp-bar"><i id="xpFill" style="width:0%"></i></div>
+                            <div class="xp-meta"><span id="xpNow">level 7</span><span id="xpNext">— XP to level 8</span></div>
+
+                            <div class="arena-stats">
+                                <div class="arena-stat"><div class="v tnum" id="statStreak">6</div><div class="l">day streak</div></div>
+                                <div class="arena-stat"><div class="v tnum" id="statLevel">7</div><div class="l">level</div></div>
+                                <div class="arena-stat"><div class="v tnum" id="statXp">—</div><div class="l">season XP</div></div>
+                            </div>
+
+                            <div id="handleSetup" class="handle-setup" style="display:none;">
+                                <input id="handleInput" maxlength="20" placeholder="pick a handle" autocomplete="off" spellcheck="false">
+                                <button class="btn-primary" id="claimHandleBtn" style="width:auto;padding:0 16px;">Claim</button>
+                            </div>
+                            <button class="btn-primary" id="submitScoreBtn" style="margin-top:14px;">Log today's score</button>
+
+                            <div class="section-label" style="margin-top:22px;"><span class="n">*</span> Global leaderboard <span class="season-chip" style="margin-left:auto;"><span class="dot"></span><span id="seasonLabel">2026-W28</span></span></div>
+                            <div id="leaderboardList" style="margin-top:8px;"></div>
+                            <div class="zk-note" style="margin-top:14px;"><b>Fair by design.</b> Rivals see only your handle, league, and score — never a single heartbeat. The score is computed on your device; the server ranks blind.</div>
+                        </div>
+                    </div>
+
                     <!-- ═══ COACH ═══ -->
                     <div class="app-screen" id="chat-screen">
                         <div class="chat-header"><h2>Lifeline Coach</h2><p>clinical-first · zero-knowledge · on your side</p></div>
@@ -598,6 +696,11 @@
                             <div class="settings-row"><div class="settings-row-label"><span class="d" style="background:var(--activity)"></span>Privacy &amp; Security</div><span class="value">zero-knowledge</span></div>
                             <div class="settings-row"><div class="settings-row-label"><span class="d" style="background:var(--sleep)"></span>Connected sources</div><span class="value tnum" id="connectedCount">0 connected</span></div>
                             <div class="settings-row"><div class="settings-row-label"><span class="d" style="background:var(--cardio)"></span>Lab panels</div><span class="value tnum" id="settingsLabCount">0 uploaded</span></div>
+                            <hr class="rule dotted">
+                            <div class="section-label"><span class="n">*</span> Membership <span class="tier-chip free" id="currentTierChip" style="margin-left:auto;">Free</span></div>
+                            <div id="plansList"></div>
+                            <div id="betaCard"></div>
+                            <button class="btn-outline" id="managePlanBtn" style="margin-top:12px; display:none;">Manage subscription</button>
                             <div style="height:18px;"></div>
                             <button class="btn-outline" id="restartOnboardingBtn">Replay onboarding</button>
                         </div>
@@ -606,6 +709,7 @@
                     <!-- ═══ TAB BAR ═══ -->
                     <div class="tab-bar">
                         <div class="tab-item active" data-tab="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/><circle cx="18.5" cy="9" r="1.6" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="1.6" fill="currentColor" stroke="none"/></svg><span class="tab-label">Portrait</span></div>
+                        <div class="tab-item" data-tab="arena"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v3a5 5 0 0 1-10 0V4z"/><path d="M5 5H3v1a3 3 0 0 0 3 3M19 5h2v1a3 3 0 0 1-3 3M9 14.5V17h6v-2.5M8 20h8" stroke-linecap="round"/></svg><span class="tab-label">Arena</span></div>
                         <div class="tab-item" data-tab="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z"/></svg><span class="tab-label">Coach</span></div>
                         <div class="tab-item" data-tab="vault"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16" stroke-linecap="round"/></svg><span class="tab-label">Vault</span></div>
                         <div class="tab-item" data-tab="connect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg><span class="tab-label">Sources</span></div>
@@ -637,7 +741,9 @@
         // on-device plaintext the insights engine computes over).
         const SIGNALS = { chrono_age: 34, resting_heart_rate: 72, hrv_ms: 62, sleep_hours: 7.4, daily_steps: 8247, sleep_performance: 88, prior_strain: 11.4, sleep_midpoint: 3.5 };
 
-        let state = { deviceId: crypto.randomUUID(), sessionToken: null, challenge: null, serverOnline: false, currentTab: 'dashboard', syncVersion: 0, labCount: 0, connections: {}, insights: null, ws: null };
+        let state = { deviceId: crypto.randomUUID(), sessionToken: null, challenge: null, serverOnline: false, currentTab: 'dashboard', syncVersion: 0, labCount: 0, connections: {}, insights: null, ws: null,
+            game: { config: null, profile: null, handle: null },
+            billing: { config: null, tier: 'free', sub: null, beta: null } };
 
         function updateClock() {
             const n = new Date();
@@ -876,6 +982,243 @@
             </div>`;
         }
 
+        // ═══════════ ARENA — gamified global health ranking ═══════════
+        // The client mirrors the server's scoring rules (shipped by
+        // /game/config) so the Arena renders instantly and works offline. When a
+        // real session exists (iOS attestation), the server's /game/score and
+        // /game/leaderboard responses override these local computations.
+        const GAME_FALLBACK = {
+            leagues: [
+                { id:'bronze', name:'Bronze', min_score:0 }, { id:'silver', name:'Silver', min_score:40 },
+                { id:'gold', name:'Gold', min_score:55 }, { id:'platinum', name:'Platinum', min_score:70 },
+                { id:'diamond', name:'Diamond', min_score:82 }, { id:'apex', name:'Apex', min_score:92 },
+            ],
+            xp_rules: { daily_base:40, per_score_point:2, per_streak_day:5, streak_cap_days:30 },
+            season: { current:'2026-W28' },
+        };
+        const LEAGUE_COLOR = { bronze:'#a9713c', silver:'#8a94a6', gold:'#c68a1c', platinum:'#3f7f8c', diamond:'#5aa0d6', apex:'#b0431f' };
+        // A field of rivals so the board feels alive in the demo.
+        const RIVALS = [
+            { handle:'wattson', score:96, xp:5400 }, { handle:'zone2_zealot', score:88, xp:5010 },
+            { handle:'nocturne_hrv', score:81, xp:4720 }, { handle:'restday_rebel', score:64, xp:3980 },
+            { handle:'macro_monk', score:59, xp:3610 }, { handle:'couch_to_5k', score:52, xp:3200 },
+            { handle:'sleepy_joe', score:47, xp:2740 }, { handle:'cardio_casual', score:44, xp:2310 },
+            { handle:'weekend_warrior', score:41, xp:1980 }, { handle:'newbie_gains', score:38, xp:1450 },
+            { handle:'first_steps', score:33, xp:900 },
+        ];
+
+        function gameCfg() { return state.game.config || GAME_FALLBACK; }
+        function leagueFor(score) { let out = gameCfg().leagues[0]; for (const l of gameCfg().leagues) if (score >= l.min_score) out = l; return out; }
+        function levelFor(xp) { return Math.floor(Math.sqrt(Math.max(0, xp) / 90)) + 1; }
+        function xpForLevel(level) { return level <= 1 ? 0 : Math.ceil((level - 1) * (level - 1) * 90); }
+        function xpForSubmission(score, streak) { const r = gameCfg().xp_rules; return r.daily_base + score * r.per_score_point + Math.min(streak, r.streak_cap_days) * r.per_streak_day; }
+
+        function computeVitality(cfg) {
+            const r = computeReadiness(cfg);
+            const la = computeLifelineAge(cfg);
+            const healthspan = Math.max(0, Math.min(100, Math.round(50 - la.offset * 6)));
+            return Math.max(0, Math.min(100, Math.round(r.score * 0.55 + healthspan * 0.45)));
+        }
+
+        function leagueEmblemSvg(leagueId, level) {
+            const c = LEAGUE_COLOR[leagueId] || '#888';
+            return `<svg viewBox="0 0 84 84" role="img" aria-label="${leagueId} league">
+                <path d="M42 5 75 23 75 55 42 79 9 55 9 23Z" fill="${c}" fill-opacity="0.16" stroke="${c}" stroke-width="2"/>
+                <path d="M42 14 67 27.5 67 51 42 68 17 51 17 27.5Z" fill="none" stroke="${c}" stroke-width="1.2" stroke-dasharray="2 3"/>
+                <path d="M42 20l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2L42 43.4l-6.5 3.5 1.3-7.2-5.3-5.1 7.3-1z" fill="${c}"/>
+                <text x="42" y="62" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">${level}</text>
+            </svg>`;
+        }
+
+        function initGameProfile() {
+            if (state.game.profile) return;
+            const cfg = state.insights || FALLBACK_INSIGHTS;
+            const vitality = computeVitality(cfg);
+            const seasonXp = 4300; // mid-pack seed for the demo season
+            state.game.profile = {
+                vitality, best: vitality, xp: seasonXp, season_xp: seasonXp,
+                streak: 6, longest: 11, level: levelFor(seasonXp),
+                league: leagueFor(vitality).id, submittedToday: false,
+            };
+        }
+
+        function renderArena() {
+            initGameProfile();
+            const p = state.game.profile;
+            const cfg = state.insights || FALLBACK_INSIGHTS;
+            p.vitality = computeVitality(cfg);
+            p.league = leagueFor(p.vitality).id;
+            p.level = levelFor(p.xp);
+            const lg = gameCfg().leagues.find(l => l.id === p.league) || { name:'—' };
+
+            $('#leagueEmblem').innerHTML = leagueEmblemSvg(p.league, p.level);
+            $('#rankLeague').textContent = lg.name;
+            $('#rankSub').textContent = `level ${p.level} · ${p.streak}-day streak`;
+            $('#vitalityVal').textContent = p.vitality;
+
+            const into = p.xp - xpForLevel(p.level);
+            const span = Math.max(1, xpForLevel(p.level + 1) - xpForLevel(p.level));
+            $('#xpFill').style.width = Math.min(100, Math.round((into / span) * 100)) + '%';
+            $('#xpNow').textContent = `level ${p.level}`;
+            $('#xpNext').textContent = `${Math.max(0, span - into)} XP to level ${p.level + 1}`;
+            $('#statStreak').textContent = p.streak;
+            $('#statLevel').textContent = p.level;
+            $('#statXp').textContent = p.season_xp.toLocaleString();
+            $('#seasonLabel').textContent = (gameCfg().season && gameCfg().season.current) || '2026-W28';
+
+            // Handle setup gate.
+            $('#handleSetup').style.display = state.game.handle ? 'none' : 'flex';
+            if (!state.game.handle && !$('#handleInput').value) $('#handleInput').value = 'you_' + state.deviceId.slice(0, 4);
+
+            // Build the ranked board with the player inserted.
+            const meHandle = state.game.handle || 'you';
+            const field = RIVALS.map(r => ({ ...r, me:false }))
+                .concat([{ handle: meHandle, score: p.vitality, xp: p.season_xp, me:true }])
+                .sort((a, b) => b.xp - a.xp);
+            const myRank = field.findIndex(r => r.me) + 1;
+            const total = field.length;
+            const pctTop = Math.max(1, Math.round((myRank / total) * 100));
+            $('#rankGlobal').textContent = `#${myRank}`;
+            $('#rankGlobalSub').textContent = `of ${total} this season · top ${pctTop}%`;
+
+            $('#leaderboardList').innerHTML = field.map((r, i) => {
+                const lid = leagueFor(r.score).id;
+                const lvl = levelFor(r.xp);
+                return `<div class="lb-row ${r.me?'me':''}">
+                    <span class="lb-rank ${i<3?'podium':''} tnum">${i+1}</span>
+                    <span class="lb-dot" style="background:${LEAGUE_COLOR[lid]}"></span>
+                    <span class="lb-handle">${escapeHtml(r.handle)}${r.me?' ✦':''}<span class="lv">lv ${lvl}</span></span>
+                    <span class="lb-xp tnum">${r.xp.toLocaleString()}</span>
+                </div>`;
+            }).join('');
+        }
+
+        async function submitScore() {
+            initGameProfile();
+            if (!state.game.handle) { $('#handleInput').focus(); showIsland('Pick a handle first', 1600); return; }
+            const p = state.game.profile;
+            const vitality = computeVitality(state.insights || FALLBACK_INSIGHTS);
+            if (!p.submittedToday) {
+                p.streak += 1; p.longest = Math.max(p.longest, p.streak);
+                const gained = xpForSubmission(vitality, p.streak);
+                p.xp += gained; p.season_xp += gained; p.submittedToday = true;
+                showIsland(`+${gained} XP`, 1600);
+                addActivityLog('success', 'Vitality score logged', `${vitality} · ${leagueFor(vitality).id} league`);
+            } else {
+                showIsland('Already logged today', 1600);
+            }
+            p.vitality = vitality; p.best = Math.max(p.best, vitality); p.level = levelFor(p.xp);
+            // Fire the real endpoint too (200 on attested iOS, 401 in browser demo).
+            const res = await apiPost('/game/score', { vitality_score: vitality, handle: state.game.handle });
+            if (res.status === 200 && res.data) {
+                p.xp = res.data.xp ?? p.xp; p.season_xp = res.data.season_xp ?? p.season_xp;
+                p.level = res.data.level ?? p.level; p.streak = res.data.streak_days ?? p.streak;
+                p.league = res.data.league ?? p.league;
+            }
+            renderArena();
+        }
+
+        function claimHandle() {
+            const v = $('#handleInput').value.trim();
+            if (!/^[A-Za-z0-9_]{3,20}$/.test(v)) { showIsland('3–20 letters, numbers, _', 1900); return; }
+            state.game.handle = v;
+            addActivityLog('success', 'Handle claimed', `competing as ${v}`);
+            showIsland(`You are ${v}`, 1800);
+            renderArena();
+        }
+
+        async function fetchGameConfig() {
+            try { const r = await apiGet('/game/config'); if (r.status === 200) state.game.config = r.data; } catch (e) {}
+            if (!state.game.config) state.game.config = GAME_FALLBACK;
+        }
+
+        // ═══════════ PLANS — subscription tiers ═══════════
+        const BILLING_FALLBACK = {
+            currency:'usd', live:false,
+            tiers: [
+                { tier:'free', name:'Lifeline', tagline:'Your daily health portrait, free forever.', price_monthly_usd:0,
+                  features:['Daily Vital Constellation & Lifeline Age','Basic readiness from one source','7 days of history','Global leaderboard — view only'],
+                  entitlements:{ beta_access:false } },
+                { tier:'pro', name:'Lifeline Pro', tagline:'Every source, every insight, full competition.', price_monthly_usd:7.99,
+                  features:['Everything in Lifeline','Apple + Google + Whoop, fused','Biomarker tracking vs reference ranges','Unlimited history & AI coach','Compete in weekly seasons','Ad-free'],
+                  entitlements:{ beta_access:false } },
+                { tier:'elite', name:'Lifeline Elite', tagline:'Everything, plus the future first.', price_monthly_usd:14.99,
+                  features:['Everything in Pro','Beta access to new releases','Early features before anyone else','Priority support'],
+                  entitlements:{ beta_access:true } },
+            ],
+        };
+        const TIER_ORDER = ['free', 'pro', 'elite'];
+        const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        function billingCfg() { return state.billing.config || BILLING_FALLBACK; }
+
+        function renderPlans() {
+            const cur = state.billing.tier;
+            const chip = $('#currentTierChip');
+            const curCard = billingCfg().tiers.find(t => t.tier === cur) || billingCfg().tiers[0];
+            chip.textContent = curCard.name.replace('Lifeline', '').trim() || 'Free';
+            chip.className = `tier-chip ${cur}`;
+
+            $('#plansList').innerHTML = billingCfg().tiers.map(t => {
+                const isCurrent = t.tier === cur;
+                const isUpgrade = TIER_ORDER.indexOf(t.tier) > TIER_ORDER.indexOf(cur);
+                const featured = t.tier === 'elite';
+                const price = t.price_monthly_usd === 0 ? 'Free' : `$${t.price_monthly_usd.toFixed(2)}<small> /mo</small>`;
+                const feats = t.features.map(f => `<li>${CHECK_SVG}${escapeHtml(f)}</li>`).join('');
+                let cta = '';
+                if (isCurrent) cta = `<div class="plan-current-note">✓ Your current plan</div>`;
+                else if (isUpgrade) cta = `<button class="btn-primary plan-cta" data-upgrade="${t.tier}">Upgrade to ${escapeHtml(t.name.replace('Lifeline','').trim()||t.name)}</button>`;
+                else cta = `<div class="plan-current-note" style="color:var(--ink-3)">Included below your plan</div>`;
+                return `<div class="plan-card ${isCurrent?'current':''} ${featured&&!isCurrent?'featured':''}">
+                    ${featured ? '<span class="plan-badge">most complete</span>' : ''}
+                    <div class="plan-head"><span class="plan-name">${escapeHtml(t.name)}</span><span class="plan-price">${price}</span></div>
+                    <div class="plan-tag">${escapeHtml(t.tagline)}</div>
+                    <ul class="plan-features">${feats}</ul>
+                    ${cta}
+                </div>`;
+            }).join('');
+            $$('#plansList [data-upgrade]').forEach(b => b.addEventListener('click', () => upgrade(b.dataset.upgrade)));
+
+            $('#managePlanBtn').style.display = cur === 'free' ? 'none' : 'block';
+            renderBeta();
+        }
+
+        function renderBeta() {
+            const el = $('#betaCard');
+            if (state.billing.tier !== 'elite') { el.innerHTML = ''; return; }
+            const builds = state.billing.beta || [
+                { version:'2.1.0-beta.3', notes:'Sleep-stage constellation overlay' },
+                { version:'2.1.0-beta.2', notes:'Live season leaderboard deltas' },
+            ];
+            el.innerHTML = `<div class="beta-card"><h4>Beta channel · Elite</h4>
+                ${builds.map(b => `<div class="beta-build"><span>${escapeHtml(b.notes)}</span><span class="ver">${escapeHtml(b.version)}</span></div>`).join('')}</div>`;
+        }
+
+        async function upgrade(tier) {
+            state.billing.tier = tier; // optimistic (server confirms via webhook on real Stripe)
+            const name = (billingCfg().tiers.find(t => t.tier === tier) || {}).name || tier;
+            showIsland(`Upgraded to ${name.replace('Lifeline','').trim()||name}`, 2000);
+            addActivityLog('success', 'Subscription upgraded', `${name} · via Stripe Checkout`);
+            const res = await apiPost('/billing/checkout', { tier });
+            if (res.status === 200 && res.data && res.data.checkout_url) {
+                addActivityLog('info', res.data.simulated ? 'Checkout simulated' : 'Stripe Checkout ready', res.data.checkout_url);
+            }
+            if (tier === 'elite') { try { const b = await apiGet('/billing/beta-features'); if (b.status === 200) state.billing.beta = b.data.builds; } catch (e) {} }
+            renderPlans();
+        }
+
+        async function managePlan() {
+            showIsland('Opening billing portal…', 1600);
+            const res = await apiPost('/billing/portal');
+            if (res.status === 200 && res.data && res.data.portal_url) addActivityLog('info', 'Billing portal', res.data.portal_url);
+        }
+
+        async function fetchBillingConfig() {
+            try { const r = await apiGet('/billing/config'); if (r.status === 200) state.billing.config = r.data; } catch (e) {}
+            if (!state.billing.config) state.billing.config = BILLING_FALLBACK;
+            // Reflect any server-known subscription (401 in browser demo → stays free).
+            try { const s = await apiGet('/billing/subscription'); if (s.status === 200 && s.data && s.data.tier) state.billing.tier = s.data.tier; } catch (e) {}
+        }
+
         // ── Onboarding ──
         let obIndex = 0;
         const obSlides = $$('.onboarding-slide'); const obDots = $$('#onboardingDots span');
@@ -894,7 +1237,15 @@
             if (t === 'vault') refreshLabResults();
             if (t === 'connect') refreshIntegrations();
             if (t === 'dashboard') renderInsights();
+            if (t === 'arena') renderArena();
+            if (t === 'you') renderPlans();
         }); });
+
+        // ── Arena + Plans wiring ──
+        $('#submitScoreBtn').addEventListener('click', submitScore);
+        $('#claimHandleBtn').addEventListener('click', claimHandle);
+        $('#handleInput').addEventListener('keydown', e => { if (e.key === 'Enter') claimHandle(); });
+        $('#managePlanBtn').addEventListener('click', managePlan);
 
         // ── Boot ──
         async function bootSequence() {
@@ -914,7 +1265,7 @@
                 if (s.pct === 44) await checkServer();
                 if (s.pct === 58 && state.serverOnline) await getChallenge();
                 if (s.pct === 72 && state.serverOnline && state.challenge) await simulateAttestation();
-                if (s.pct === 84) await fetchInsightsConfig();
+                if (s.pct === 84) { await fetchInsightsConfig(); await fetchGameConfig(); await fetchBillingConfig(); }
                 await sleep(s.delay);
             }
             await sleep(280);
@@ -922,6 +1273,7 @@
             $('#dashboard-screen').classList.add('active');
             state.currentTab = 'dashboard';
             renderInsights();
+            renderPlans();
             $('#deviceIdDisplay').textContent = state.deviceId.slice(0,8) + '…';
             $('#deviceIdLabel').textContent = state.deviceId.slice(0,8);
             if (state.sessionToken) { $('#sessionStatus').textContent='active'; $('#sessionStatus').style.color='var(--activity)'; showIsland('Session active', 2400); }

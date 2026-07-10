@@ -1,6 +1,8 @@
 use crate::errors::AppError;
 use crate::models::device::AttestedDevice;
+use crate::models::game::GameProfile;
 use crate::models::provider_connection::ProviderConnection;
+use crate::models::subscription::Subscription;
 use crate::models::sync_document::SyncDocument;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -8,7 +10,9 @@ use std::sync::Mutex;
 use uuid::Uuid;
 
 pub mod audit;
+pub mod billing;
 pub mod devices;
+pub mod game;
 pub mod integrations;
 pub mod sync;
 
@@ -68,6 +72,26 @@ pub trait Database: Send + Sync {
         provider: &str,
     ) -> Result<Option<Vec<u8>>, AppError>;
     async fn touch_last_synced(&self, device_id: Uuid, provider: &str) -> Result<(), AppError>;
+
+    // ── Gamification (global health ranking) ─────────────────────────────────
+    async fn get_game_profile(&self, device_id: Uuid) -> Result<Option<GameProfile>, AppError>;
+    async fn is_handle_taken(&self, handle: &str, exclude_device: Uuid) -> Result<bool, AppError>;
+    async fn upsert_game_profile(&self, profile: &GameProfile) -> Result<(), AppError>;
+    async fn leaderboard(&self, season_id: &str, limit: i64) -> Result<Vec<GameProfile>, AppError>;
+    async fn season_rank(
+        &self,
+        season_id: &str,
+        season_xp: i64,
+        best_vitality_score: i32,
+    ) -> Result<(i64, i64), AppError>;
+
+    // ── Billing / subscriptions ──────────────────────────────────────────────
+    async fn get_subscription(&self, device_id: Uuid) -> Result<Option<Subscription>, AppError>;
+    async fn get_subscription_by_customer(
+        &self,
+        stripe_customer_id: &str,
+    ) -> Result<Option<Subscription>, AppError>;
+    async fn upsert_subscription(&self, subscription: &Subscription) -> Result<(), AppError>;
 }
 
 /// Postgres implementation of the Database trait.
@@ -256,6 +280,46 @@ impl Database for PostgresDatabase {
     async fn touch_last_synced(&self, device_id: Uuid, provider: &str) -> Result<(), AppError> {
         integrations::touch_last_synced(&self.pool, device_id, provider).await
     }
+
+    async fn get_game_profile(&self, device_id: Uuid) -> Result<Option<GameProfile>, AppError> {
+        game::get_game_profile(&self.pool, device_id).await
+    }
+
+    async fn is_handle_taken(&self, handle: &str, exclude_device: Uuid) -> Result<bool, AppError> {
+        game::is_handle_taken(&self.pool, handle, exclude_device).await
+    }
+
+    async fn upsert_game_profile(&self, profile: &GameProfile) -> Result<(), AppError> {
+        game::upsert_game_profile(&self.pool, profile).await
+    }
+
+    async fn leaderboard(&self, season_id: &str, limit: i64) -> Result<Vec<GameProfile>, AppError> {
+        game::leaderboard(&self.pool, season_id, limit).await
+    }
+
+    async fn season_rank(
+        &self,
+        season_id: &str,
+        season_xp: i64,
+        best_vitality_score: i32,
+    ) -> Result<(i64, i64), AppError> {
+        game::season_rank(&self.pool, season_id, season_xp, best_vitality_score).await
+    }
+
+    async fn get_subscription(&self, device_id: Uuid) -> Result<Option<Subscription>, AppError> {
+        billing::get_subscription(&self.pool, device_id).await
+    }
+
+    async fn get_subscription_by_customer(
+        &self,
+        stripe_customer_id: &str,
+    ) -> Result<Option<Subscription>, AppError> {
+        billing::get_subscription_by_customer(&self.pool, stripe_customer_id).await
+    }
+
+    async fn upsert_subscription(&self, subscription: &Subscription) -> Result<(), AppError> {
+        billing::upsert_subscription(&self.pool, subscription).await
+    }
 }
 
 /// A stored provider connection paired with its encrypted refresh token (if
@@ -271,6 +335,8 @@ pub struct MockDatabase {
     audit_key: ring::hmac::Key,
     // Keyed by (device_id, provider).
     provider_connections: Mutex<HashMap<(Uuid, String), ProviderConnectionRecord>>,
+    game_profiles: Mutex<HashMap<Uuid, GameProfile>>,
+    subscriptions: Mutex<HashMap<Uuid, Subscription>>,
 }
 
 impl MockDatabase {
@@ -282,6 +348,8 @@ impl MockDatabase {
             audit_logs: Mutex::new(Vec::new()),
             audit_key: audit::derive_audit_key(server_secret),
             provider_connections: Mutex::new(HashMap::new()),
+            game_profiles: Mutex::new(HashMap::new()),
+            subscriptions: Mutex::new(HashMap::new()),
         }
     }
 
@@ -496,5 +564,107 @@ impl Database for MockDatabase {
                 "No provider connection to update".to_owned(),
             ))
         }
+    }
+
+    async fn get_game_profile(&self, device_id: Uuid) -> Result<Option<GameProfile>, AppError> {
+        let guard = self.game_profiles.lock().unwrap();
+        Ok(guard.get(&device_id).cloned())
+    }
+
+    async fn is_handle_taken(&self, handle: &str, exclude_device: Uuid) -> Result<bool, AppError> {
+        let guard = self.game_profiles.lock().unwrap();
+        Ok(guard
+            .values()
+            .any(|p| p.handle == handle && p.device_id != exclude_device))
+    }
+
+    async fn upsert_game_profile(&self, profile: &GameProfile) -> Result<(), AppError> {
+        let mut guard = self.game_profiles.lock().unwrap();
+        // Enforce the handle-uniqueness constraint the Postgres schema has.
+        if guard
+            .values()
+            .any(|p| p.handle == profile.handle && p.device_id != profile.device_id)
+        {
+            return Err(AppError::Conflict(
+                "That handle is already taken — choose another.".to_owned(),
+            ));
+        }
+        guard.insert(profile.device_id, profile.clone());
+        Ok(())
+    }
+
+    async fn leaderboard(&self, season_id: &str, limit: i64) -> Result<Vec<GameProfile>, AppError> {
+        let guard = self.game_profiles.lock().unwrap();
+        let mut rows: Vec<GameProfile> = guard
+            .values()
+            .filter(|p| p.season_id == season_id)
+            .cloned()
+            .collect();
+        rows.sort_by(|a, b| {
+            b.season_xp
+                .cmp(&a.season_xp)
+                .then(b.best_vitality_score.cmp(&a.best_vitality_score))
+                .then(a.updated_at.cmp(&b.updated_at))
+        });
+        rows.truncate(usize::try_from(limit.max(0)).unwrap_or(0));
+        Ok(rows)
+    }
+
+    async fn season_rank(
+        &self,
+        season_id: &str,
+        season_xp: i64,
+        best_vitality_score: i32,
+    ) -> Result<(i64, i64), AppError> {
+        let guard = self.game_profiles.lock().unwrap();
+        let mut total = 0i64;
+        let mut ahead = 0i64;
+        for p in guard.values().filter(|p| p.season_id == season_id) {
+            total += 1;
+            if p.season_xp > season_xp
+                || (p.season_xp == season_xp && p.best_vitality_score > best_vitality_score)
+            {
+                ahead += 1;
+            }
+        }
+        Ok((ahead + 1, total))
+    }
+
+    async fn get_subscription(&self, device_id: Uuid) -> Result<Option<Subscription>, AppError> {
+        let guard = self.subscriptions.lock().unwrap();
+        Ok(guard.get(&device_id).cloned())
+    }
+
+    async fn get_subscription_by_customer(
+        &self,
+        stripe_customer_id: &str,
+    ) -> Result<Option<Subscription>, AppError> {
+        let guard = self.subscriptions.lock().unwrap();
+        Ok(guard
+            .values()
+            .find(|s| s.stripe_customer_id.as_deref() == Some(stripe_customer_id))
+            .cloned())
+    }
+
+    async fn upsert_subscription(&self, subscription: &Subscription) -> Result<(), AppError> {
+        let mut guard = self.subscriptions.lock().unwrap();
+        // Preserve stripe ids on a status-only update, mirroring the SQL COALESCE.
+        let merged = match guard.get(&subscription.device_id) {
+            Some(existing) => Subscription {
+                stripe_customer_id: subscription
+                    .stripe_customer_id
+                    .clone()
+                    .or_else(|| existing.stripe_customer_id.clone()),
+                stripe_subscription_id: subscription
+                    .stripe_subscription_id
+                    .clone()
+                    .or_else(|| existing.stripe_subscription_id.clone()),
+                created_at: existing.created_at,
+                ..subscription.clone()
+            },
+            None => subscription.clone(),
+        };
+        guard.insert(subscription.device_id, merged);
+        Ok(())
     }
 }

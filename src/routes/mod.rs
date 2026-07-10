@@ -15,6 +15,8 @@ use crate::state::AppState;
 
 pub mod ai;
 pub mod auth;
+pub mod billing;
+pub mod game;
 pub mod health;
 pub mod insights;
 pub mod integrations;
@@ -120,6 +122,19 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/integrations/whoop/metrics",
             get(integrations::whoop_metrics_handler),
         )
+        // ── Gamification: global health ranking (client submits only an opaque
+        //    derived vitality score — never raw health data) ──────────────────
+        .route("/game/score", post(game::submit_score_handler))
+        .route("/game/profile", get(game::get_profile_handler))
+        .route("/game/leaderboard", get(game::leaderboard_handler))
+        // ── Billing: subscription state + Stripe checkout/portal ─────────────
+        .route("/billing/subscription", get(billing::subscription_handler))
+        .route("/billing/checkout", post(billing::checkout_handler))
+        .route("/billing/portal", post(billing::portal_handler))
+        .route(
+            "/billing/beta-features",
+            get(billing::beta_features_handler),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             crate::middleware::attest_guard::attest_guard,
@@ -136,6 +151,14 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         // Rules-only insights config for the on-device longevity engine; ships
         // no user data, so it's public + cacheable like the policy matrix.
         .route("/insights/config", get(insights::insights_config_handler))
+        // Rules-only game + billing catalogs (league ladder, tier prices) —
+        // no user data, public like the policy matrix.
+        .route("/game/config", get(game::game_config_handler))
+        .route("/billing/config", get(billing::billing_config_handler))
+        // Stripe posts payment events here. Public (no session) but
+        // authenticated by verifying the Stripe-Signature HMAC over the raw
+        // body — see billing::verify_stripe_signature.
+        .route("/billing/webhook", post(billing::webhook_handler))
         .route("/stream", get(stream::ws_upgrade_handler))
         // Whoop redirects the user's own browser here after consent — no
         // Authorization header is present, so this cannot sit behind
