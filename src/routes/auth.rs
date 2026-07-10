@@ -98,6 +98,96 @@ pub async fn verify_attestation_handler(
     })))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct DevSessionRequest {
+    /// Client device identifier. Reusing the same id across calls keeps the
+    /// same dev identity (and its game profile / subscription / documents).
+    pub device_id: Uuid,
+    /// Optional base64 raw uncompressed P-256 public key (65 bytes, `0x04…`).
+    /// When supplied, the device is registered with this key so the client can
+    /// produce *real* ECDSA signatures on sync payloads — the web app does
+    /// this via `WebCrypto`, making its E2EE flow cryptographically identical
+    /// to the native client's.
+    #[serde(default)]
+    pub public_key: Option<String>,
+}
+
+/// Handler for `POST /api/v1/auth/dev-session`.
+///
+/// **Development-only** session mint for clients that cannot perform Apple
+/// App Attest (the browser app, local tooling). Registers the device with a
+/// synthetic per-device key and issues a normal session token, so every
+/// protected endpoint works end-to-end in local development.
+///
+/// Hard-gated on `auth.environment == "development"`: in any other
+/// environment it returns 404-equivalent `DeviceNotFound`-free 403 via
+/// `Forbidden`, and the router still requires real attestation.
+#[tracing::instrument(skip(state, payload), fields(device_id = %payload.device_id))]
+pub async fn dev_session_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<DevSessionRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/auth/dev-session")
+        .increment(1);
+
+    if state.config.auth.environment != "development" {
+        return Err(AppError::Forbidden(
+            "Dev sessions are disabled outside the development environment.".to_owned(),
+        ));
+    }
+
+    // Use the client's real P-256 key when it sends one (so its ECDSA sync
+    // signatures verify), otherwise fall back to a synthetic key derived from
+    // the device id: stable across calls for the same device (idempotent
+    // re-registration) and unique per device (the takeover guard still holds
+    // between dev identities).
+    let public_key_der = match &payload.public_key {
+        Some(b64) => {
+            use base64::Engine as _;
+            let key = base64::prelude::BASE64_STANDARD.decode(b64)?;
+            if key.len() != 65 || key[0] != 0x04 {
+                return Err(AppError::BadRequest(
+                    "public_key must be a 65-byte uncompressed P-256 point".to_owned(),
+                ));
+            }
+            key
+        }
+        None => {
+            let mut key = vec![0x04u8];
+            key.extend_from_slice(payload.device_id.as_bytes());
+            key.resize(65, 0xDE);
+            key
+        }
+    };
+
+    state
+        .db
+        .insert_device(&crate::models::device::AttestedDevice {
+            device_id: payload.device_id,
+            public_key_der,
+            sign_counter: 0,
+            registered_at: chrono::Utc::now(),
+        })
+        .await?;
+
+    let token = crate::crypto::session::create_session_token(
+        &state.hmac_key,
+        payload.device_id,
+        state.config.auth.session_token_ttl_seconds,
+    )?;
+
+    state
+        .db
+        .insert_audit_log("DEV_SESSION", payload.device_id, payload.device_id, &[])
+        .await?;
+
+    Ok(Json(json!({
+        "status": "dev",
+        "token": token,
+        "expires_in": state.config.auth.session_token_ttl_seconds,
+    })))
+}
+
 /// Handler for `POST /api/v1/auth/assert`.
 /// Performs login/session refresh by verifying client assertion token.
 #[tracing::instrument(skip(state, payload), fields(device_id = %payload.device_id))]
