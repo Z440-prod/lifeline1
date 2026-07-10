@@ -112,7 +112,87 @@ pub async fn billing_config_handler(State(state): State<Arc<AppState>>) -> Json<
         // Lets the client show a "test mode" ribbon when no live keys are set.
         "live": state.config.billing.stripe_configured(),
         "tiers": tiers,
+        // Donations: an optional pre-created Payment Link, plus the preset
+        // amounts the client offers (rule of three). Store builds hide the
+        // donate UI entirely (IAP policies) — this is web-only.
+        "donate": {
+            "url": (!state.config.billing.donate_url.is_empty())
+                .then_some(state.config.billing.donate_url.as_str()),
+            "presets_usd": [3, 5, 10],
+        },
     }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DonateRequest {
+    /// One-time donation amount in USD cents. Bounded to keep typos and
+    /// abuse out ($1 – $500).
+    pub amount_usd_cents: i64,
+}
+
+/// Handler for `POST /api/v1/billing/donate`.
+///
+/// Creates a one-time Stripe Checkout Session ("Support Lifeline") for the
+/// chosen amount. Donations unlock nothing — they exist so people who love
+/// the free tier can keep it free. Simulated when Stripe isn't configured,
+/// like every other billing flow.
+#[tracing::instrument(skip(state, payload), fields(device_id = %verified_device.device_id))]
+pub async fn donate_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(verified_device): Extension<VerifiedDevice>,
+    Json(payload): Json<DonateRequest>,
+) -> Result<Json<Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/billing/donate")
+        .increment(1);
+
+    let cents = payload.amount_usd_cents;
+    if !(100..=50_000).contains(&cents) {
+        return Err(AppError::BadRequest(
+            "Donation must be between $1 and $500.".to_owned(),
+        ));
+    }
+    let billing = &state.config.billing;
+
+    if !billing.stripe_configured() {
+        state
+            .db
+            .insert_audit_log(
+                "DONATION_SIMULATED",
+                verified_device.device_id,
+                verified_device.device_id,
+                &cents.to_be_bytes(),
+            )
+            .await?;
+        return Ok(Json(json!({
+            "simulated": true,
+            "amount_usd_cents": cents,
+            "message": "Stripe is not configured — donation simulated. Thank you!",
+        })));
+    }
+
+    let cents_str = cents.to_string();
+    let params = [
+        ("mode", "payment"),
+        ("line_items[0][price_data][currency]", "usd"),
+        (
+            "line_items[0][price_data][product_data][name]",
+            "Support Lifeline",
+        ),
+        ("line_items[0][price_data][unit_amount]", cents_str.as_str()),
+        ("line_items[0][quantity]", "1"),
+        ("success_url", billing.success_url.as_str()),
+        ("cancel_url", billing.cancel_url.as_str()),
+        ("submit_type", "donate"),
+    ];
+    let resp = stripe_post(state.as_ref(), "/v1/checkout/sessions", &params).await?;
+    let url = resp["url"].as_str().ok_or_else(|| {
+        AppError::ExternalServiceError("Stripe donation session had no url".to_owned())
+    })?;
+    Ok(Json(json!({
+        "simulated": false,
+        "amount_usd_cents": cents,
+        "checkout_url": url,
+    })))
 }
 
 /// Handler for `GET /api/v1/billing/subscription`.

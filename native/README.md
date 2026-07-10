@@ -50,6 +50,10 @@ device, and Stripe is just one writer of that state. Launch plan:
    entitlement checks need no changes.
 4. Hide the Stripe checkout buttons when running inside a shell
    (`window.Capacitor` is defined) and show the native purchase sheet instead.
+5. **Donations are web-only.** The app already hides the donate card inside
+   store shells (`IN_STORE_SHELL` gate) — keep it that way: Apple treats
+   in-app donations to the developer as digital purchases (3.1.1), and Play's
+   payment policy is equivalent.
 
 ## Store assets
 
