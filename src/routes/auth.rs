@@ -136,12 +136,31 @@ pub async fn dev_session_handler(
         ));
     }
 
-    // Use the client's real P-256 key when it sends one (so its ECDSA sync
-    // signatures verify), otherwise fall back to a synthetic key derived from
-    // the device id: stable across calls for the same device (idempotent
-    // re-registration) and unique per device (the takeover guard still holds
-    // between dev identities).
-    let public_key_der = match &payload.public_key {
+    let token =
+        register_device_and_issue_token(&state, payload.device_id, &payload.public_key).await?;
+    state
+        .db
+        .insert_audit_log("DEV_SESSION", payload.device_id, payload.device_id, &[])
+        .await?;
+
+    Ok(Json(json!({
+        "status": "dev",
+        "token": token,
+        "expires_in": state.config.auth.session_token_ttl_seconds,
+    })))
+}
+
+/// Register a device (with the client's real P-256 key when supplied, else a
+/// stable synthetic one) and mint a session token. Shared by the dev-session
+/// and the account sign-in / sign-up flows, so every browser path that isn't
+/// App Attest produces an identical device-bound session — the account layer
+/// only adds identity metadata on top.
+pub async fn register_device_and_issue_token(
+    state: &AppState,
+    device_id: Uuid,
+    public_key: &Option<String>,
+) -> Result<String, AppError> {
+    let public_key_der = match public_key {
         Some(b64) => {
             use base64::Engine as _;
             let key = base64::prelude::BASE64_STANDARD.decode(b64)?;
@@ -154,7 +173,7 @@ pub async fn dev_session_handler(
         }
         None => {
             let mut key = vec![0x04u8];
-            key.extend_from_slice(payload.device_id.as_bytes());
+            key.extend_from_slice(device_id.as_bytes());
             key.resize(65, 0xDE);
             key
         }
@@ -163,29 +182,18 @@ pub async fn dev_session_handler(
     state
         .db
         .insert_device(&crate::models::device::AttestedDevice {
-            device_id: payload.device_id,
+            device_id,
             public_key_der,
             sign_counter: 0,
             registered_at: chrono::Utc::now(),
         })
         .await?;
 
-    let token = crate::crypto::session::create_session_token(
+    crate::crypto::session::create_session_token(
         &state.hmac_key,
-        payload.device_id,
+        device_id,
         state.config.auth.session_token_ttl_seconds,
-    )?;
-
-    state
-        .db
-        .insert_audit_log("DEV_SESSION", payload.device_id, payload.device_id, &[])
-        .await?;
-
-    Ok(Json(json!({
-        "status": "dev",
-        "token": token,
-        "expires_in": state.config.auth.session_token_ttl_seconds,
-    })))
+    )
 }
 
 /// Handler for `POST /api/v1/auth/assert`.

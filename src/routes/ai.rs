@@ -26,26 +26,62 @@ pub async fn ai_proxy_handler(
     metrics::counter!("antigravity_api_requests_total", "endpoint" => "/ai/proxy").increment(1);
     let start_time = std::time::Instant::now();
 
-    // 1. Enforce the tier's daily coach limit (free = a few messages a day,
-    //    paid = unlimited). Metered in-process with a day-scoped key; applies
-    //    in every environment so the limit is honest and testable.
-    let tier =
-        crate::routes::billing::effective_tier(state.as_ref(), verified_device.device_id).await?;
-    let daily_limit = tier.entitlements().ai_coach_daily_limit;
-    if daily_limit >= 0 {
-        let key = format!(
-            "{}:{}",
-            verified_device.device_id,
-            chrono::Utc::now().date_naive()
-        );
-        let used = state.ai_usage.get(&key).unwrap_or(0);
-        #[allow(clippy::cast_sign_loss)]
-        if used >= daily_limit as u32 {
-            return Err(AppError::Forbidden(format!(
-                "You've used all {daily_limit} free coach messages today — upgrade for unlimited coaching."
-            )));
-        }
-        state.ai_usage.insert(key, used + 1);
+    // 1. Coach usage budgets — the token bill can never run away.
+    //    Three gates, checked cheapest-first, all metered in-process:
+    //      (a) global daily circuit breaker across ALL users;
+    //      (b) per-device daily cap by tier;
+    //      (c) per-device monthly cap by tier.
+    //    Enforced in every environment so the limits are honest and testable.
+    let device_id = verified_device.device_id;
+    let tier = crate::routes::billing::effective_tier(state.as_ref(), device_id).await?;
+    let budget = &state.config.ai.budget;
+    let now = chrono::Utc::now();
+    let day = now.format("%Y-%m-%d");
+    let month = now.format("%Y-%m");
+
+    // (a) Global breaker — protects the whole service's token spend.
+    let gkey = format!("ai:global:{day}");
+    let gused = state.ai_usage.get(&gkey).unwrap_or(0);
+    if gused >= budget.global_daily_budget {
+        metrics::counter!("antigravity_ai_budget_trips_total", "scope" => "global").increment(1);
+        return Err(AppError::ServiceUnavailable(
+            "The coach is resting to keep the service healthy — try again tomorrow.".to_owned(),
+        ));
+    }
+
+    // (b) Per-device daily cap by tier.
+    let daily_cap = budget.daily_for(tier.as_str());
+    let dkey = format!("{device_id}:d:{day}");
+    let dused = state.ai_usage.get(&dkey).unwrap_or(0);
+    if dused >= daily_cap {
+        metrics::counter!("antigravity_ai_budget_trips_total", "scope" => "daily").increment(1);
+        let hint = if tier == crate::models::subscription::Tier::Free {
+            " Upgrade for far more daily coaching."
+        } else {
+            " This resets tomorrow."
+        };
+        return Err(AppError::Forbidden(format!(
+            "You've used all {daily_cap} coach messages today.{hint}"
+        )));
+    }
+
+    // (c) Per-device monthly cap by tier (0 = not enforced, e.g. free rides on
+    //     the daily cap alone).
+    let monthly_cap = budget.monthly_for(tier.as_str());
+    let mkey = format!("{device_id}:m:{month}");
+    let mused = state.ai_usage.get(&mkey).unwrap_or(0);
+    if monthly_cap > 0 && mused >= monthly_cap {
+        metrics::counter!("antigravity_ai_budget_trips_total", "scope" => "monthly").increment(1);
+        return Err(AppError::Forbidden(format!(
+            "You've reached this month's {monthly_cap}-message coaching limit — it resets next month."
+        )));
+    }
+
+    // Reserve the message across all three counters.
+    state.ai_usage.insert(gkey, gused + 1);
+    state.ai_usage.insert(dkey, dused + 1);
+    if monthly_cap > 0 {
+        state.ai_usage.insert(mkey, mused + 1);
     }
 
     // 1.5 Audit log the access of the AI proxy

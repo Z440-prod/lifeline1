@@ -1,3 +1,4 @@
+pub mod account;
 pub mod device;
 pub mod game;
 pub mod provider_connection;

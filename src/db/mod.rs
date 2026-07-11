@@ -1,4 +1,5 @@
 use crate::errors::AppError;
+use crate::models::account::Account;
 use crate::models::device::AttestedDevice;
 use crate::models::game::GameProfile;
 use crate::models::provider_connection::ProviderConnection;
@@ -9,6 +10,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use uuid::Uuid;
 
+pub mod accounts;
 pub mod audit;
 pub mod billing;
 pub mod devices;
@@ -92,6 +94,16 @@ pub trait Database: Send + Sync {
         stripe_customer_id: &str,
     ) -> Result<Option<Subscription>, AppError>;
     async fn upsert_subscription(&self, subscription: &Subscription) -> Result<(), AppError>;
+
+    // ── Accounts (sign-in layer) ──────────────────────────────────────────────
+    async fn get_account_by_email(&self, email: &str) -> Result<Option<Account>, AppError>;
+    async fn get_account_by_oauth(
+        &self,
+        provider: &str,
+        subject: &str,
+    ) -> Result<Option<Account>, AppError>;
+    async fn insert_account(&self, account: &Account) -> Result<(), AppError>;
+    async fn link_device(&self, account_id: Uuid, device_id: Uuid) -> Result<(), AppError>;
 }
 
 /// Postgres implementation of the Database trait.
@@ -320,6 +332,26 @@ impl Database for PostgresDatabase {
     async fn upsert_subscription(&self, subscription: &Subscription) -> Result<(), AppError> {
         billing::upsert_subscription(&self.pool, subscription).await
     }
+
+    async fn get_account_by_email(&self, email: &str) -> Result<Option<Account>, AppError> {
+        accounts::get_account_by_email(&self.pool, email).await
+    }
+
+    async fn get_account_by_oauth(
+        &self,
+        provider: &str,
+        subject: &str,
+    ) -> Result<Option<Account>, AppError> {
+        accounts::get_account_by_oauth(&self.pool, provider, subject).await
+    }
+
+    async fn insert_account(&self, account: &Account) -> Result<(), AppError> {
+        accounts::insert_account(&self.pool, account).await
+    }
+
+    async fn link_device(&self, account_id: Uuid, device_id: Uuid) -> Result<(), AppError> {
+        accounts::link_device(&self.pool, account_id, device_id).await
+    }
 }
 
 /// A stored provider connection paired with its encrypted refresh token (if
@@ -337,6 +369,8 @@ pub struct MockDatabase {
     provider_connections: Mutex<HashMap<(Uuid, String), ProviderConnectionRecord>>,
     game_profiles: Mutex<HashMap<Uuid, GameProfile>>,
     subscriptions: Mutex<HashMap<Uuid, Subscription>>,
+    accounts: Mutex<HashMap<Uuid, Account>>,
+    account_devices: Mutex<HashMap<Uuid, Uuid>>,
 }
 
 impl MockDatabase {
@@ -350,6 +384,8 @@ impl MockDatabase {
             provider_connections: Mutex::new(HashMap::new()),
             game_profiles: Mutex::new(HashMap::new()),
             subscriptions: Mutex::new(HashMap::new()),
+            accounts: Mutex::new(HashMap::new()),
+            account_devices: Mutex::new(HashMap::new()),
         }
     }
 
@@ -665,6 +701,53 @@ impl Database for MockDatabase {
             None => subscription.clone(),
         };
         guard.insert(subscription.device_id, merged);
+        Ok(())
+    }
+
+    async fn get_account_by_email(&self, email: &str) -> Result<Option<Account>, AppError> {
+        let guard = self.accounts.lock().unwrap();
+        Ok(guard
+            .values()
+            .find(|a| a.email.as_deref() == Some(email))
+            .cloned())
+    }
+
+    async fn get_account_by_oauth(
+        &self,
+        provider: &str,
+        subject: &str,
+    ) -> Result<Option<Account>, AppError> {
+        let guard = self.accounts.lock().unwrap();
+        Ok(guard
+            .values()
+            .find(|a| {
+                a.oauth_provider.as_deref() == Some(provider)
+                    && a.oauth_subject.as_deref() == Some(subject)
+            })
+            .cloned())
+    }
+
+    async fn insert_account(&self, account: &Account) -> Result<(), AppError> {
+        let mut guard = self.accounts.lock().unwrap();
+        if guard.values().any(|a| {
+            (account.email.is_some() && a.email == account.email)
+                || (account.oauth_subject.is_some()
+                    && a.oauth_provider == account.oauth_provider
+                    && a.oauth_subject == account.oauth_subject)
+        }) {
+            return Err(AppError::Conflict(
+                "An account with those details already exists.".to_owned(),
+            ));
+        }
+        guard.insert(account.id, account.clone());
+        Ok(())
+    }
+
+    async fn link_device(&self, account_id: Uuid, device_id: Uuid) -> Result<(), AppError> {
+        self.account_devices
+            .lock()
+            .unwrap()
+            .insert(device_id, account_id);
         Ok(())
     }
 }

@@ -23,7 +23,7 @@ pub async fn insights_config_handler(
         .increment(1);
 
     Ok(Json(json!({
-        "version": "1.0.0",
+        "version": "1.1.0",
         "policy_matrix_version": state.config.ai.policy_matrix_version,
 
         // ── Lifeline Age ─────────────────────────────────────────────────────
@@ -125,6 +125,85 @@ pub async fn insights_config_handler(
                 "lark": { "wind_down": "20:30", "peak_focus": "09:00", "last_caffeine": "12:00" },
                 "neutral": { "wind_down": "22:00", "peak_focus": "10:30", "last_caffeine": "14:00" },
                 "owl": { "wind_down": "23:30", "peak_focus": "12:30", "last_caffeine": "16:00" }
+            }
+        },
+
+        // ── The Conductor ───────────────────────────────────────────────────
+        // The rules that let "the AI control the app": each day the client
+        // reduces the user's own readiness + habit signals to a single *mode*,
+        // and the mode reshapes the whole app — which view leads, the accent
+        // color, the primary call-to-action, the coach's tone, and how loud the
+        // interface is. All decided on-device from data the server never sees;
+        // the server only ships these thresholds and presentation tokens, so
+        // the adaptive behavior stays fully zero-knowledge and inspectable.
+        "conductor": {
+            // Thresholds are evaluated top-to-bottom against the on-device
+            // readiness score (0–100); the first match wins. "push" is gated on
+            // BOTH high readiness and a logged-today streak so the app only
+            // escalates when the user is genuinely primed and engaged.
+            "modes": [
+                {
+                    "id": "recover",
+                    "max_readiness": 45,
+                    "label": "Recovery day",
+                    "subtitle": "Your body is asking for a lighter touch today.",
+                    "accent": "#6C8AE4",
+                    "lead_view": "coach",
+                    "view_order": ["portrait", "coach", "vault", "arena", "sources"],
+                    "primary_cta": { "text": "Plan a restful day", "view": "coach" },
+                    "coach_tone": "gentle",
+                    "intensity": "calm",
+                    "hide": ["arena_streak_pressure"],
+                    "haptics": "soft",
+                    "sound_theme": "calm"
+                },
+                {
+                    "id": "maintain",
+                    "max_readiness": 74,
+                    "label": "Steady state",
+                    "subtitle": "Balanced signals — hold your rhythm.",
+                    "accent": "#4FB0A8",
+                    "lead_view": "portrait",
+                    "view_order": ["portrait", "arena", "coach", "vault", "sources"],
+                    "primary_cta": { "text": "Log today's check-in", "view": "portrait" },
+                    "coach_tone": "balanced",
+                    "intensity": "steady",
+                    "hide": [],
+                    "haptics": "medium",
+                    "sound_theme": "default"
+                },
+                {
+                    "id": "push",
+                    "max_readiness": 100,
+                    "min_readiness": 75,
+                    "requires_streak": true,
+                    "label": "Green light",
+                    "subtitle": "You're primed — today's a day to reach.",
+                    "accent": "#E4A11B",
+                    "lead_view": "arena",
+                    "view_order": ["arena", "portrait", "coach", "sources", "vault"],
+                    "primary_cta": { "text": "Climb the Arena", "view": "arena" },
+                    "coach_tone": "driven",
+                    "intensity": "energized",
+                    "hide": [],
+                    "haptics": "crisp",
+                    "sound_theme": "triumphant"
+                }
+            ],
+            // When readiness can't be computed yet (no connected sources / no
+            // check-in), fall back to a welcoming steady default rather than
+            // guessing.
+            "default_mode": "maintain",
+            // The client re-evaluates at most once per local day so the app's
+            // "rhythm" is stable within a day and only shifts as the user's
+            // health does — not on every render.
+            "revaluate": "daily",
+            // Coach-tone presets the on-device prompt builder prepends so the AI
+            // companion's voice matches the day's mode.
+            "tone_prompts": {
+                "gentle": "Speak softly and reassuringly. Prioritize rest, recovery, and self-compassion. Discourage strain.",
+                "balanced": "Be clear, steady, and practical. Reinforce consistency and small wins.",
+                "driven": "Be energizing and motivating. The user is primed — encourage ambitious but safe effort."
             }
         }
     })))
