@@ -1443,3 +1443,77 @@ async fn test_store_receipt_native_purchase_loop() {
         "unverifiable production receipt must be refused"
     );
 }
+
+#[tokio::test]
+async fn test_response_hardening_compression_and_cache() {
+    // Every response carries the security headers; public rulebooks are
+    // edge-cacheable; compressible bodies are gzip'd when the client asks —
+    // faster and cheaper without touching any handler.
+    let (state, _db) = create_test_state();
+    let app = create_router(state);
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12395));
+
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/game/config")
+                .header("accept-encoding", "gzip")
+                .extension(axum::extract::ConnectInfo(addr))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let h = res.headers();
+    assert_eq!(h.get("x-content-type-options").unwrap(), "nosniff");
+    assert_eq!(h.get("x-frame-options").unwrap(), "DENY");
+    assert!(
+        h.get("content-security-policy").is_some(),
+        "CSP must be set"
+    );
+    assert!(
+        h.get("cache-control")
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| v.contains("public")),
+        "rulebook configs must be edge-cacheable"
+    );
+    assert_eq!(
+        h.get("content-encoding").and_then(|v| v.to_str().ok()),
+        Some("gzip"),
+        "JSON must compress when the client accepts gzip"
+    );
+    // HSTS is production-only (the dev server speaks plain HTTP).
+    assert!(h.get("strict-transport-security").is_none());
+
+    // Private, per-user endpoints must NOT be marked publicly cacheable.
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/auth/challenge")
+                .extension(axum::extract::ConnectInfo(addr))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert!(res.headers().get("cache-control").is_none());
+
+    let (prod_state, _db2) = create_test_state_with_env("production");
+    let prod = create_router(prod_state);
+    let res = prod
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/game/config")
+                .extension(axum::extract::ConnectInfo(addr))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert!(
+        res.headers().get("strict-transport-security").is_some(),
+        "HSTS must be on in production"
+    );
+}

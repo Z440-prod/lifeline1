@@ -31,6 +31,71 @@ pub mod sync;
 /// binary each build their own router).
 static METRIC_HANDLE: OnceLock<PrometheusHandle> = OnceLock::new();
 
+/// Response hardening + edge-cache policy, one pass over every response.
+///
+/// * Security headers on everything: `nosniff`, `DENY` framing, referrer
+///   suppression, a conservative CSP (the app is fully self-contained — no
+///   external scripts, styles, or fonts), and HSTS in production (the engine
+///   sits behind TLS termination there).
+/// * `Cache-Control` on the public, user-independent surfaces so browsers and
+///   any CDN (e.g. Cloudflare in front) serve repeats without touching the
+///   engine: rulebook configs for 5 minutes, static assets for an hour —
+///   faster for users, cheaper on compute and egress.
+async fn harden_and_cache(
+    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+    req: axum::http::Request<axum::body::Body>,
+    next: middleware::Next,
+) -> axum::response::Response {
+    let path = req.uri().path().to_owned();
+    let is_get = req.method() == Method::GET;
+    let mut res = next.run(req).await;
+    let ok = res.status().is_success();
+    let h = res.headers_mut();
+
+    let hv = axum::http::HeaderValue::from_static;
+    h.insert("x-content-type-options", hv("nosniff"));
+    h.insert("x-frame-options", hv("DENY"));
+    h.insert("referrer-policy", hv("no-referrer"));
+    h.insert(
+        "permissions-policy",
+        hv("camera=(), microphone=(), geolocation=()"),
+    );
+    h.insert(
+        "content-security-policy",
+        hv(
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
+            img-src 'self' data:; connect-src 'self' ws: wss:; manifest-src 'self'; \
+            frame-ancestors 'none'; base-uri 'self'",
+        ),
+    );
+    if state.config.auth.environment == "production" {
+        h.insert(
+            "strict-transport-security",
+            hv("max-age=63072000; includeSubDomains"),
+        );
+    }
+
+    if is_get && ok && !h.contains_key(axum::http::header::CACHE_CONTROL) {
+        let policy = if path.starts_with("/assets/") {
+            Some("public, max-age=3600, stale-while-revalidate=86400")
+        } else if matches!(
+            path.as_str(),
+            "/api/v1/insights/config"
+                | "/api/v1/game/config"
+                | "/api/v1/billing/config"
+                | "/api/v1/ai/policy-matrix"
+        ) {
+            Some("public, max-age=300, stale-while-revalidate=3600")
+        } else {
+            None
+        };
+        if let Some(p) = policy {
+            h.insert(axum::http::header::CACHE_CONTROL, hv(p));
+        }
+    }
+    res
+}
+
 /// Assemble the application router.
 /// Defines all endpoints under the `/api/v1` namespace and applies `attest_guard` middleware
 /// to protected resources (sync, AI proxy).
@@ -204,6 +269,13 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route_service("/manifest.webmanifest", manifest)
         .route_service("/privacy", privacy)
         .fallback_service(shell)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            harden_and_cache,
+        ))
+        // Brotli/gzip on every compressible response (HTML/CSS/JS/JSON):
+        // ~70% less egress — faster loads, cheaper hosting.
+        .layer(tower_http::compression::CompressionLayer::new())
         .layer(prometheus_layer)
         .layer(governor_layer)
         .layer(cors)
