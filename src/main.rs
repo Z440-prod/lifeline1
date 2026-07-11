@@ -112,10 +112,14 @@ async fn main() -> anyhow::Result<()> {
         .time_to_idle(std::time::Duration::from_secs(600))
         .build();
 
-    // 8.6 Daily AI-coach usage meter (free-tier limit enforcement)
+    // 8.6 AI-coach usage meter — enforces daily/monthly/global token budgets.
+    //     Keys are date-scoped (`…:d:<day>`, `…:m:<month>`, `ai:global:<day>`),
+    //     so the TTL only needs to outlive the longest window (monthly). 40 days
+    //     keeps a month's counter alive through its entire span, after which the
+    //     rolled-over key is irrelevant and expires on its own.
     let ai_usage = moka::sync::Cache::builder()
         .max_capacity(100_000)
-        .time_to_live(std::time::Duration::from_secs(26 * 3600))
+        .time_to_live(std::time::Duration::from_secs(40 * 24 * 3600))
         .build();
 
     // 9. Assemble Shared Application State

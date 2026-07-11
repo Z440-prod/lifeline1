@@ -55,6 +55,9 @@ pub enum AppError {
     /// 502 — An outbound service call (e.g. Claude API) failed.
     #[error("ExternalServiceError: {0}")]
     ExternalServiceError(String),
+    /// 503 — A capacity/budget circuit breaker is open; retry later.
+    #[error("ServiceUnavailable: {0}")]
+    ServiceUnavailable(String),
     /// 500 — Catch-all for unexpected internal errors.
     #[error("Internal: {0}")]
     Internal(String),
@@ -122,6 +125,11 @@ impl IntoResponse for AppError {
                     "Upstream service unavailable".to_owned(),
                 )
             }
+            Self::ServiceUnavailable(msg) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "SERVICE_UNAVAILABLE",
+                msg.clone(),
+            ),
             Self::Internal(msg) => {
                 tracing::error!(error = %msg, "Internal error");
                 (

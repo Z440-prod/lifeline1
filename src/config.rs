@@ -57,6 +57,62 @@ pub struct AiConfig {
     pub anthropic_api_url: String,
     pub anthropic_api_key: String,
     pub policy_matrix_version: String,
+    /// AI-coach usage budgets. Hard caps so the token bill can never run away,
+    /// enforced server-side regardless of tier marketing. All default to sane
+    /// values so existing configs keep working.
+    #[serde(default)]
+    pub budget: AiBudget,
+}
+
+/// Coach usage limits. Per-device daily and monthly caps bound each user's
+/// spend; the process-wide daily budget is a circuit breaker that protects the
+/// whole token bill if usage spikes.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct AiBudget {
+    pub coach_daily_free: u32,
+    pub coach_daily_pro: u32,
+    pub coach_daily_elite: u32,
+    pub coach_monthly_pro: u32,
+    pub coach_monthly_elite: u32,
+    /// Total coach messages allowed across ALL users per day. When reached,
+    /// the coach pauses for everyone until the next day.
+    pub global_daily_budget: u32,
+}
+
+impl Default for AiBudget {
+    fn default() -> Self {
+        Self {
+            coach_daily_free: 3,
+            coach_daily_pro: 50,
+            coach_daily_elite: 120,
+            coach_monthly_pro: 800,
+            coach_monthly_elite: 2000,
+            global_daily_budget: 5000,
+        }
+    }
+}
+
+impl AiBudget {
+    /// The per-device daily message cap for a tier.
+    #[must_use]
+    pub fn daily_for(&self, tier: &str) -> u32 {
+        match tier {
+            "pro" => self.coach_daily_pro,
+            "elite" => self.coach_daily_elite,
+            _ => self.coach_daily_free,
+        }
+    }
+
+    /// The per-device monthly message cap for a tier (0 = not enforced).
+    #[must_use]
+    pub fn monthly_for(&self, tier: &str) -> u32 {
+        match tier {
+            "pro" => self.coach_monthly_pro,
+            "elite" => self.coach_monthly_elite,
+            _ => 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -210,4 +266,25 @@ pub fn load() -> Result<AppConfig, config::ConfigError> {
         .build()?;
 
     settings.try_deserialize()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AiBudget;
+
+    #[test]
+    fn budget_caps_by_tier() {
+        let b = AiBudget::default();
+        // Daily caps rise with tier; unknown/free share the free cap.
+        assert_eq!(b.daily_for("free"), b.coach_daily_free);
+        assert_eq!(b.daily_for("pro"), b.coach_daily_pro);
+        assert_eq!(b.daily_for("elite"), b.coach_daily_elite);
+        assert_eq!(b.daily_for("mystery"), b.coach_daily_free);
+        assert!(b.daily_for("pro") > b.daily_for("free"));
+        assert!(b.daily_for("elite") > b.daily_for("pro"));
+        // Monthly caps: free rides on the daily cap alone (0 = not enforced).
+        assert_eq!(b.monthly_for("free"), 0);
+        assert_eq!(b.monthly_for("pro"), b.coach_monthly_pro);
+        assert_eq!(b.monthly_for("elite"), b.coach_monthly_elite);
+    }
 }

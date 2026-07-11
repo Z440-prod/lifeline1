@@ -43,6 +43,7 @@ fn create_test_state_with_env(environment: &str) -> (Arc<AppState>, Arc<MockData
             anthropic_api_url: "http://localhost:1234/v1/messages".to_string(),
             anthropic_api_key: String::new(),
             policy_matrix_version: "1.0.0".to_string(),
+            budget: antigravity::config::AiBudget::default(),
         },
         rate_limit: antigravity::config::RateLimitConfig {
             requests_per_second: 100,
@@ -694,18 +695,23 @@ async fn test_insights_config_ships_rules_only() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), 20000)
+    let body = axum::body::to_bytes(response.into_body(), 40000)
         .await
         .unwrap();
     let cfg: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
-    // The five rule blocks the client needs are all present.
+    // The rule blocks the client needs are all present.
     assert!(cfg["biological_age"]["signals"]["resting_heart_rate"].is_object());
     assert!(cfg["readiness"]["components"]["hrv"].is_object());
     assert!(cfg["biomarkers"]["ldl_cholesterol"].is_object());
     assert!(cfg["correlation"]["habits"]["winddown_routine"].is_object());
     assert!(cfg["circadian"]["chronotypes"]["neutral"].is_object());
-    assert_eq!(cfg["version"], "1.0.0");
+    // The Conductor rules that drive the adaptive app rhythm — modes are
+    // ordered rules, still just thresholds + presentation tokens (no user data).
+    assert!(cfg["conductor"]["modes"].is_array());
+    assert_eq!(cfg["conductor"]["modes"].as_array().unwrap().len(), 3);
+    assert!(cfg["conductor"]["default_mode"].is_string());
+    assert_eq!(cfg["version"], "1.1.0");
 }
 
 /// Register a device in the mock DB and mint a valid session token for it.
@@ -1516,4 +1522,145 @@ async fn test_response_hardening_compression_and_cache() {
         res.headers().get("strict-transport-security").is_some(),
         "HSTS must be on in production"
     );
+}
+
+/// POST JSON helper for the public account endpoints (no auth header).
+async fn post_json(
+    app: &axum::Router,
+    uri: &str,
+    body: serde_json::Value,
+    addr: std::net::SocketAddr,
+) -> (StatusCode, serde_json::Value) {
+    read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(uri)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::from(body.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await
+}
+
+#[tokio::test]
+async fn test_account_signin_signup_flow() {
+    // The account layer sits on top of device attestation: email/password and
+    // Apple/Google each mint a device-bound session and return an account view
+    // that never leaks the password hash. It must never reveal whether an email
+    // exists, must reject duplicates, and must upsert an OAuth identity.
+    let (state, _db) = create_test_state();
+    let app = create_router(state);
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12360));
+    let device = Uuid::new_v4();
+
+    // Register.
+    let (status, body) = post_json(
+        &app,
+        "/api/v1/account/register",
+        json!({ "email": "Jo@Example.com", "password": "correct horse", "device_id": device }),
+        addr,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "register: {body:?}");
+    assert!(body["token"].is_string());
+    assert_eq!(
+        body["account"]["email"], "jo@example.com",
+        "email normalized"
+    );
+    assert_eq!(body["account"]["auth_method"], "password");
+    assert!(
+        body["account"]["password_hash"].is_null(),
+        "hash never leaves"
+    );
+
+    // Duplicate email is a conflict, not a silent overwrite.
+    let (status, _) = post_json(
+        &app,
+        "/api/v1/account/register",
+        json!({ "email": "jo@example.com", "password": "another one!", "device_id": device }),
+        addr,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT, "duplicate email must 409");
+
+    // Wrong password: 401 with a message that doesn't reveal existence.
+    let (status, body) = post_json(
+        &app,
+        "/api/v1/account/login",
+        json!({ "email": "jo@example.com", "password": "wrong guess", "device_id": device }),
+        addr,
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    // Unknown email returns the *same* 401 + message (no user enumeration).
+    let (status2, body2) = post_json(
+        &app,
+        "/api/v1/account/login",
+        json!({ "email": "nobody@example.com", "password": "wrong guess", "device_id": device }),
+        addr,
+    )
+    .await;
+    assert_eq!(status2, StatusCode::UNAUTHORIZED);
+    assert_eq!(body["error"]["message"], body2["error"]["message"]);
+
+    // Correct password signs in.
+    let (status, body) = post_json(
+        &app,
+        "/api/v1/account/login",
+        json!({ "email": "jo@example.com", "password": "correct horse", "device_id": device }),
+        addr,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "login: {body:?}");
+    assert!(body["token"].is_string());
+
+    // Password below the minimum length is rejected at registration.
+    let (status, _) = post_json(
+        &app,
+        "/api/v1/account/register",
+        json!({ "email": "short@example.com", "password": "tiny", "device_id": Uuid::new_v4() }),
+        addr,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "short password must 400");
+
+    // OAuth (simulated in development): first call creates, second with the
+    // same subject returns the SAME account (upsert, not duplicate).
+    let (status, first) = post_json(
+        &app,
+        "/api/v1/account/oauth",
+        json!({ "provider": "apple", "id_token": "sim:apple-sub-1:apple@example.com", "device_id": Uuid::new_v4() }),
+        addr,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "oauth create: {first:?}");
+    assert_eq!(first["account"]["auth_method"], "apple");
+    let (status, again) = post_json(
+        &app,
+        "/api/v1/account/oauth",
+        json!({ "provider": "apple", "id_token": "sim:apple-sub-1:apple@example.com", "device_id": Uuid::new_v4() }),
+        addr,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        first["account"]["id"], again["account"]["id"],
+        "same subject → same account"
+    );
+
+    // An unknown provider is rejected.
+    let (status, _) = post_json(
+        &app,
+        "/api/v1/account/oauth",
+        json!({ "provider": "facebook", "id_token": "sim:x:y", "device_id": Uuid::new_v4() }),
+        addr,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "unknown provider must 400");
 }

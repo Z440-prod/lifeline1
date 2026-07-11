@@ -156,6 +156,69 @@ export async function connect() {
     return online && !!sessionToken;
 }
 
+/* ── Account identity layer ──────────────────────────────────────────────────
+   Sign-in / sign-up sits ON TOP of the device session: each account endpoint
+   registers this device (with its real WebCrypto public key) and mints the
+   same device-bound token dev-session would, then attaches the account. Email
+   / password uses server-side PBKDF2; Apple / Google use OpenID Connect. The
+   browser cannot run the native Apple/Google SDKs (and the CSP forbids loading
+   them), so in this web build the social buttons present a simulated id-token
+   (`sim:<subject>:<email>`) the backend accepts in development — the same
+   account round-trips every time because the subject is stored per provider. */
+const LS_ACCOUNT = 'lifeline.account';
+const LS_OAUTH_SUB = 'lifeline.oauth_sub';
+
+async function accountCall(path, body) {
+    await deviceCrypto.init();
+    const res = await post(
+        path,
+        { ...body, device_id: identity.deviceId, public_key: deviceCrypto.publicKeyB64 },
+        { auth: false },
+    );
+    if (res.status === 200 && res.data?.token) {
+        sessionToken = res.data.token;
+        online = true;
+        if (res.data.account) {
+            localStorage.setItem(LS_ACCOUNT, JSON.stringify(res.data.account));
+        }
+        emit();
+    }
+    return res;
+}
+
+/* A stable per-provider subject so "Continue with Apple/Google" resolves to the
+   same simulated account across sessions on this device. */
+function oauthSubject(provider) {
+    const store = JSON.parse(localStorage.getItem(LS_OAUTH_SUB) || '{}');
+    if (!store[provider]) {
+        store[provider] = `${provider}_${crypto.randomUUID()}`;
+        localStorage.setItem(LS_OAUTH_SUB, JSON.stringify(store));
+    }
+    return store[provider];
+}
+
+export const account = {
+    get current() {
+        try { return JSON.parse(localStorage.getItem(LS_ACCOUNT) || 'null'); }
+        catch { return null; }
+    },
+    register: (email, password) => accountCall('/account/register', { email, password }),
+    login: (email, password) => accountCall('/account/login', { email, password }),
+    /* provider: "apple" | "google". Builds the dev-accepted simulated token
+       from a stable subject + the user's email so the flow is exercisable
+       without live OAuth client credentials in the browser. */
+    social: (provider, email) => {
+        const subject = oauthSubject(provider);
+        const id_token = `sim:${subject}:${email || ''}`;
+        return accountCall('/account/oauth', { provider, id_token });
+    },
+    signOut() {
+        localStorage.removeItem(LS_ACCOUNT);
+        sessionToken = null;
+        emit();
+    },
+};
+
 /* Refresh the token before it can expire (dev TTL is 1h). */
 export function keepAlive(intervalMs = 20 * 60 * 1000) {
     setInterval(() => { connect(); }, intervalMs);

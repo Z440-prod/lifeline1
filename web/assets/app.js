@@ -4,7 +4,7 @@
    ranks from /game/*, entitlements from /billing/*, documents from /sync/*,
    providers from /integrations/*. */
 
-import { api, connect, keepAlive, identity, onConnection, status, deviceCrypto } from './api.js';
+import { api, connect, account, keepAlive, identity, onConnection, status, deviceCrypto } from './api.js';
 import * as engine from './engine.js';
 import * as charts from './charts.js';
 import { sound, armGlobalSounds } from './sound.js';
@@ -44,6 +44,70 @@ const vitalityNow = () => store.insights ? engine.vitality(store.insights, store
    uses it to show the right doors. */
 const FREE_ENTITLEMENTS = { history_days: 7, ai_coach_daily_limit: 3, all_integrations: false, biomarker_tracking: false, competitive_seasons: false, ad_free: false, beta_access: false, early_features: false };
 const can = () => store.sub?.entitlements || FREE_ENTITLEMENTS;
+
+/* ── The Conductor ────────────────────────────────────────────────────────────
+   "The AI controls the app." Each day the client reduces your own readiness +
+   streak to a single *mode* using the rules the server ships in
+   insights.conductor, and the mode reshapes the whole app: accent color, which
+   view leads the tab bar, the primary call-to-action, and the coach's tone.
+   All computed here from data the server never sees — the rhythm is yours.
+   Recomputed at most once per local day and cached so the app is stable within
+   a day and only shifts as your health does. */
+let conductorCache = null; // { day, mode }
+function conductorMode() {
+    const cfg = store.insights?.conductor;
+    if (!cfg) return null;
+    const day = new Date().toISOString().slice(0, 10);
+    const streakLive = !!store.profile
+        && store.profile.streak_days > 0
+        && store.profile.last_submission_date === day;
+    // A key over the inputs that actually change the mode, so logging a score
+    // (which can flip Maintain → Push) re-evaluates immediately, but nothing
+    // else churns it.
+    const key = `${day}:${streakLive}:${!!store.insights}`;
+    if (conductorCache && conductorCache.key === key) return conductorCache.mode;
+
+    let chosen = null;
+    if (store.insights) {
+        const r = engine.readiness(store.insights, store.signals, { whoop: whoopConnected() });
+        for (const m of cfg.modes) {
+            const okMin = m.min_readiness == null || r.score >= m.min_readiness;
+            const okMax = r.score <= m.max_readiness;
+            const okStreak = !m.requires_streak || streakLive;
+            if (okMin && okMax && okStreak) { chosen = m; break; }
+        }
+    }
+    if (!chosen) chosen = cfg.modes.find((m) => m.id === cfg.default_mode) || cfg.modes[0];
+    conductorCache = { key, mode: chosen };
+    return chosen;
+}
+
+/* Apply the day's mode to the shell: recolor the accent and reorder the primary
+   tab bar so the mode's lead view sits first. Called on every render so the app
+   consistently wears the current rhythm. */
+function applyConductor() {
+    const mode = conductorMode();
+    if (!mode) return null;
+    document.documentElement.style.setProperty('--tint', mode.accent);
+    document.documentElement.setAttribute('data-conductor', mode.id);
+    if (Array.isArray(mode.view_order)) {
+        ROUTES.sort((a, b) => {
+            const ia = mode.view_order.indexOf(a.id);
+            const ib = mode.view_order.indexOf(b.id);
+            return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        });
+    }
+    return mode;
+}
+
+/* The coach's tone for today, as a system-prompt preamble the on-device prompt
+   builder prepends so the AI companion's voice matches the mode. */
+function conductorTonePrompt() {
+    const cfg = store.insights?.conductor;
+    const mode = conductorMode();
+    if (!cfg || !mode) return '';
+    return cfg.tone_prompts?.[mode.coach_tone] || '';
+}
 
 /* ── Toasts ───────────────────────────────────────────────────────────────── */
 function toast(text, tone = 'var(--ok)') {
@@ -96,13 +160,9 @@ function renderFrame() {
     <div class="frame">
         <header class="topbar" id="topbar"><span class="t" id="topbarTitle">Today</span><span class="dot" id="topbarDot"></span></header>
         <main class="main"><div class="content" id="view"></div></main>
-        <nav class="tabbar">
-            ${ROUTES.slice(0, 4).map((r) => `<button class="tab" data-nav="${r.id}">${r.icon}<span>${r.label}</span></button>`).join('')}
-            <button class="tab" id="moreTab">${MORE_ICON}<span>More</span></button>
-        </nav>
+        <nav class="tabbar" id="tabbar"></nav>
     </div>`;
-    $$('[data-nav]').forEach((b) => b.addEventListener('click', () => { location.hash = `#/${b.dataset.nav}`; }));
-    $('#moreTab').addEventListener('click', openMoreSheet);
+    paintTabbar();
     onConnection((s) => {
         const dot = $('#topbarDot');
         if (dot) dot.classList.toggle('on', s.online && s.authed);
@@ -111,6 +171,22 @@ function renderFrame() {
     window.addEventListener('scroll', () => {
         $('#topbar')?.classList.toggle('showing', window.scrollY > 74);
     }, { passive: true });
+}
+
+/* (Re)build the primary tab bar to match the current ROUTES order — the
+   Conductor may have reordered it so today's lead view sits first. */
+let tabbarOrder = '';
+function paintTabbar() {
+    const nav = $('#tabbar');
+    if (!nav) return;
+    const order = ROUTES.slice(0, 4).map((r) => r.id).join(',');
+    if (order === tabbarOrder && nav.children.length) return; // unchanged
+    tabbarOrder = order;
+    nav.innerHTML = `${ROUTES.slice(0, 4).map((r) => `<button class="tab" data-nav="${r.id}">${r.icon}<span>${r.label}</span></button>`).join('')}
+        <button class="tab" id="moreTab">${MORE_ICON}<span>More</span></button>`;
+    $$('[data-nav]', nav).forEach((b) => b.addEventListener('click', () => { location.hash = `#/${b.dataset.nav}`; }));
+    $('#moreTab', nav).addEventListener('click', openMoreSheet);
+    setActiveNav(routeId());
 }
 
 function setActiveNav(id) {
@@ -187,6 +263,7 @@ function viewPortrait(el) {
     const todayIso = new Date().toISOString().slice(0, 10);
     const loggedToday = store.profile?.last_submission_date === todayIso;
     const streakAtRisk = !!store.profile && !loggedToday && store.profile.streak_days > 0 && can().competitive_seasons;
+    const mode = conductorMode();
 
     el.innerHTML = `
     ${offlineBanner()}
@@ -195,6 +272,14 @@ function viewPortrait(el) {
         <h1>${hello}.</h1>
         <div class="sub">Drawn fresh on your device, from your signals. The server never sees a heartbeat.</div>
     </div>
+    ${mode ? `<div class="conductor-banner" data-mode="${mode.id}">
+        <div class="cb-glyph" style="background:${mode.accent}"></div>
+        <div class="cb-copy">
+            <div class="cb-label">${esc(mode.label)}</div>
+            <div class="cb-sub">${esc(mode.subtitle)}</div>
+        </div>
+        <button class="btn btn-pulse btn-sm cb-cta" id="conductorCta">${esc(mode.primary_cta.text)}</button>
+    </div>` : ''}
     ${streakAtRisk ? `<div class="streak-warn"><span class="flame">${I.flame}</span><span>Your <b>${store.profile.streak_days}-day streak</b> is on the line — log today's score to keep it alive.</span></div>` : ''}
     <div class="grid">
         <div class="card hero col-12">
@@ -269,6 +354,15 @@ function viewPortrait(el) {
     $('#logScoreBtn')?.addEventListener('click', () => {
         if (loggedToday) { location.hash = '#/arena'; return; }
         submitScoreFlow();
+    });
+
+    // The Conductor's call-to-action routes to the mode's suggested view (or
+    // logs today's score when the mode wants a check-in).
+    $('#conductorCta')?.addEventListener('click', () => {
+        const target = mode?.primary_cta?.view;
+        if (target === 'portrait' && !loggedToday) { submitScoreFlow(); return; }
+        if (target && target !== 'portrait') { location.hash = `#/${target}`; return; }
+        location.hash = '#/arena';
     });
 
     // Count-up on the hero number — the little dopamine ramp.
@@ -463,7 +557,15 @@ function viewCoach(el) {
         let reply;
         try {
             const ch = await api.challenge();
-            const res = await api.aiProxy(text, ch.data?.challenge || 'token');
+            // The Conductor sets the coach's voice for the day: prepend the
+            // mode's tone preamble on-device so replies match your rhythm
+            // (gentle on a recovery day, driven on a green-light day).
+            const tone = conductorTonePrompt();
+            const md = conductorMode();
+            const framed = tone
+                ? `[Today's coaching tone — ${md.label}: ${tone}]\n\nUser: ${text}`
+                : text;
+            const res = await api.aiProxy(framed, ch.data?.challenge || 'token');
             reply = res.status === 200
                 ? (res.data?.content?.[0]?.text || res.data?.content || 'Understood.')
                 : res.status === 403
@@ -813,6 +915,7 @@ function paintPlans() {
 /* ═══ VIEW: SETTINGS ═══════════════════════════════════════════════════════ */
 async function viewSettings(el) {
     const theme = localStorage.getItem('lifeline.theme') || 'auto';
+    const acct = account.current;
     const health = await api.health();
     el.innerHTML = `${offlineBanner()}
     <div class="page-head">
@@ -821,13 +924,15 @@ async function viewSettings(el) {
     </div>
     <div class="grid">
         <div class="card col-6">
-            <div class="card-title">Identity</div>
-            <div class="card-sub">your pseudonymous device identity — there is no account, by design</div>
+            <div class="card-title">Account &amp; identity</div>
+            <div class="card-sub">your account secures access; your device holds the keys — health data stays here</div>
+            <div class="kv"><span class="k">Account</span><span class="v">${esc(acct?.email || (acct?.auth_method ? cap(acct.auth_method) + ' sign-in' : '—'))}</span></div>
+            <div class="kv"><span class="k">Sign-in method</span><span class="v">${esc(acct?.auth_method ? cap(acct.auth_method) : 'device only')}</span></div>
             <div class="kv"><span class="k">Device ID</span><span class="v">${esc(identity.deviceId.slice(0, 13))}…</span></div>
-            <div class="kv"><span class="k">Session</span><span class="v">${status().authed ? 'attested · active' : 'none'}</span></div>
-            <div class="kv"><span class="k">Handle</span><span class="v">${esc(store.profile?.handle || '—')}</span></div>
+            <div class="kv"><span class="k">Session</span><span class="v">${status().authed ? 'active' : 'none'}</span></div>
             <div class="kv"><span class="k">Plan</span><span class="v">${esc(store.sub?.tier || 'free')}</span></div>
-            <div style="margin-top:14px; display:flex; gap:9px;">
+            <div style="margin-top:14px; display:flex; gap:9px; flex-wrap:wrap;">
+                ${acct ? '<button class="btn btn-ghost btn-sm" id="signOutBtn">Sign out</button>' : ''}
                 <button class="btn btn-ghost btn-sm" id="resetBtn">Reset identity</button>
                 <button class="btn btn-ghost btn-sm" id="replayBtn">Replay onboarding</button>
             </div>
@@ -857,6 +962,12 @@ async function viewSettings(el) {
         </div>
     </div>`;
 
+    $('#signOutBtn')?.addEventListener('click', () => {
+        if (confirm('Sign out of this account? Your encrypted data stays on this device.')) {
+            account.signOut();
+            location.reload();
+        }
+    });
     $('#resetBtn').addEventListener('click', () => {
         if (confirm('Reset this device identity? Your handle, plan, and vault links are tied to it.')) identity.reset();
     });
@@ -891,6 +1002,8 @@ const VIEWS = {
 };
 
 async function render() {
+    applyConductor();   // recolor + reorder the shell for today's mode
+    paintTabbar();      // reflect any reorder in the tab bar
     const id = VIEWS[routeId()] ? routeId() : 'portrait';
     setActiveNav(id);
     const el = $('#view');
@@ -918,7 +1031,7 @@ function onboarding() {
                 <div class="zk-points">
                     <div class="pt">${I.lock}<p><b>Everything is computed here.</b> The server publishes rules; your device does the math.</p></div>
                     <div class="pt">${I.eye}<p><b>The server is blind.</b> Vault documents arrive as ciphertext. The Arena sees one opaque integer.</p></div>
-                    <div class="pt">${I.device}<p><b>Hardware-attested.</b> On iOS, Apple App Attest proves it's really your device — no passwords, no accounts.</p></div>
+                    <div class="pt">${I.device}<p><b>Hardware-attested.</b> Your device holds the keys. Your account only unlocks the door — it never holds your health data.</p></div>
                 </div>`,
             () => `
                 <div class="gate-logo">${I.logo}</div>
@@ -964,6 +1077,99 @@ async function bootSequence(withGate) {
     await new Promise((r) => setTimeout(r, withGate ? 260 : 0));
 }
 
+/* ═══ SIGN IN / SIGN UP GATE ═══════════════════════════════════════════════
+   Stands between onboarding and the app. Email + password (server-side
+   PBKDF2), plus Continue with Apple / Google. Resolves once a real account
+   session is live. The device must be reachable first — offline, the gate
+   explains and lets the user retry. */
+function authGate() {
+    return new Promise((resolve) => {
+        const host = $('#overlays');
+        let mode = 'signin'; // 'signin' | 'signup'
+        const APPLE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.9-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8zM14.2 6.3c.6-.8 1.1-1.9.9-3-.9 0-2.1.6-2.8 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.9-1.3z"/></svg>';
+        const GOOGLE = '<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7c2.2-2 3.4-5 3.4-8.6z"/><path fill="#34A853" d="M12 24c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.5-2-6.4-4.7H1.8v3A11.5 11.5 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.6 14.7a6.9 6.9 0 0 1 0-4.4v-3H1.8a11.5 11.5 0 0 0 0 10.4l3.8-3z"/><path fill="#EA4335" d="M12 4.8c1.7 0 3.2.6 4.4 1.7l3.3-3.3A11.5 11.5 0 0 0 12 0 11.5 11.5 0 0 0 1.8 6.3l3.8 3C6.5 6.7 9 4.8 12 4.8z"/></svg>';
+
+        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const setErr = (m) => { const e = $('#authErr'); if (e) e.textContent = m || ''; };
+        const busy = (on, label) => {
+            $$('.gate button').forEach((b) => { b.disabled = on; });
+            const pb = $('#authPrimary');
+            if (pb && label) pb.textContent = on ? 'One moment…' : label;
+        };
+
+        const finish = () => { host.innerHTML = ''; resolve(); };
+
+        const handle = async (fn, label) => {
+            setErr('');
+            busy(true, label);
+            const res = await fn();
+            busy(false, label);
+            if (res.status === 200 && res.data?.token) {
+                sound.chime();
+                finish();
+                return;
+            }
+            const msg = res.data?.error?.message
+                || (res.status === 0 ? 'Can’t reach the engine — check your connection.' : 'Something went wrong. Try again.');
+            setErr(msg);
+        };
+
+        const paint = () => {
+            const signup = mode === 'signup';
+            host.innerHTML = `<div class="gate"><div class="gate-inner">
+                <div class="gate-logo">${I.logo}</div>
+                <h1>${signup ? 'Create your<br>Lifeline.' : 'Welcome<br>back.'}</h1>
+                <p class="lede">${signup
+                    ? 'One private account to carry your longevity across every device — your health data still never leaves this one.'
+                    : 'Sign in to pick up your portrait, streak, and rank.'}</p>
+                <div class="seg auth-seg" role="tablist">
+                    <button data-mode="signin" class="${!signup ? 'active' : ''}">Sign in</button>
+                    <button data-mode="signup" class="${signup ? 'active' : ''}">Create account</button>
+                </div>
+                <div class="auth-form">
+                    <input class="field" id="authEmail" type="email" inputmode="email" autocomplete="email"
+                        autocapitalize="off" spellcheck="false" placeholder="Email address">
+                    <input class="field" id="authPass" type="password"
+                        autocomplete="${signup ? 'new-password' : 'current-password'}"
+                        placeholder="${signup ? 'Create a password (8+ characters)' : 'Password'}">
+                    <button class="btn btn-pulse btn-block" id="authPrimary">${signup ? 'Create account' : 'Sign in'}</button>
+                    <div class="auth-err" id="authErr" role="alert"></div>
+                </div>
+                <div class="auth-or"><span>or continue with</span></div>
+                <div class="auth-social">
+                    <button class="btn social-btn social-apple" id="appleBtn">${APPLE}<span>Apple</span></button>
+                    <button class="btn social-btn social-google" id="googleBtn">${GOOGLE}<span>Google</span></button>
+                </div>
+                <p class="auth-fine">${I.lock}<span>Zero-knowledge by design — your account secures access, never your health data.</span></p>
+            </div></div>`;
+
+            $$('.auth-seg button').forEach((b) => b.addEventListener('click', () => {
+                mode = b.dataset.mode; paint();
+            }));
+
+            $('#authPrimary').addEventListener('click', () => {
+                const email = $('#authEmail').value.trim();
+                const pass = $('#authPass').value;
+                if (!emailRe.test(email)) { setErr('Enter a valid email address.'); return; }
+                if (pass.length < 8) { setErr('Password must be at least 8 characters.'); return; }
+                const label = signup ? 'Create account' : 'Sign in';
+                handle(() => (signup ? account.register(email, pass) : account.login(email, pass)), label);
+            });
+
+            const social = (provider) => {
+                const email = $('#authEmail').value.trim() || '';
+                if (email && !emailRe.test(email)) { setErr('That email looks off — clear it or fix it.'); return; }
+                handle(() => account.social(provider, email));
+            };
+            $('#appleBtn').addEventListener('click', () => social('apple'));
+            $('#googleBtn').addEventListener('click', () => social('google'));
+
+            $('#authEmail').focus();
+        };
+        paint();
+    });
+}
+
 async function main() {
     applyTheme();
     armGlobalSounds();
@@ -973,10 +1179,26 @@ async function main() {
         await onboarding();
         await bootSequence(true);
         localStorage.setItem('lifeline.onboarded', '1');
-        $('#overlays').innerHTML = '';
-        toast(status().authed ? 'Device attested — session active' : 'Running offline', status().authed ? 'var(--ok)' : 'var(--warn)');
     } else {
         await bootSequence(false);
+    }
+    // Sign-in / sign-up gate: require a real account before entering the app.
+    // Show it whenever the engine is reachable and we don't already hold a
+    // working session for a remembered account — i.e. a brand-new user, or a
+    // returning user whose device session couldn't be re-established silently
+    // (as in production, where the browser can't mint a dev session). Offline,
+    // we let the user in read-only rather than trap them behind a login they
+    // can't complete.
+    if (status().online && (!account.current || !status().authed)) {
+        await authGate();
+        // Load the per-account server truth now that we're authed.
+        if (status().authed) {
+            await Promise.all([refreshArena(), refreshBillingState(), refreshSources()]);
+        }
+    }
+    $('#overlays').innerHTML = '';
+    if (first) {
+        toast(status().authed ? `Signed in${account.current?.email ? ' as ' + account.current.email : ''}` : 'Running offline', status().authed ? 'var(--ok)' : 'var(--warn)');
     }
     keepAlive();
     await render();

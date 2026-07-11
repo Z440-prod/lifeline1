@@ -13,6 +13,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::state::AppState;
 
+pub mod account;
 pub mod ai;
 pub mod auth;
 pub mod billing;
@@ -220,6 +221,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         // Development-only session mint for clients without App Attest (the
         // browser app). The handler hard-rejects outside development.
         .route("/auth/dev-session", post(auth::dev_session_handler))
+        // Account sign-in layer (email/password + Apple/Google). Public: these
+        // establish the session. Each mints a device-bound token internally.
+        .route("/account/register", post(account::register_handler))
+        .route("/account/login", post(account::login_handler))
+        .route("/account/oauth", post(account::oauth_handler))
         .route("/ai/policy-matrix", get(ai::policy_matrix_handler))
         // Rules-only insights config for the on-device longevity engine; ships
         // no user data, so it's public + cacheable like the policy matrix.
