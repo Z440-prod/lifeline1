@@ -57,8 +57,8 @@ whoop_redirect_uri = "http://localhost:8443/api/v1/integrations/whoop/callback"
 stripe_secret_key = ""
 stripe_webhook_secret = ""
 # Stripe Price ids for the two paid tiers (create them in the Stripe dashboard).
-price_pro = ""
-price_elite = ""
+price_pro = "price_1TrvpnV05D55xsPf83oNFGNb"
+price_elite = "price_1TrvpyV05D55xsPfbURkZaBD"
 # Redirect targets for Stripe Checkout / billing portal. Point these at your
 # app's deep links or web return pages in production.
 success_url = "http://localhost:8443/billing/success"
@@ -69,7 +69,7 @@ api_base = "https://api.stripe.com"
 # Optional pre-created Stripe Payment Link for donations ("Support Lifeline").
 # When empty, POST /billing/donate creates a one-time Checkout Session with
 # the caller-chosen amount instead (simulated until Stripe keys are set).
-donate_url = ""
+donate_url = "https://donate.stripe.com/test_cNi4gC9Y6aB6eJK0lhcQU00"
 apple_shared_secret = ""
 apple_verify_url = ""
 apple_product_pro = ""
