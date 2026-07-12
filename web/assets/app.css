@@ -379,6 +379,38 @@ html[data-theme="dark"] .seg button.active, .seg button.active { background: col
     .conductor-banner .cb-cta { width: 100%; margin-top: 4px; }
 }
 
+/* ── Personal shape ───────────────────────────────────────────────────────
+   The chip row that shows (and lets you tweak) how the app is shaped for you:
+   readiness mode · focus · league · data richness. */
+.shape-chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 14px; }
+.shape-chips .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--fs-micro); font-weight: 650; line-height: 1;
+    padding: 6px 11px; border-radius: 99px; background: var(--card-2); color: var(--ink-2);
+}
+.shape-chips .chip .d { width: 8px; height: 8px; border-radius: 99px; flex-shrink: 0; }
+.shape-chips .shape-focus {
+    background: color-mix(in srgb, var(--tint) 15%, var(--card)); color: var(--tint);
+    -webkit-tap-highlight-color: transparent; transition: transform 0.2s var(--spring);
+}
+.shape-chips .shape-focus:active { transform: scale(0.95); }
+.shape-chips .shape-data[data-rich="sparse"] { color: var(--warn-deep); }
+.shape-chips .shape-data[data-rich="rich"] { color: var(--ok); }
+
+/* The focused insight card + the focused signal rows get a subtle lift. */
+.focus-card { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tint) 45%, transparent), var(--shadow-card, 0 1px 3px rgba(0,0,0,.1)); }
+.focus-tag {
+    font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--tint); background: color-mix(in srgb, var(--tint) 15%, transparent);
+    padding: 2px 7px; border-radius: 99px; margin-left: 7px; vertical-align: middle;
+}
+.signal-row.focused { background: color-mix(in srgb, var(--tint) 8%, transparent); border-radius: 10px; }
+.signal-row.focused .name { font-weight: 700; }
+
+/* A segmented control that wraps when it has many options (the Focus picker). */
+.seg.seg-wrap { display: flex; flex-wrap: wrap; }
+.seg.seg-wrap button { flex: 1 1 auto; }
+
 /* ── On-device AI ─────────────────────────────────────────────────────────
    Coach backend badge, the download offer, and the Settings capability card. */
 .coach-head { display: flex; justify-content: flex-end; margin-bottom: 10px; }

@@ -112,6 +112,83 @@ function conductorTonePrompt() {
     return cfg.tone_prompts?.[mode.coach_tone] || '';
 }
 
+/* ── Personal shape ───────────────────────────────────────────────────────────
+   The Conductor decides the day's *rhythm* from your health. The personal shape
+   layers on the other three things that make each user's app their own: what
+   they've uploaded (connected sources + labs), what rank they hold (league
+   prestige), and what they've chosen to focus on. Together these reorder the
+   Today view, bias the coach, and label the app so no two users see the same
+   thing. All computed on-device from data the server never sees. */
+const FOCI = {
+    auto: { label: 'Auto', signals: [], lead: null },
+    sleep: { label: 'Sleep', signals: ['sleep_hours'], lead: 'circadian' },
+    heart: { label: 'Heart', signals: ['resting_heart_rate', 'hrv_ms'], lead: 'readiness' },
+    activity: { label: 'Activity', signals: ['daily_steps'], lead: 'readiness' },
+    longevity: { label: 'Longevity', signals: [], lead: 'age' },
+};
+const userFocus = () => localStorage.getItem('lifeline.focus') || 'auto';
+const setUserFocus = (f) => localStorage.setItem('lifeline.focus', f);
+
+function domainForSignal(key) {
+    if (key === 'sleep_hours') return 'sleep';
+    if (key === 'resting_heart_rate' || key === 'hrv_ms') return 'heart';
+    if (key === 'daily_steps') return 'activity';
+    return 'longevity';
+}
+
+/* Reduce readiness mode + rank + uploaded data + the Focus setting to one
+   render-ready description of *this user's* app right now. */
+function personalShape() {
+    const cfg = store.insights;
+    if (!cfg) return null;
+    const mode = conductorMode();
+    const s = store.signals;
+    const devs = engine.signalDeviations(cfg, s);
+
+    // Focus: the user's explicit choice, or (Auto) their weakest signal today.
+    const setting = userFocus();
+    const weakest = [...devs].sort((a, b) => a.goodness - b.goodness)[0];
+    const focus = setting === 'auto' ? (weakest ? domainForSignal(weakest.key) : 'longevity') : setting;
+    const spec = FOCI[focus] || FOCI.longevity;
+
+    // Rank → prestige (0..1 up the league ladder).
+    const v = vitalityNow();
+    const lg = store.game ? engine.leagueFor(store.game, v) : null;
+    const leagues = store.game?.leagues || [];
+    const leagueIdx = lg ? leagues.findIndex((l) => l.id === lg.id) : -1;
+    const prestige = leagues.length > 1 && leagueIdx >= 0 ? leagueIdx / (leagues.length - 1) : 0;
+
+    // Uploaded data → richness (connected sources + uploaded labs).
+    const sources = Object.values(store.connections || {}).filter((c) => c.status === 'connected').length;
+    const labs = Object.keys(store.labMeta || {}).length;
+    const richScore = sources + (labs > 0 ? 1 : 0) + (labs >= 3 ? 1 : 0);
+    const dataRichness = richScore >= 3 ? 'rich' : richScore >= 1 ? 'growing' : 'sparse';
+
+    const signature = `${mode ? mode.label : 'Steady'} · ${spec.label} focus${lg ? ' · ' + lg.name : ''}`;
+    const coachContext = `The user's focus today is ${spec.label}`
+        + `${setting === 'auto' ? ' (their weakest signal)' : ' (their choice)'}. `
+        + `${lg ? `They compete in the ${lg.name} league. ` : ''}`
+        + `${labs > 0 ? `They have uploaded ${labs} lab result(s). ` : ''}`
+        + `Bias your guidance toward ${spec.label.toLowerCase()}.`;
+
+    return {
+        mode,
+        focus,
+        focusAuto: setting === 'auto',
+        focusLabel: spec.label,
+        focusSignals: spec.signals,
+        lead: spec.lead,
+        weakestKey: weakest?.key,
+        league: lg,
+        prestige,
+        sources,
+        labs,
+        dataRichness,
+        signature,
+        coachContext,
+    };
+}
+
 /* ── Toasts ───────────────────────────────────────────────────────────────── */
 function toast(text, tone = 'var(--ok)') {
     let host = $('.toasts');
@@ -267,6 +344,44 @@ function viewPortrait(el) {
     const loggedToday = store.profile?.last_submission_date === todayIso;
     const streakAtRisk = !!store.profile && !loggedToday && store.profile.streak_days > 0 && can().competitive_seasons;
     const mode = conductorMode();
+    const shape = personalShape();
+
+    // Signals reordered so the focused domain leads and is highlighted.
+    const orderedDevs = [...devs].sort((a, b) => {
+        const af = shape.focusSignals.includes(a.key) ? 0 : 1;
+        const bf = shape.focusSignals.includes(b.key) ? 0 : 1;
+        return af - bf;
+    });
+
+    // The three insight cards, reordered so the focus leads the Today view —
+    // this is a visible way "what you focus on" reshapes the app per user.
+    const insightCards = {
+        readiness: `
+        <div class="card col-4 ${shape.lead === 'readiness' ? 'focus-card' : ''}">
+            <div class="card-title">Readiness${shape.lead === 'readiness' ? ' <span class="focus-tag">focus</span>' : ''}</div>
+            <div class="card-sub">fused from every connected source</div>
+            <div style="display:flex; justify-content:center;">${charts.ringGauge({ value: r.score, label: r.label })}</div>
+            <p style="text-align:center; font-size:var(--fs-small); color:var(--ink-2); margin-top:10px;">${esc(r.driver)}</p>
+        </div>`,
+        age: `
+        <div class="card col-4 ${shape.lead === 'age' ? 'focus-card' : ''}">
+            <div class="card-title">Lifeline Age${shape.lead === 'age' ? ' <span class="focus-tag">focus</span>' : ''}</div>
+            <div class="card-sub">transparent additive model — inspect it in Settings</div>
+            <div class="tiles">
+                <div class="tile"><div class="v tnum">${la.age}</div><div class="l">your body says</div>
+                    <div class="delta" style="color:${la.offset <= 0 ? 'var(--ok)' : 'var(--warn-deep)'}">${Math.abs(la.offset)} yrs ${la.offset <= 0 ? 'younger' : 'older'} than your passport</div></div>
+                <div class="tile"><div class="v tnum">${s.chrono_age}</div><div class="l">your passport says</div></div>
+            </div>
+        </div>`,
+        circadian: `
+        <div class="card col-4 ${shape.lead === 'circadian' ? 'focus-card' : ''}">
+            <div class="card-title">Circadian window${shape.lead === 'circadian' ? ' <span class="focus-tag">focus</span>' : ''}</div>
+            <div class="card-sub">${esc(chrono.type)} chronotype · shifted to your sleep midpoint</div>
+            ${charts.circadianTrack(chrono.windows, 420)}
+        </div>`,
+    };
+    const cardOrder = [shape.lead, 'readiness', 'age', 'circadian']
+        .filter((k, i, a) => k && insightCards[k] && a.indexOf(k) === i);
 
     el.innerHTML = `
     ${offlineBanner()}
@@ -283,6 +398,12 @@ function viewPortrait(el) {
         </div>
         <button class="btn btn-pulse btn-sm cb-cta" id="conductorCta">${esc(mode.primary_cta.text)}</button>
     </div>` : ''}
+    <div class="shape-chips" title="Your app is shaped by your health, your rank, your data, and your focus">
+        ${mode ? `<span class="chip shape-mode"><span class="d" style="background:${mode.accent}"></span>${esc(mode.label)}</span>` : ''}
+        <button class="chip shape-focus" id="focusChip">${esc(shape.focusLabel)} focus${shape.focusAuto ? ' · auto' : ''}</button>
+        ${shape.league ? `<span class="chip shape-league"><span class="d" style="background:${charts.LEAGUE_COLORS[shape.league.id]}"></span>${esc(shape.league.name)}</span>` : ''}
+        <span class="chip shape-data" data-rich="${shape.dataRichness}">${esc(shape.dataRichness)} data</span>
+    </div>
     ${streakAtRisk ? `<div class="streak-warn"><span class="flame">${I.flame}</span><span>Your <b>${store.profile.streak_days}-day streak</b> is on the line — log today's score to keep it alive.</span></div>` : ''}
     <div class="grid">
         <div class="card hero col-12">
@@ -302,35 +423,14 @@ function viewPortrait(el) {
             </div>
         </div>
 
-        <div class="card col-4">
-            <div class="card-title">Readiness</div>
-            <div class="card-sub">fused from every connected source</div>
-            <div style="display:flex; justify-content:center;">${charts.ringGauge({ value: r.score, label: r.label })}</div>
-            <p style="text-align:center; font-size:var(--fs-small); color:var(--ink-2); margin-top:10px;">${esc(r.driver)}</p>
-        </div>
-
-        <div class="card col-4">
-            <div class="card-title">Lifeline Age</div>
-            <div class="card-sub">transparent additive model — inspect it in Settings</div>
-            <div class="tiles">
-                <div class="tile"><div class="v tnum">${la.age}</div><div class="l">your body says</div>
-                    <div class="delta" style="color:${la.offset <= 0 ? 'var(--ok)' : 'var(--warn-deep)'}">${Math.abs(la.offset)} yrs ${la.offset <= 0 ? 'younger' : 'older'} than your passport</div></div>
-                <div class="tile"><div class="v tnum">${s.chrono_age}</div><div class="l">your passport says</div></div>
-            </div>
-        </div>
-
-        <div class="card col-4">
-            <div class="card-title">Circadian window</div>
-            <div class="card-sub">${esc(chrono.type)} chronotype · shifted to your sleep midpoint</div>
-            ${charts.circadianTrack(chrono.windows, 420)}
-        </div>
+        ${cardOrder.map((k) => insightCards[k]).join('')}
 
         <div class="card col-7">
             <div class="card-title">Signals vs ideal <span class="hint">band tables from /insights/config</span></div>
-            <div class="card-sub">bar length = how close each signal sits to its optimal band</div>
+            <div class="card-sub">bar length = how close each signal sits to its optimal band · your <b>${esc(shape.focusLabel.toLowerCase())}</b> focus leads</div>
             <div class="signal-rows">
-                ${devs.map((d) => `
-                <div class="signal-row" title="${esc(d.name)}: ${d.value}${d.unit} → ${d.years <= 0 ? '' : '+'}${d.years} yrs on Lifeline Age">
+                ${orderedDevs.map((d) => `
+                <div class="signal-row ${shape.focusSignals.includes(d.key) ? 'focused' : ''}" title="${esc(d.name)}: ${d.value}${d.unit} → ${d.years <= 0 ? '' : '+'}${d.years} yrs on Lifeline Age">
                     <span class="name"><span class="d" style="background:${PIGMENT[d.pigment]}"></span>${esc(d.name)}</span>
                     <div class="meter"><i style="width:${Math.round(d.goodness * 100)}%; background:${PIGMENT[d.pigment]}"></i></div>
                     <span class="val tnum">${d.value}<small>${d.unit ? ' ' + d.unit : ''}</small></span>
@@ -358,6 +458,9 @@ function viewPortrait(el) {
         if (loggedToday) { location.hash = '#/arena'; return; }
         submitScoreFlow();
     });
+
+    // Tapping the focus chip jumps to the Focus control in Settings.
+    $('#focusChip')?.addEventListener('click', () => { location.hash = '#/settings'; });
 
     // The Conductor's call-to-action routes to the mode's suggested view (or
     // logs today's score when the mode wants a check-in).
@@ -569,10 +672,18 @@ function viewCoach(el) {
         thread.insertAdjacentHTML('beforeend', `<div class="msg ai" id="${tid}"><div class="who">LIFELINE COACH</div><div class="typing"><span></span><span></span><span></span></div></div>`);
         thread.scrollTop = thread.scrollHeight;
 
-        // The Conductor sets the coach's voice for the day.
+        // The Conductor sets the coach's voice for the day; the personal shape
+        // biases it to this user's focus, rank, and uploaded data — so the same
+        // question gets a different answer for a Sleep-focused Gold-league user
+        // than for an Activity-focused newcomer.
         const tone = conductorTonePrompt();
         const md = conductorMode();
-        const framed = tone ? `[Today's coaching tone — ${md.label}: ${tone}]\n\nUser: ${text}` : text;
+        const shape = personalShape();
+        const preamble = [
+            tone ? `Today's coaching tone — ${md.label}: ${tone}` : '',
+            shape?.coachContext || '',
+        ].filter(Boolean).join(' ');
+        const framed = preamble ? `[${preamble}]\n\nUser: ${text}` : text;
 
         let reply;
         // Prefer the on-device model when it's installed: instant, private, and
@@ -1010,6 +1121,13 @@ async function viewSettings(el) {
             <div class="kv"><span class="k">Season</span><span class="v">${esc(store.game?.season?.current || '—')}</span></div>
         </div>
         <div class="card col-6">
+            <div class="card-title">Your focus</div>
+            <div class="card-sub">shapes your Today view and biases the coach — <b>Auto</b> follows your weakest signal</div>
+            <div class="seg seg-wrap" id="focusSeg">
+                ${['auto', 'sleep', 'heart', 'activity', 'longevity'].map((f) => `<button data-focus="${f}" class="${userFocus() === f ? 'active' : ''}">${FOCI[f].label}</button>`).join('')}
+            </div>
+        </div>
+        <div class="card col-6">
             <div class="card-title">Appearance &amp; feel</div>
             <div class="card-sub">the light theme is designed, not inverted</div>
             <div class="seg" id="themeSeg">
@@ -1042,6 +1160,11 @@ async function viewSettings(el) {
         localStorage.setItem('lifeline.theme', b.dataset.th);
         applyTheme();
         $$('#themeSeg button').forEach((x) => x.classList.toggle('active', x === b));
+    }));
+    $$('#focusSeg [data-focus]').forEach((b) => b.addEventListener('click', () => {
+        setUserFocus(b.dataset.focus);
+        $$('#focusSeg button').forEach((x) => x.classList.toggle('active', x === b));
+        toast(`Focus set to ${FOCI[b.dataset.focus].label} — your Today view will lead with it`);
     }));
     $('#soundSwitch')?.addEventListener('click', (e) => {
         sound.setEnabled(!sound.enabled);
