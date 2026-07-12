@@ -711,7 +711,12 @@ async fn test_insights_config_ships_rules_only() {
     assert!(cfg["conductor"]["modes"].is_array());
     assert_eq!(cfg["conductor"]["modes"].as_array().unwrap().len(), 3);
     assert!(cfg["conductor"]["default_mode"].is_string());
-    assert_eq!(cfg["version"], "1.1.0");
+    // Daily-anecdote style rules — system prompt + per-mode offline templates,
+    // still rules-only (no user data).
+    assert!(cfg["anecdote"]["system"].is_string());
+    assert!(cfg["anecdote"]["templates"]["push"].is_array());
+    assert!(cfg["anecdote"]["notification_title"].is_string());
+    assert_eq!(cfg["version"], "1.2.0");
 }
 
 /// Register a device in the mock DB and mint a valid session token for it.
