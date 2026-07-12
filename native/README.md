@@ -39,6 +39,10 @@ production deployment (must be HTTPS; both platforms reject cleartext).
   The backend is already production-ready for it; set
   `ANTIGRAVITY__AUTH__APPLE_TEAM_ID` / `APPLE_BUNDLE_ID` and
   `ENVIRONMENT=production` (which also hard-disables `/auth/dev-session`).
+- **Privacy manifest (required)**: a ready `PrivacyInfo.xcprivacy` lives at
+  `native/privacy/PrivacyInfo.xcprivacy`. After `npx cap add ios`, copy it to
+  `native/ios/App/App/PrivacyInfo.xcprivacy` and add it to the App target. See
+  `store/APP_STORE_AUDIT.md` for the full pre-submission audit.
 - **HealthKit**: add the HealthKit capability + `NSHealthShareUsageDescription`.
   Signals are read on-device and fed to the same insights engine the web app
   uses (`web/assets/engine.js` mirrors the server's published rules).

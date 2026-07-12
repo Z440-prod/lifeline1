@@ -1299,6 +1299,17 @@ async function viewSettings(el) {
             <div class="kv"><span class="k">Coach</span><span class="v">${localAI.ready() ? 'on-device · offline' : 'identity-stripped proxy'}</span></div>
         </div>
         ${onDeviceAiCard(ai)}
+        <div class="card col-12" style="border:1px solid var(--line);">
+            <div class="card-title">About &amp; disclaimer</div>
+            <p style="font-size:var(--fs-micro); color:var(--ink-3); line-height:1.5; margin:2px 0 8px;">
+                Lifeline is for informational and wellness purposes and is <b>not a medical device</b>.
+                It does not diagnose, treat, cure, or prevent any condition, and its scores and guidance
+                are not medical advice. Always consult a qualified clinician for medical decisions.
+            </p>
+            <a class="kv" href="/privacy" target="_blank" rel="noopener" style="text-decoration:none;">
+                <span class="k">Privacy policy</span><span class="v">how zero-knowledge works →</span>
+            </a>
+        </div>
     </div>`;
 
     $('#signOutBtn')?.addEventListener('click', () => {
