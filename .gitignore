@@ -51,3 +51,7 @@ native/ios/
 native/android/
 native/plugins/*/dist/
 native/plugins/*/node_modules/
+
+# Production secrets — never commit
+deploy/.env.production
+.env.production

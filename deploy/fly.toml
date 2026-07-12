@@ -1,0 +1,45 @@
+# Fly.io deploy config for the Lifeline engine.
+#
+# Fly is the recommended host: it runs a persistent Rust process (unlike Vercel/
+# Cloudflare serverless), gives you managed Postgres, and terminates TLS for you
+# so both app stores' HTTPS requirement is satisfied out of the box.
+#
+# First-time setup (from the repo root):
+#   fly launch --no-deploy --copy-config --dockerfile deploy/Dockerfile
+#   fly postgres create --name lifeline-db            # managed Postgres
+#   fly postgres attach lifeline-db                   # sets DATABASE_URL secret
+#   fly secrets import < deploy/.env.production        # your real secrets
+#   fly deploy
+#
+# NOTE: rename "app" below to a globally-unique name Fly accepts.
+
+app = "lifeline-engine"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Non-secret config. Secrets (DB url, Stripe, Anthropic, admin token) go via
+  # `fly secrets`, never here.
+  ANTIGRAVITY__SERVER__HOST = "0.0.0.0"
+  ANTIGRAVITY__SERVER__PORT = "8443"
+  ANTIGRAVITY__AUTH__ENVIRONMENT = "production"
+
+[http_service]
+  internal_port = 8443
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.checks]
+    [[http_service.checks.health]]
+      path = "/health"
+      interval = "30s"
+      timeout = "4s"
+      grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

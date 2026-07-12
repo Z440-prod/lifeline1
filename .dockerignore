@@ -1,0 +1,12 @@
+# Keep the build context small and the image clean.
+target/
+.driver-shots/
+.git/
+node_modules/
+native/node_modules/
+native/ios/
+native/android/
+**/*.log
+deploy/.env.production
+.env
+scratchpad/
