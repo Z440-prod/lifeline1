@@ -114,6 +114,12 @@ prices before use — they change.
 - "A leaderboard for your health that literally can't see your health."
 - "Zero-knowledge isn't a privacy policy. It's the architecture."
 
+## Ready-to-run campaigns
+
+- **[`AD_CAMPAIGNS.md`](./AD_CAMPAIGNS.md)** — paste-ready ad kit built from these
+  pillars: Apple Search Ads, Google Ads, Meta, TikTok, Reddit copy + the App Store
+  "Why switch" block, UTM scheme, and a pre-spend launch checklist.
+
 ## Landing surfaces
 
 - **/compare** — the "Why switch to Lifeline" page (in this repo, `web/compare.html`).
