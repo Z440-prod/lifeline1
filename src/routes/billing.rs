@@ -109,8 +109,12 @@ pub async fn billing_config_handler(State(state): State<Arc<AppState>>) -> Json<
         "version": "1.0.0",
         "currency": "usd",
         "provider": "stripe",
-        // Lets the client show a "test mode" ribbon when no live keys are set.
-        "live": state.config.billing.stripe_configured(),
+        // Lets the client show a "test mode" ribbon when no live payment path is
+        // set. Payment Links take real money without a secret key, so they count
+        // as live too.
+        "live": state.config.billing.stripe_configured()
+            || state.config.billing.payment_link_for("pro").is_some()
+            || state.config.billing.payment_link_for("elite").is_some(),
         "tiers": tiers,
         // Donations: an optional pre-created Payment Link, plus the preset
         // amounts the client offers (rule of three). Store builds hide the
@@ -249,6 +253,34 @@ pub async fn checkout_handler(
         ));
     }
     let billing = &state.config.billing;
+
+    // ── Pre-created Stripe Payment Link (no secret key needed) ───────────────
+    // If a hosted buy.stripe.com link is configured for this tier, hand it back
+    // directly. We append the device id and tier as `client_reference_id` so the
+    // webhook can grant the tier when the signing secret is set. This is real
+    // payment — money moves — even without the Stripe API secret key.
+    if let Some(link) = billing.payment_link_for(tier.as_str()) {
+        let sep = if link.contains('?') { '&' } else { '?' };
+        let checkout_url = format!(
+            "{link}{sep}client_reference_id={device_id}__{tier}",
+            tier = tier.as_str()
+        );
+        state
+            .db
+            .insert_audit_log(
+                "BILLING_PAYMENT_LINK",
+                device_id,
+                device_id,
+                tier.as_str().as_bytes(),
+            )
+            .await?;
+        return Ok(Json(json!({
+            "simulated": false,
+            "tier": tier.as_str(),
+            "checkout_url": checkout_url,
+            "provider": "payment_link",
+        })));
+    }
 
     // ── Dev / unconfigured fallback: simulate a successful upgrade ───────────
     if !billing.stripe_configured() {
@@ -420,13 +452,21 @@ pub async fn webhook_handler(
 
     match event_type {
         "checkout.session.completed" => {
-            let device_id = object["client_reference_id"]
-                .as_str()
-                .and_then(|s| Uuid::parse_str(s).ok());
+            // `client_reference_id` is either a bare device UUID (app-created
+            // Checkout Session) or "<device_uuid>__<tier>" (Payment Link, where
+            // the tier can't come from metadata). Parse both.
+            let cref = object["client_reference_id"].as_str().unwrap_or_default();
+            let (id_part, link_tier) = match cref.split_once("__") {
+                Some((id, tier)) => (id, Some(tier)),
+                None => (cref, None),
+            };
+            let device_id = Uuid::parse_str(id_part).ok();
             let customer = object["customer"].as_str().map(str::to_owned);
             let subscription_id = object["subscription"].as_str().map(str::to_owned);
-            let tier = object["metadata"]["tier"]
-                .as_str()
+            // Prefer the tier from the Payment Link ref, then Stripe metadata,
+            // else default to pro.
+            let tier = link_tier
+                .or_else(|| object["metadata"]["tier"].as_str())
                 .unwrap_or("pro")
                 .to_owned();
             if let Some(device_id) = device_id {

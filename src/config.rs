@@ -228,6 +228,13 @@ pub struct BillingConfig {
     /// client's donate button opens it directly; when empty, POST
     /// /billing/donate creates a one-time Checkout Session instead.
     pub donate_url: String,
+    /// Optional pre-created Stripe **Payment Links** for the paid tiers
+    /// (`https://buy.stripe.com/…`). When set, checkout returns the link
+    /// directly — real payment with no secret key or Checkout Session API call.
+    /// The device id (and tier) is appended as `client_reference_id` so the
+    /// webhook can grant the tier once a signing secret is configured.
+    pub payment_link_pro: String,
+    pub payment_link_elite: String,
 
     /// App Store shared secret for receipt verification (App Store Connect →
     /// App Information → App-Specific Shared Secret). Store builds purchase
@@ -269,6 +276,17 @@ impl BillingConfig {
             _ => return None,
         };
         (!id.is_empty()).then_some(id.as_str())
+    }
+
+    /// A pre-created Stripe Payment Link for a paid tier, if configured.
+    #[must_use]
+    pub fn payment_link_for(&self, tier: &str) -> Option<&str> {
+        let url = match tier {
+            "pro" => &self.payment_link_pro,
+            "elite" => &self.payment_link_elite,
+            _ => return None,
+        };
+        (!url.is_empty()).then_some(url.as_str())
     }
 
     /// Apple receipt verification endpoint (production default).
@@ -362,6 +380,24 @@ mod tests {
         // …but a forced provider with no key falls through to whatever is set.
         assert_eq!(ai("anthropic", "osk", "").cloud_provider(), "openai");
         assert_eq!(ai("openai", "", "ak").cloud_provider(), "anthropic");
+    }
+
+    #[test]
+    fn payment_link_selection() {
+        let mut b = super::BillingConfig::default();
+        assert_eq!(b.payment_link_for("pro"), None);
+        assert_eq!(b.payment_link_for("elite"), None);
+        b.payment_link_pro = "https://buy.stripe.com/pro".to_owned();
+        b.payment_link_elite = "https://buy.stripe.com/elite".to_owned();
+        assert_eq!(
+            b.payment_link_for("pro"),
+            Some("https://buy.stripe.com/pro")
+        );
+        assert_eq!(
+            b.payment_link_for("elite"),
+            Some("https://buy.stripe.com/elite")
+        );
+        assert_eq!(b.payment_link_for("free"), None);
     }
 
     #[test]
