@@ -24,14 +24,30 @@
 - [ ] Enable the customer billing portal in Stripe settings.
 - [ ] Test-mode dry run: checkout → webhook flips tier → beta endpoint opens.
 
-## 3. Store binaries (see `native/README.md`)
+## 3. Accounts, privacy & data rights (App Review blockers)
+- [ ] Run all DB migrations on the production database — **including
+      `006_accounts.sql`** (accounts + `account_devices`, RLS-locked).
+- [ ] **Sign in with Apple** entitlement enabled in the iOS app (required by
+      Guideline 4.8 because Google sign-in is offered). Configure the Apple +
+      Google OIDC client credentials the backend verifies id-tokens against
+      (`account/oauth` refuses unverified tokens in production by default).
+- [ ] **Account deletion** verified end-to-end: Settings → Delete account →
+      `DELETE /api/v1/account` erases account + all data (Guideline 5.1.1(v)).
+- [ ] Privacy nutrition label / Data-safety form filled from
+      `store/PRIVACY_LABELS.md` (note: **email is now collected** for sign-in).
+- [ ] Privacy policy at `/privacy` mentions on-device AI + account email.
+
+## 4. Store binaries (see `native/README.md`)
 - [ ] `npx cap add ios && npx cap add android`, set signing, point `server.url` at production.
+- [ ] Generate app icons + splash from a source asset (`@capacitor/assets`).
 - [ ] Create in-app subscriptions in App Store Connect & Play Console
       (`pro_monthly`, `elite_monthly`) — **store builds must use IAP, not Stripe** (Apple 3.1.1 / Play Payments policy).
 - [ ] Implement `POST /billing/store-receipt` receipt validation feeding the same `upsert_subscription` (backend tier logic unchanged).
 - [ ] Hide Stripe purchase buttons when `window.Capacitor` is defined.
 - [ ] HealthKit / Health Connect permissions + usage strings.
 - [ ] Adopt real App Attest in the iOS shell.
+- [ ] (Optional) On-device AI: implement the `window.LifelineLocalAI` bridge
+      (MediaPipe LLM / Core ML) and gate large model downloads to Wi-Fi.
 
 ## 4. Listings
 - [ ] Copy from `store/LISTING.md`; privacy answers from `store/PRIVACY_LABELS.md`.

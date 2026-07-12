@@ -55,6 +55,64 @@ pub async fn insert_account(pool: &PgPool, a: &Account) -> Result<(), AppError> 
     }
 }
 
+/// Permanently delete the account that owns `device_id` **and all of its data**,
+/// in a single transaction. Satisfies App Store 5.1.1(v) (in-app account
+/// deletion) and GDPR/CCPA erasure.
+///
+/// Because every device-scoped table (`sync_documents`, `provider_connections`,
+/// `game_profiles`, `subscriptions`, `account_devices`) is declared
+/// `ON DELETE CASCADE` from `attested_devices`, deleting the device rows erases
+/// the encrypted vault, connections, game profile, and subscription with them.
+/// Audit logs carry no FK, so they're cleared explicitly. If the device is
+/// linked to an account, every device under that account is purged too (so
+/// deletion from any one signed-in device removes the whole account).
+///
+/// Returns `true` if a formal account existed, `false` if only device-scoped
+/// data was purged (a device that was never linked to an account).
+pub async fn delete_account_and_data(pool: &PgPool, device_id: Uuid) -> Result<bool, AppError> {
+    let mut tx = pool.begin().await?;
+
+    let account_id: Option<Uuid> =
+        sqlx::query_scalar("SELECT account_id FROM account_devices WHERE device_id = $1")
+            .bind(device_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+
+    // Every device to erase: all devices under the account, or just this one.
+    let device_ids: Vec<Uuid> = match account_id {
+        Some(aid) => {
+            sqlx::query_scalar("SELECT device_id FROM account_devices WHERE account_id = $1")
+                .bind(aid)
+                .fetch_all(&mut *tx)
+                .await?
+        }
+        None => vec![device_id],
+    };
+
+    // Audit logs have no FK to cascade, so clear them for these devices.
+    sqlx::query("DELETE FROM audit_logs WHERE actor_id = ANY($1) OR target_id = ANY($1)")
+        .bind(&device_ids)
+        .execute(&mut *tx)
+        .await?;
+
+    // Deleting the device rows cascades to sync_documents, provider_connections,
+    // game_profiles, subscriptions, and account_devices.
+    sqlx::query("DELETE FROM attested_devices WHERE device_id = ANY($1)")
+        .bind(&device_ids)
+        .execute(&mut *tx)
+        .await?;
+
+    if let Some(aid) = account_id {
+        sqlx::query("DELETE FROM accounts WHERE id = $1")
+            .bind(aid)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    tx.commit().await?;
+    Ok(account_id.is_some())
+}
+
 /// Link a device to an account (idempotent; a device belongs to one account).
 pub async fn link_device(pool: &PgPool, account_id: Uuid, device_id: Uuid) -> Result<(), AppError> {
     sqlx::query(

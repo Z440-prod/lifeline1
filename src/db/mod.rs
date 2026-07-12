@@ -104,6 +104,10 @@ pub trait Database: Send + Sync {
     ) -> Result<Option<Account>, AppError>;
     async fn insert_account(&self, account: &Account) -> Result<(), AppError>;
     async fn link_device(&self, account_id: Uuid, device_id: Uuid) -> Result<(), AppError>;
+    /// Permanently delete the account owning `device_id` and all associated
+    /// data (App Store 5.1.1(v) / GDPR erasure). Returns whether an account
+    /// existed. See `accounts::delete_account_and_data`.
+    async fn delete_account_and_data(&self, device_id: Uuid) -> Result<bool, AppError>;
 }
 
 /// Postgres implementation of the Database trait.
@@ -351,6 +355,10 @@ impl Database for PostgresDatabase {
 
     async fn link_device(&self, account_id: Uuid, device_id: Uuid) -> Result<(), AppError> {
         accounts::link_device(&self.pool, account_id, device_id).await
+    }
+
+    async fn delete_account_and_data(&self, device_id: Uuid) -> Result<bool, AppError> {
+        accounts::delete_account_and_data(&self.pool, device_id).await
     }
 }
 
@@ -749,5 +757,55 @@ impl Database for MockDatabase {
             .unwrap()
             .insert(device_id, account_id);
         Ok(())
+    }
+
+    async fn delete_account_and_data(&self, device_id: Uuid) -> Result<bool, AppError> {
+        // Resolve the account for this device (map is keyed device_id → account_id).
+        let account_id = self
+            .account_devices
+            .lock()
+            .unwrap()
+            .get(&device_id)
+            .copied();
+
+        // Every device to erase: all under the account, or just this one.
+        let device_ids: Vec<Uuid> = match account_id {
+            Some(aid) => self
+                .account_devices
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|(_, a)| **a == aid)
+                .map(|(d, _)| *d)
+                .collect(),
+            None => vec![device_id],
+        };
+
+        // Purge every device-scoped store, mirroring the Postgres cascade.
+        {
+            let mut devices = self.devices.lock().unwrap();
+            let mut documents = self.documents.lock().unwrap();
+            let mut profiles = self.game_profiles.lock().unwrap();
+            let mut subs = self.subscriptions.lock().unwrap();
+            let mut conns = self.provider_connections.lock().unwrap();
+            let mut links = self.account_devices.lock().unwrap();
+            for d in &device_ids {
+                devices.remove(d);
+                documents.remove(d);
+                profiles.remove(d);
+                subs.remove(d);
+                conns.retain(|(dev, _), _| dev != d);
+                links.remove(d);
+            }
+        }
+        self.audit_logs
+            .lock()
+            .unwrap()
+            .retain(|e| !device_ids.contains(&e.actor_id) && !device_ids.contains(&e.target_id));
+
+        if let Some(aid) = account_id {
+            self.accounts.lock().unwrap().remove(&aid);
+        }
+        Ok(account_id.is_some())
     }
 }

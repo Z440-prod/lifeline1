@@ -1712,3 +1712,98 @@ async fn test_local_models_catalog_is_rules_only() {
         "Gemma should be offered"
     );
 }
+
+#[tokio::test]
+async fn test_account_deletion_erases_account_and_device() {
+    // App Store 5.1.1(v): deleting the account must remove it AND the associated
+    // data in-app. Register, confirm the account + device exist, DELETE /account
+    // with the session, then confirm both are gone and the credentials no longer
+    // work.
+    let (state, db) = create_test_state();
+    let app = create_router(state);
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12363));
+    let device = Uuid::new_v4();
+
+    let (status, body) = post_json(
+        &app,
+        "/api/v1/account/register",
+        json!({ "email": "erase@example.com", "password": "erase me please", "device_id": device }),
+        addr,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "register: {body:?}");
+    let token = body["token"].as_str().unwrap().to_owned();
+
+    // The account + device really exist now.
+    assert!(db
+        .get_account_by_email("erase@example.com")
+        .await
+        .unwrap()
+        .is_some());
+    assert!(db.get_device(device).await.unwrap().is_some());
+
+    // Unauthenticated delete is rejected (attest_guard).
+    let unauth = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/v1/account")
+                .extension(axum::extract::ConnectInfo(addr))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        unauth.status(),
+        StatusCode::UNAUTHORIZED,
+        "delete needs a session"
+    );
+
+    // Delete with the session token.
+    let (status, body) = read_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri("/api/v1/account")
+                    .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                    .header("x-device-id", device.to_string())
+                    .extension(axum::extract::ConnectInfo(addr))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "delete: {body:?}");
+    assert_eq!(body["deleted"], true);
+    assert_eq!(body["had_account"], true);
+
+    // Everything is gone: account, device, and the credentials no longer work.
+    assert!(
+        db.get_account_by_email("erase@example.com")
+            .await
+            .unwrap()
+            .is_none(),
+        "account purged"
+    );
+    assert!(
+        db.get_device(device).await.unwrap().is_none(),
+        "device purged"
+    );
+    let (relogin, _) = post_json(
+        &app,
+        "/api/v1/account/login",
+        json!({ "email": "erase@example.com", "password": "erase me please", "device_id": device }),
+        addr,
+    )
+    .await;
+    assert_eq!(
+        relogin,
+        StatusCode::UNAUTHORIZED,
+        "deleted account can't sign in"
+    );
+}

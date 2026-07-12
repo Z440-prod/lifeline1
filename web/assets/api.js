@@ -217,6 +217,19 @@ export const account = {
         sessionToken = null;
         emit();
     },
+    /* Permanently delete the account + all server-side data (App Store
+       5.1.1(v) / GDPR erasure), then wipe every local trace on this device.
+       The caller reloads into a fresh, signed-out state. */
+    async deleteAccount() {
+        const res = await del('/account');
+        if (res.status === 200) {
+            // Erase device keys, account, cached model state — everything.
+            localStorage.clear();
+            sessionToken = null;
+            emit();
+        }
+        return res;
+    },
 };
 
 /* Refresh the token before it can expire (dev TTL is 1h). */
