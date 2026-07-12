@@ -90,52 +90,63 @@ pub async fn ai_proxy_handler(
         .insert_audit_log("AI_PROXY", verified_device.device_id, Uuid::nil(), &[])
         .await?;
 
-    // 2. If key is missing, handle gracefully in development mode, otherwise fail.
-    if state.config.ai.anthropic_api_key.is_empty() {
-        if state.config.auth.environment == "development" {
-            tracing::info!(
-                "Anthropic API key is empty; returning mock response in development environment"
-            );
-            metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/ai/proxy")
-                .record(start_time.elapsed().as_secs_f64());
-            return Ok(Json(json!({
-                "id": "msg_mock_dev_12345",
-                "type": "message",
-                "role": "assistant",
-                "content": [
-                    {
+    // 2. Choose the cloud provider for this device. The client already runs
+    //    Gemma on-device for premium phones and only reaches this proxy when no
+    //    local model is installed — so this path is the coach for everyone else.
+    //    "auto" prefers the cheaper open-source model when configured, else
+    //    Claude; a missing key falls back to a dev mock or a prod error.
+    const SYSTEM: &str = "You are Lifeline AI, a private health companion. Under no \
+        circumstances should you ask for, collect, or log identifying user information. \
+        Provide clinical-first, empathetic advice based on the biometric metrics provided.";
+
+    let response_json = match state.config.ai.cloud_provider() {
+        "openai" => call_openai_compatible(state.as_ref(), &payload.prompt, SYSTEM).await?,
+        "anthropic" => call_anthropic(state.as_ref(), &payload.prompt, SYSTEM).await?,
+        // No provider configured.
+        _ => {
+            if state.config.auth.environment == "development" {
+                tracing::info!("No AI provider key configured; returning dev mock response");
+                metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/ai/proxy")
+                    .record(start_time.elapsed().as_secs_f64());
+                return Ok(Json(json!({
+                    "id": "msg_mock_dev_12345",
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{
                         "type": "text",
                         "text": format!("[Mock Claude Response] Received prompt: \"{}\" with execution token: {}", payload.prompt, payload.execution_token)
-                    }
-                ],
-                "model": "claude-3-5-sonnet-20241022",
-                "usage": {
-                    "input_tokens": 12,
-                    "output_tokens": 35
-                }
-            })));
+                    }],
+                    "model": "mock-dev",
+                    "usage": { "input_tokens": 12, "output_tokens": 35 }
+                })));
+            }
+            metrics::counter!("antigravity_api_errors_total", "endpoint" => "/ai/proxy", "error" => "missing_api_key").increment(1);
+            return Err(AppError::ExternalServiceError(
+                "No AI provider is configured (set ANTIGRAVITY__AI__OPENAI_API_KEY for the open-source model, or ANTIGRAVITY__AI__ANTHROPIC_API_KEY).".to_owned(),
+            ));
         }
-        metrics::counter!("antigravity_api_errors_total", "endpoint" => "/ai/proxy", "error" => "missing_api_key").increment(1);
-        return Err(AppError::ExternalServiceError(
-            "Anthropic API key is not configured".to_owned(),
-        ));
-    }
+    };
 
-    // outbound messages request structure for Claude API
+    metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/ai/proxy")
+        .record(start_time.elapsed().as_secs_f64());
+
+    Ok(Json(response_json))
+}
+
+/// Call Anthropic's Messages API. Returns the raw JSON (already in the
+/// `content[0].text` shape the client reads).
+async fn call_anthropic(
+    state: &AppState,
+    prompt: &str,
+    system: &str,
+) -> Result<serde_json::Value, AppError> {
     let outbound_body = json!({
         "model": "claude-3-5-sonnet-20241022",
         "max_tokens": 2048,
-        "messages": [
-            {
-                "role": "user",
-                "content": payload.prompt
-            }
-        ],
-        "system": "You are Lifeline AI, a private health companion. Under no circumstances should you ask for, collect, or log identifying user information. Provide clinical-first advice based on the biometric metrics provided."
+        "messages": [{ "role": "user", "content": prompt }],
+        "system": system,
     });
-
     let ai_start = std::time::Instant::now();
-    // 3. Make anonymized outbound call to Anthropic API (IP/metadata of the client is stripped)
     let response = state
         .http_client
         .post(&state.config.ai.anthropic_api_url)
@@ -148,10 +159,8 @@ pub async fn ai_proxy_handler(
         .map_err(|e| {
             AppError::ExternalServiceError(format!("Failed to connect to Anthropic: {e}"))
         })?;
-
     metrics::histogram!("antigravity_ai_latency_seconds", "model" => "claude-3-5-sonnet")
         .record(ai_start.elapsed().as_secs_f64());
-
     if !response.status().is_success() {
         let status = response.status();
         let error_body = response.text().await.unwrap_or_default();
@@ -160,15 +169,87 @@ pub async fn ai_proxy_handler(
             "Anthropic API returned status {status}: {error_body}"
         )));
     }
+    response
+        .json()
+        .await
+        .map_err(|e| AppError::ExternalServiceError(format!("Failed to parse Anthropic JSON: {e}")))
+}
 
-    let response_json: serde_json::Value = response.json().await.map_err(|e| {
-        AppError::ExternalServiceError(format!("Failed to parse Anthropic JSON response: {e}"))
+/// Call an OpenAI-compatible endpoint (Together / Groq / OpenRouter / DeepInfra /
+/// vLLM, …) running a cheaper open-source model, then normalize its
+/// `choices[0].message.content` into the same `content[0].text` shape the client
+/// already parses — so the coach behaves identically to the Anthropic path.
+async fn call_openai_compatible(
+    state: &AppState,
+    prompt: &str,
+    system: &str,
+) -> Result<serde_json::Value, AppError> {
+    let cfg = &state.config.ai;
+    let base = cfg.openai_base_url.trim_end_matches('/');
+    if base.is_empty() {
+        return Err(AppError::ExternalServiceError(
+            "ANTIGRAVITY__AI__OPENAI_BASE_URL is not set for the open-source coach.".to_owned(),
+        ));
+    }
+    let model = if cfg.openai_model.is_empty() {
+        "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+    } else {
+        cfg.openai_model.as_str()
+    };
+    let url = format!("{base}/chat/completions");
+    let outbound_body = json!({
+        "model": model,
+        "max_tokens": 2048,
+        "messages": [
+            { "role": "system", "content": system },
+            { "role": "user", "content": prompt },
+        ],
+    });
+    let ai_start = std::time::Instant::now();
+    let response = state
+        .http_client
+        .post(&url)
+        .header("authorization", format!("Bearer {}", cfg.openai_api_key))
+        .header("content-type", "application/json")
+        .json(&outbound_body)
+        .send()
+        .await
+        .map_err(|e| {
+            AppError::ExternalServiceError(format!(
+                "Failed to connect to the open-source model: {e}"
+            ))
+        })?;
+    metrics::histogram!("antigravity_ai_latency_seconds", "model" => "open-source")
+        .record(ai_start.elapsed().as_secs_f64());
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_body = response.text().await.unwrap_or_default();
+        metrics::counter!("antigravity_api_errors_total", "endpoint" => "/ai/proxy", "error" => "openai_failure").increment(1);
+        return Err(AppError::ExternalServiceError(format!(
+            "Open-source model endpoint returned status {status}: {error_body}"
+        )));
+    }
+    let body: serde_json::Value = response.json().await.map_err(|e| {
+        AppError::ExternalServiceError(format!("Failed to parse open-source model JSON: {e}"))
     })?;
-
-    metrics::histogram!("antigravity_request_duration_seconds", "endpoint" => "/ai/proxy")
-        .record(start_time.elapsed().as_secs_f64());
-
-    Ok(Json(response_json))
+    // Normalize OpenAI chat-completions -> Anthropic messages shape.
+    let text = body
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .unwrap_or("")
+        .to_owned();
+    let usage = body.get("usage").cloned().unwrap_or_else(|| json!({}));
+    Ok(json!({
+        "id": body.get("id").and_then(|v| v.as_str()).unwrap_or("msg_oss"),
+        "type": "message",
+        "role": "assistant",
+        "content": [{ "type": "text", "text": text }],
+        "model": model,
+        "usage": usage,
+    }))
 }
 
 /// Handler for `GET /api/v1/ai/policy-matrix`.

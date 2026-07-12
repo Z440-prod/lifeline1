@@ -84,6 +84,45 @@ pub struct AiConfig {
     /// values so existing configs keep working.
     #[serde(default)]
     pub budget: AiBudget,
+    /// Cloud-coach provider selection for devices that can't run Gemma locally.
+    /// "auto" (default) uses the open-source model when `openai_api_key` is set,
+    /// otherwise Anthropic; "openai" forces the open-source path; "anthropic"
+    /// forces Claude. The on-device Gemma path is chosen by the client and never
+    /// touches this — this only governs the cloud fallback.
+    #[serde(default)]
+    pub provider: String,
+    /// OpenAI-compatible endpoint for a cheaper open-source model (Llama, Qwen,
+    /// DeepSeek, …) served by Together / Groq / OpenRouter / DeepInfra / vLLM.
+    /// Base URL only — the handler appends `/chat/completions`.
+    #[serde(default)]
+    pub openai_base_url: String,
+    /// API key for the OpenAI-compatible endpoint above. When set (and provider
+    /// is "auto" or "openai"), the cloud coach uses this instead of Anthropic.
+    #[serde(default)]
+    pub openai_api_key: String,
+    /// Model id for the open-source endpoint,
+    /// e.g. "meta-llama/Llama-3.3-70B-Instruct-Turbo".
+    #[serde(default)]
+    pub openai_model: String,
+}
+
+impl AiConfig {
+    /// Which cloud provider the proxy should use, resolved from `provider` +
+    /// which keys are set. Returns "openai", "anthropic", or "none".
+    #[must_use]
+    pub fn cloud_provider(&self) -> &'static str {
+        let has_openai = !self.openai_api_key.is_empty();
+        let has_anthropic = !self.anthropic_api_key.is_empty();
+        match self.provider.as_str() {
+            "openai" if has_openai => "openai",
+            "anthropic" if has_anthropic => "anthropic",
+            // "auto" / empty / anything else: prefer the cheaper open-source
+            // model when configured, else Claude.
+            _ if has_openai => "openai",
+            _ if has_anthropic => "anthropic",
+            _ => "none",
+        }
+    }
 }
 
 /// Coach usage limits. Per-device daily and monthly caps bound each user's
@@ -292,7 +331,38 @@ pub fn load() -> Result<AppConfig, config::ConfigError> {
 
 #[cfg(test)]
 mod tests {
-    use super::AiBudget;
+    use super::{AiBudget, AiConfig};
+
+    fn ai(provider: &str, openai_key: &str, anthropic_key: &str) -> AiConfig {
+        AiConfig {
+            anthropic_api_url: String::new(),
+            anthropic_api_key: anthropic_key.to_owned(),
+            policy_matrix_version: "1.0.0".to_owned(),
+            budget: AiBudget::default(),
+            provider: provider.to_owned(),
+            openai_base_url: String::new(),
+            openai_api_key: openai_key.to_owned(),
+            openai_model: String::new(),
+        }
+    }
+
+    #[test]
+    fn cloud_provider_selection() {
+        // auto: prefer the cheaper open-source model when its key is set.
+        assert_eq!(ai("auto", "osk", "").cloud_provider(), "openai");
+        assert_eq!(ai("auto", "osk", "ak").cloud_provider(), "openai");
+        // auto: fall back to Anthropic when only that key is set.
+        assert_eq!(ai("auto", "", "ak").cloud_provider(), "anthropic");
+        // auto / empty provider with no keys → none (dev mock or prod error).
+        assert_eq!(ai("auto", "", "").cloud_provider(), "none");
+        assert_eq!(ai("", "", "").cloud_provider(), "none");
+        // Forced providers honor the choice when the matching key exists…
+        assert_eq!(ai("anthropic", "osk", "ak").cloud_provider(), "anthropic");
+        assert_eq!(ai("openai", "osk", "ak").cloud_provider(), "openai");
+        // …but a forced provider with no key falls through to whatever is set.
+        assert_eq!(ai("anthropic", "osk", "").cloud_provider(), "openai");
+        assert_eq!(ai("openai", "", "ak").cloud_provider(), "anthropic");
+    }
 
     #[test]
     fn budget_caps_by_tier() {

@@ -26,6 +26,20 @@ anthropic_api_url = "https://api.anthropic.com/v1/messages"
 # Set via ANTIGRAVITY__AI__ANTHROPIC_API_KEY env var in production.
 anthropic_api_key = ""
 policy_matrix_version = "1.0.0"
+# Cloud-coach provider for devices that can't run Gemma locally.
+#   "auto" (default) → open-source model if openai_api_key is set, else Anthropic
+#   "openai"        → force the open-source / OpenAI-compatible endpoint below
+#   "anthropic"     → force Claude
+# The on-device Gemma path is picked by the client and ignores this.
+provider = "auto"
+# A cheaper, open-source model via any OpenAI-compatible endpoint (Together,
+# Groq, OpenRouter, DeepInfra, self-hosted vLLM). Base URL only; the server
+# appends /chat/completions. Set the key via ANTIGRAVITY__AI__OPENAI_API_KEY.
+openai_base_url = ""
+openai_api_key = ""
+# e.g. "meta-llama/Llama-3.3-70B-Instruct-Turbo", "Qwen/Qwen2.5-72B-Instruct-Turbo",
+# "deepseek-ai/DeepSeek-V3". Defaults to Llama-3.3-70B if left blank.
+openai_model = ""
 
 [rate_limit]
 # Sustained requests per second allowed per source IP.

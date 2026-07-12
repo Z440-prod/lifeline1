@@ -127,3 +127,29 @@ the privacy policy (`web/privacy.html`) explaining the zero-knowledge model.
 Blocking items: #1 fixed in-repo; #2 is a scaffold-time step (documented). Once
 the iOS project is generated with the manifest + Info.plist strings, the disclaimer
 is added, and the server is live with a demo account, Lifeline clears the hard gate.
+
+---
+
+## Re-check — 2026-07-12 (after the device-adaptive AI coach)
+
+The coach now picks its engine by device: premium phones run Gemma on-device;
+everyone else uses a cheaper open-source model (Llama/Qwen/DeepSeek via an
+OpenAI-compatible endpoint) or Claude, chosen server-side by `[ai] provider`.
+Re-audited against the skill — **no new risk introduced:**
+
+- **5.1.1 / 5.1.2 privacy — unchanged.** The open-source model is a *server-side*
+  backend the client never sees; it adds no SDK, no client identifier, and no new
+  data type. The proxy still strips identity before any model sees a word. No new
+  `NSPrivacyCollectedDataType` and no tracking → the manifest is unaffected, no
+  ATT prompt. ✅
+- **2.1 functionality — improved.** With a provider key set the coach returns real
+  answers (verified end-to-end against a mock open-source endpoint: request →
+  normalize → render). This strengthens the "app is fully functional in review"
+  requirement vs. the old dev-mock echo. ✅
+- **3.1.1 / 5.1.1(v) / 4.8 — still CLEAR** (unchanged by this work).
+- **Cost/abuse — unchanged.** The three-gate token budget still meters every coach
+  call regardless of provider. ✅
+
+**Verdict unchanged: 🟡 MEDIUM**, gated only on the same native-scaffold items
+(#2) plus the label/manifest consistency check (#5). The adaptive coach does not
+move the risk.

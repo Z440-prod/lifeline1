@@ -148,7 +148,7 @@ to App Store Connect, paste the listing, and submit.
 | Google Play Developer | Google | $25 one-time |
 | Host (Fly/Render/Railway) | the host | ~$5–20 / mo to start |
 | Postgres (Supabase free tier ok to start) | Supabase | $0 → up |
-| Anthropic API (the coach) | Anthropic | pay-per-use |
+| AI coach — cloud tier (non-premium devices) | open-source host (Together/Groq/OpenRouter) or Anthropic | pay-per-use (open-source is cheaper) |
 | Stripe | Stripe | ~2.9% + 30¢ / charge |
 
 The **app code** is done and verified. These are the only things standing between

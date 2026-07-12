@@ -44,6 +44,10 @@ fn create_test_state_with_env(environment: &str) -> (Arc<AppState>, Arc<MockData
             anthropic_api_key: String::new(),
             policy_matrix_version: "1.0.0".to_string(),
             budget: antigravity::config::AiBudget::default(),
+            provider: "auto".to_string(),
+            openai_base_url: String::new(),
+            openai_api_key: String::new(),
+            openai_model: String::new(),
         },
         rate_limit: antigravity::config::RateLimitConfig {
             requests_per_second: 100,
