@@ -281,6 +281,8 @@ pub fn create_router(state: Arc<AppState>) -> Router {
     // Operator dashboard page. Static HTML; the data it loads is admin-token
     // gated server-side (see admin::admin_stats_handler).
     let admin_page = tower_http::services::ServeFile::new("web/admin.html");
+    // Marketing comparison page ("Lifeline vs. cloud health apps").
+    let compare_page = tower_http::services::ServeFile::new("web/compare.html");
     let shell = tower_http::services::ServeFile::new("web/index.html");
 
     // Combine routes with middleware layers.
@@ -294,6 +296,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route_service("/sw.js", service_worker)
         .route_service("/privacy", privacy)
         .route_service("/admin", admin_page)
+        .route_service("/compare", compare_page)
         .fallback_service(shell)
         .layer(middleware::from_fn_with_state(
             state.clone(),

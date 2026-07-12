@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark light">
+    <title>Lifeline vs. cloud health apps — your health, zero-knowledge</title>
+    <meta name="description" content="Most health apps store your body in their cloud and rent you hardware. Lifeline computes everything on your device and never sees your data. See the difference.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e1116'/%3E%3Cpath d='M4 18h6l3-8 4 12 3-6h8' fill='none' stroke='%23e05a52' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --bg:#0b0d10; --card:#16191f; --card-2:#1e222a; --line:#262b34;
+            --ink:#f2f4f8; --ink-2:#a6afbd; --ink-3:#6b7280;
+            --pulse:#e05a52; --tint:#4fb0a8; --ok:#34c759; --no:#6b7280;
+        }
+        @media (prefers-color-scheme: light) {
+            :root { --bg:#f6f7f9; --card:#fff; --card-2:#f0f2f5; --line:#e2e5ea; --ink:#0b0d10; --ink-2:#4b5563; --ink-3:#9aa2ae; }
+        }
+        * { box-sizing: border-box; margin: 0; }
+        body { background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.55; }
+        .wrap { max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; }
+        .eyebrow { color: var(--tint); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; }
+        h1 { font-size: clamp(2rem, 6vw, 3.1rem); font-weight: 850; letter-spacing: -0.035em; line-height: 1.04; margin: 12px 0 14px; }
+        h1 .hl { color: var(--pulse); }
+        .lede { color: var(--ink-2); font-size: clamp(1.02rem, 2.4vw, 1.2rem); max-width: 46ch; }
+        .cta { display: inline-flex; align-items: center; gap: 8px; background: var(--pulse); color: #fff; font-weight: 750; text-decoration: none; padding: 14px 22px; border-radius: 14px; margin-top: 24px; transition: filter .15s, transform .2s; }
+        .cta:hover { filter: brightness(1.07); transform: translateY(-1px); }
+        .cta.ghost { background: var(--card-2); color: var(--ink); }
+        h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin: 52px 0 6px; }
+        .sub { color: var(--ink-3); font-size: 0.92rem; margin-bottom: 18px; }
+        /* Contrast rows */
+        .flip { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+        @media (max-width: 640px) { .flip { grid-template-columns: 1fr; } }
+        .flip .them, .flip .us { border-radius: 16px; padding: 16px 18px; border: 1px solid var(--line); }
+        .flip .them { background: var(--card); }
+        .flip .us { background: linear-gradient(135deg, color-mix(in srgb, var(--tint) 14%, var(--card)), var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 30%, transparent); }
+        .flip .tag { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 7px; }
+        .flip .them .tag { color: var(--ink-3); }
+        .flip .us .tag { color: var(--tint); }
+        .flip p { font-size: 0.96rem; color: var(--ink); }
+        .flip .them p { color: var(--ink-2); }
+        /* Table */
+        .tablewrap { overflow-x: auto; border-radius: 18px; border: 1px solid var(--line); margin-top: 8px; }
+        table { border-collapse: collapse; width: 100%; min-width: 560px; background: var(--card); }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--line); font-size: 0.95rem; vertical-align: top; }
+        thead th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 800; }
+        thead th.us { color: var(--tint); }
+        tbody tr:last-child td { border-bottom: none; }
+        td.dim { color: var(--ink-2); width: 30%; font-weight: 600; }
+        td.them { color: var(--ink-2); }
+        td.us { color: var(--ink); font-weight: 650; }
+        .yes { color: var(--ok); font-weight: 800; }
+        .nope { color: var(--no); }
+        .taglines { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+        .taglines span { background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 8px 15px; font-size: 0.9rem; color: var(--ink-2); }
+        .foot { color: var(--ink-3); font-size: 0.8rem; margin-top: 40px; border-top: 1px solid var(--line); padding-top: 18px; }
+        .cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="eyebrow">Lifeline vs. the cloud health app</div>
+    <h1>They store your body <span class="hl">in their cloud.</span><br>We never see it.</h1>
+    <p class="lede">Most health and longevity apps upload your sleep, heart rate, and labs to their servers — and rent you a band or ring to do it. Lifeline computes everything <b>on your device</b>, works offline, and lets you compete globally on your health without ever handing it over.</p>
+    <div class="cta-row">
+        <a class="cta" href="/">Open Lifeline →</a>
+        <a class="cta ghost" href="/privacy">How the privacy works</a>
+    </div>
+
+    <h2>The five things we flipped</h2>
+    <div class="sub">The category's default model, and how Lifeline inverts each one.</div>
+
+    <div class="flip">
+        <div class="them"><div class="tag">Typical health app</div><p>Your body lives in their cloud — sleep, HRV, and labs on their servers.</p></div>
+        <div class="us"><div class="tag">Lifeline</div><p><b>Zero-knowledge.</b> Everything is computed on your device; the server only ever holds ciphertext it can't read.</p></div>
+    </div>
+    <div class="flip">
+        <div class="them"><div class="tag">Typical health app</div><p>Buy the band or ring, then pay monthly just to see your own numbers.</p></div>
+        <div class="us"><div class="tag">Lifeline</div><p><b>Bring your own device.</b> Use the wearable you already own — Apple Health, Google, or Whoop fuse into one score.</p></div>
+    </div>
+    <div class="flip">
+        <div class="them"><div class="tag">Typical health app</div><p>The AI coach lives in their cloud; your context is sent off-device to answer you.</p></div>
+        <div class="us"><div class="tag">Lifeline</div><p><b>On-device AI.</b> On supported phones the coach runs a local model — offline, instant, and nothing leaves the device.</p></div>
+    </div>
+    <div class="flip">
+        <div class="them"><div class="tag">Typical health app</div><p>"Free" often means ads and data — you're the product.</p></div>
+        <div class="us"><div class="tag">Lifeline</div><p><b>Nothing to sell.</b> No ads, no trackers, no third-party analytics — and by design we can't read your data anyway.</p></div>
+    </div>
+    <div class="flip">
+        <div class="them"><div class="tag">Typical health app</div><p>A "readiness score" you can't inspect, and deletion that means emailing support.</p></div>
+        <div class="us"><div class="tag">Lifeline</div><p><b>Transparent &amp; erasable.</b> An open biological-age model you can inspect, and one-tap account deletion that wipes everything.</p></div>
+    </div>
+
+    <h2>Side by side</h2>
+    <div class="sub">"Cloud health app" reflects the category's standard model.<sup>†</sup></div>
+    <div class="tablewrap">
+        <table>
+            <thead><tr><th>&nbsp;</th><th>Typical cloud health app</th><th class="us">Lifeline</th></tr></thead>
+            <tbody>
+                <tr><td class="dim">Where your health data lives</td><td class="them">Their servers</td><td class="us">Your device only <span class="yes">✓</span></td></tr>
+                <tr><td class="dim">Hardware to buy</td><td class="them">Band / ring + subscription</td><td class="us">None — bring your own <span class="yes">✓</span></td></tr>
+                <tr><td class="dim">AI coach runs</td><td class="them">In their cloud</td><td class="us">On your phone, offline <span class="yes">✓</span></td></tr>
+                <tr><td class="dim">Works with no internet</td><td class="them"><span class="nope">Rarely</span></td><td class="us"><span class="yes">Yes</span></td></tr>
+                <tr><td class="dim">Ads / data selling</td><td class="them">Sometimes</td><td class="us"><span class="yes">Never — can't</span></td></tr>
+                <tr><td class="dim">Cross-source (Apple + Google + Whoop)</td><td class="them">Usually locked in</td><td class="us">Fused into one score <span class="yes">✓</span></td></tr>
+                <tr><td class="dim">Compete globally on health</td><td class="them"><span class="nope">No</span></td><td class="us">The Arena <span class="yes">✓</span></td></tr>
+                <tr><td class="dim">Model transparency</td><td class="them">Black box</td><td class="us">Inspectable <span class="yes">✓</span></td></tr>
+                <tr><td class="dim">Delete everything, in-app</td><td class="them">Often support-only</td><td class="us">One tap <span class="yes">✓</span></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>Say it plainly</h2>
+    <div class="taglines">
+        <span>Your health. Zero-knowledge.</span>
+        <span>They watch your body. We never do.</span>
+        <span>Compete on your health — not your data.</span>
+        <span>No band. No ring. No cloud. No catch.</span>
+        <span>Your body isn't their business.</span>
+    </div>
+
+    <div class="cta-row">
+        <a class="cta" href="/">Try Lifeline free →</a>
+    </div>
+
+    <p class="foot"><sup>†</sup> "Typical cloud health app" describes the common architecture and business model across the category (e.g. subscription-wearable and cloud-analytics apps). It isn't a claim about any one company; individual products differ, so verify specifics before relying on them. Lifeline's own properties above are verifiable in this app's design and privacy policy.</p>
+</div>
+</body>
+</html>
