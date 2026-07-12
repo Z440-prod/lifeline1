@@ -28,4 +28,6 @@ pub struct AppState {
     /// `"{device_id}:{yyyy-mm-dd}"`. TTL slightly over a day so entries
     /// self-evict after the window they meter.
     pub ai_usage: moka::sync::Cache<String, u32>,
+    /// Process start time, for the admin dashboard's uptime.
+    pub started_at: chrono::DateTime<chrono::Utc>,
 }

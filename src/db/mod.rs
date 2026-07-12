@@ -11,6 +11,7 @@ use std::sync::Mutex;
 use uuid::Uuid;
 
 pub mod accounts;
+pub mod admin;
 pub mod audit;
 pub mod billing;
 pub mod devices;
@@ -108,6 +109,13 @@ pub trait Database: Send + Sync {
     /// data (App Store 5.1.1(v) / GDPR erasure). Returns whether an account
     /// existed. See `accounts::delete_account_and_data`.
     async fn delete_account_and_data(&self, device_id: Uuid) -> Result<bool, AppError>;
+
+    /// Aggregate, non-identifying stats for the admin dashboard (counts only —
+    /// never health data or PII). See `admin::admin_stats`.
+    async fn admin_stats(&self) -> Result<admin::AdminStats, AppError>;
+
+    /// Human-readable backend name for the admin dashboard.
+    fn backend(&self) -> &'static str;
 }
 
 /// Postgres implementation of the Database trait.
@@ -359,6 +367,14 @@ impl Database for PostgresDatabase {
 
     async fn delete_account_and_data(&self, device_id: Uuid) -> Result<bool, AppError> {
         accounts::delete_account_and_data(&self.pool, device_id).await
+    }
+
+    async fn admin_stats(&self) -> Result<admin::AdminStats, AppError> {
+        admin::admin_stats(&self.pool).await
+    }
+
+    fn backend(&self) -> &'static str {
+        "postgres"
     }
 }
 
@@ -791,12 +807,17 @@ impl Database for MockDatabase {
             let mut links = self.account_devices.lock().unwrap();
             for d in &device_ids {
                 devices.remove(d);
-                documents.remove(d);
                 profiles.remove(d);
                 subs.remove(d);
                 conns.retain(|(dev, _), _| dev != d);
                 links.remove(d);
             }
+            // `documents` is keyed by document_id (each holds that document's
+            // version history), so purge by the versions' owning device_id —
+            // not by the map key.
+            documents.retain(|_doc_id, versions| {
+                !versions.iter().any(|v| device_ids.contains(&v.device_id))
+            });
         }
         self.audit_logs
             .lock()
@@ -807,5 +828,57 @@ impl Database for MockDatabase {
             self.accounts.lock().unwrap().remove(&aid);
         }
         Ok(account_id.is_some())
+    }
+
+    async fn admin_stats(&self) -> Result<admin::AdminStats, AppError> {
+        let documents_map = self.documents.lock().unwrap();
+        let documents = documents_map.len() as i64;
+        let document_versions = documents_map.values().map(|v| v.len() as i64).sum();
+        drop(documents_map);
+
+        let subs = self.subscriptions.lock().unwrap();
+        let subscriptions_pro = subs
+            .values()
+            .filter(|s| s.tier == "pro" && s.status == "active")
+            .count() as i64;
+        let subscriptions_elite = subs
+            .values()
+            .filter(|s| s.tier == "elite" && s.status == "active")
+            .count() as i64;
+        drop(subs);
+
+        let profiles = self.game_profiles.lock().unwrap();
+        let mut league_counts: std::collections::HashMap<String, i64> = HashMap::new();
+        for p in profiles.values() {
+            *league_counts.entry(p.league.clone()).or_default() += 1;
+        }
+        let mut leagues: Vec<(String, i64)> = league_counts.into_iter().collect();
+        leagues.sort_by(|a, b| b.1.cmp(&a.1));
+
+        let mut top: Vec<&GameProfile> = profiles.values().collect();
+        top.sort_by(|a, b| b.best_vitality_score.cmp(&a.best_vitality_score));
+        let top_players: Vec<(String, i32, String)> = top
+            .iter()
+            .take(8)
+            .map(|p| (p.handle.clone(), p.best_vitality_score, p.league.clone()))
+            .collect();
+        let ranked_players = profiles.len() as i64;
+        drop(profiles);
+
+        Ok(admin::AdminStats {
+            accounts: self.accounts.lock().unwrap().len() as i64,
+            devices: self.devices.lock().unwrap().len() as i64,
+            documents,
+            document_versions,
+            ranked_players,
+            subscriptions_pro,
+            subscriptions_elite,
+            leagues,
+            top_players,
+        })
+    }
+
+    fn backend(&self) -> &'static str {
+        "in-memory (mock)"
     }
 }
