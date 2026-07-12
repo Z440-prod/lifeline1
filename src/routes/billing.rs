@@ -766,6 +766,21 @@ fn verify_stripe_signature(secret: &str, payload: &[u8], sig_header: &str) -> Re
         ));
     }
 
+    // Replay protection: reject events whose signed timestamp is outside a
+    // tolerance window (Stripe's recommended default is 5 minutes), so a
+    // captured-but-valid webhook can't be re-sent later to re-apply stale
+    // subscription state. The timestamp is authenticated by the HMAC below, so
+    // it can't be forged without the secret.
+    const WEBHOOK_TOLERANCE_SECS: i64 = 300;
+    let ts: i64 = t
+        .parse()
+        .map_err(|_| AppError::Unauthorized("Malformed Stripe-Signature timestamp".to_owned()))?;
+    if (chrono::Utc::now().timestamp() - ts).abs() > WEBHOOK_TOLERANCE_SECS {
+        return Err(AppError::Unauthorized(
+            "Stripe-Signature timestamp outside tolerance window".to_owned(),
+        ));
+    }
+
     let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret.as_bytes());
     let mut signed = Vec::with_capacity(t.len() + 1 + payload.len());
     signed.extend_from_slice(t.as_bytes());
@@ -796,7 +811,8 @@ mod tests {
     fn signature_roundtrip_verifies() {
         let secret = "whsec_test_secret";
         let payload = br#"{"type":"checkout.session.completed"}"#;
-        let t = "1700000000";
+        // A current timestamp so the replay-tolerance window passes.
+        let t = chrono::Utc::now().timestamp().to_string();
         let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret.as_bytes());
         let mut signed = Vec::new();
         signed.extend_from_slice(t.as_bytes());
@@ -811,14 +827,15 @@ mod tests {
     fn tampered_signature_rejected() {
         let secret = "whsec_test_secret";
         let payload = br#"{"type":"x"}"#;
-        let header = "t=1700000000,v1=deadbeef";
-        assert!(verify_stripe_signature(secret, payload, header).is_err());
+        let t = chrono::Utc::now().timestamp();
+        let header = format!("t={t},v1=deadbeef");
+        assert!(verify_stripe_signature(secret, payload, &header).is_err());
     }
 
     #[test]
     fn wrong_secret_rejected() {
         let payload = br#"{"a":1}"#;
-        let t = "1700000000";
+        let t = chrono::Utc::now().timestamp().to_string();
         let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, b"real_secret");
         let mut signed = Vec::new();
         signed.extend_from_slice(t.as_bytes());
@@ -827,5 +844,22 @@ mod tests {
         let sig = hex::encode(ring::hmac::sign(&key, &signed).as_ref());
         let header = format!("t={t},v1={sig}");
         assert!(verify_stripe_signature("attacker_secret", payload, &header).is_err());
+    }
+
+    #[test]
+    fn stale_timestamp_rejected() {
+        // A correctly-signed event with an old timestamp must be rejected as a
+        // replay, even though the HMAC itself is valid.
+        let secret = "whsec_test_secret";
+        let payload = br#"{"type":"checkout.session.completed"}"#;
+        let t = "1700000000"; // Nov 2023 — well outside the tolerance window
+        let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret.as_bytes());
+        let mut signed = Vec::new();
+        signed.extend_from_slice(t.as_bytes());
+        signed.push(b'.');
+        signed.extend_from_slice(payload);
+        let sig = hex::encode(ring::hmac::sign(&key, &signed).as_ref());
+        let header = format!("t={t},v1={sig}");
+        assert!(verify_stripe_signature(secret, payload, &header).is_err());
     }
 }
