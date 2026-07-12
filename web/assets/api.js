@@ -229,6 +229,7 @@ export const api = {
     insightsConfig: () => get('/insights/config', { auth: false }),
     gameConfig: () => get('/game/config', { auth: false }),
     billingConfig: () => get('/billing/config', { auth: false }),
+    localModels: () => get('/ai/local-models', { auth: false }),
 
     gameProfile: () => get('/game/profile'),
     submitScore: (vitality_score, handle) =>

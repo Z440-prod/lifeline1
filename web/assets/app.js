@@ -8,6 +8,8 @@ import { api, connect, account, keepAlive, identity, onConnection, status, devic
 import * as engine from './engine.js';
 import * as charts from './charts.js';
 import { sound, armGlobalSounds } from './sound.js';
+import { localAI } from './localai.js';
+import { TIER_LABEL } from './device.js';
 
 /* Native store shells (Capacitor) must not show web-payment surfaces —
    subscriptions go through StoreKit / Play Billing there, and donations are
@@ -33,6 +35,7 @@ const store = {
     coachLog: [],        // {role, text}
     labMeta: JSON.parse(localStorage.getItem('lifeline.labs') || '{}'),
     journalDrafts: 0,
+    localAI: null,       // device scan + on-device model state (localAI.probe())
 };
 const saveLabMeta = () => localStorage.setItem('lifeline.labs', JSON.stringify(store.labMeta));
 
@@ -523,18 +526,29 @@ function boardRows(board, me) {
 
 /* ═══ VIEW: COACH ══════════════════════════════════════════════════════════ */
 function viewCoach(el) {
+    const onDevice = localAI.ready();
+    const badge = onDevice
+        ? `<span class="ai-badge on-device" title="Answered by a model running entirely on this device">${I.device} on-device · offline</span>`
+        : `<span class="ai-badge cloud" title="Answered via the identity-stripping privacy proxy">${I.lock} private proxy</span>`;
+    const sysLine = onDevice
+        ? 'running fully on your device — no network, nothing leaves your phone'
+        : 'end-to-end private — the proxy strips your identity before the model sees a word';
+    const eligible = store.localAI?.eligible && !onDevice;
+
     el.innerHTML = `
     ${offlineBanner()}
     <div class="page-head">
         <div class="eyebrow">Clinical-first · zero retention</div>
         <h1>Coach.</h1>
-        <div class="sub">Every message routes through the privacy proxy: stripped of identity, never stored, answered with your on-device context.</div>
+        <div class="sub">Every message is answered with your on-device context. ${onDevice ? 'Right now it never leaves your phone.' : 'The proxy strips your identity before any model sees a word.'}</div>
     </div>
     <div class="card">
+        <div class="coach-head">${badge}</div>
         <div class="coach-thread" id="thread">
-            <div class="msg sys">end-to-end private — the proxy strips your identity before the model sees a word</div>
+            <div class="msg sys">${sysLine}</div>
             ${store.coachLog.map(msgHtml).join('')}
         </div>
+        ${eligible ? `<button class="ondevice-offer" id="coachOfferAi">${I.device}<span><b>Run Lifeline AI privately on this device.</b> Download a small model once — then the coach works offline, forever.</span><span class="chev">›</span></button>` : ''}
         <div class="coach-compose">
             <input class="field" id="coachInput" placeholder="Ask about your sleep, labs, training…" autocomplete="off">
             <button class="btn btn-pulse" id="coachSend">Send</button>
@@ -554,24 +568,34 @@ function viewCoach(el) {
         const tid = 't' + Date.now();
         thread.insertAdjacentHTML('beforeend', `<div class="msg ai" id="${tid}"><div class="who">LIFELINE COACH</div><div class="typing"><span></span><span></span><span></span></div></div>`);
         thread.scrollTop = thread.scrollHeight;
+
+        // The Conductor sets the coach's voice for the day.
+        const tone = conductorTonePrompt();
+        const md = conductorMode();
+        const framed = tone ? `[Today's coaching tone — ${md.label}: ${tone}]\n\nUser: ${text}` : text;
+
         let reply;
-        try {
-            const ch = await api.challenge();
-            // The Conductor sets the coach's voice for the day: prepend the
-            // mode's tone preamble on-device so replies match your rhythm
-            // (gentle on a recovery day, driven on a green-light day).
-            const tone = conductorTonePrompt();
-            const md = conductorMode();
-            const framed = tone
-                ? `[Today's coaching tone — ${md.label}: ${tone}]\n\nUser: ${text}`
-                : text;
-            const res = await api.aiProxy(framed, ch.data?.challenge || 'token');
-            reply = res.status === 200
-                ? (res.data?.content?.[0]?.text || res.data?.content || 'Understood.')
-                : res.status === 403
-                    ? `${res.data?.error?.message || 'Daily free limit reached.'} You'll find the plans under More → Plans.`
-                    : `The proxy answered ${res.status}: ${res.data?.error?.message || 'unavailable'}.`;
-        } catch { reply = 'Could not reach the backend.'; }
+        // Prefer the on-device model when it's installed: instant, private, and
+        // works with no connection at all. Falls back to the cloud proxy only
+        // when there's no local model ready.
+        const local = await localAI.generate(framed, {
+            system: store.localAI?.catalog?.system_prompt,
+            signals: store.signals,
+            summary: `readiness context: HRV ${store.signals.hrv_ms}ms, RHR ${store.signals.resting_heart_rate}bpm, sleep ${store.signals.sleep_hours}h, steps ${store.signals.daily_steps}`,
+        });
+        if (local != null) {
+            reply = local;
+        } else {
+            try {
+                const ch = await api.challenge();
+                const res = await api.aiProxy(framed, ch.data?.challenge || 'token');
+                reply = res.status === 200
+                    ? (res.data?.content?.[0]?.text || res.data?.content || 'Understood.')
+                    : res.status === 403
+                        ? `${res.data?.error?.message || 'Daily free limit reached.'} You'll find the plans under More → Plans.`
+                        : `The proxy answered ${res.status}: ${res.data?.error?.message || 'unavailable'}.`;
+            } catch { reply = 'Could not reach the backend — and no on-device model is installed yet. Enable on-device AI in Settings to chat offline.'; }
+        }
         document.getElementById(tid)?.remove();
         store.coachLog.push({ role: 'ai', text: reply });
         thread.insertAdjacentHTML('beforeend', msgHtml({ role: 'ai', text: reply }));
@@ -580,6 +604,38 @@ function viewCoach(el) {
     $('#coachSend').addEventListener('click', () => send($('#coachInput').value.trim()));
     $('#coachInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(e.target.value.trim()); });
     $$('.suggest button', el).forEach((b) => b.addEventListener('click', () => send(b.dataset.q)));
+    $('#coachOfferAi')?.addEventListener('click', () => downloadOnDeviceModel());
+}
+
+/* Kick off an on-device model download with a progress sheet, then refresh the
+   coach so it switches to the local backend. Offered only on eligible devices. */
+async function downloadOnDeviceModel(modelId) {
+    const info = store.localAI || await localAI.probe();
+    const model = (info.models || []).find((m) => m.id === modelId) || info.models?.[0];
+    if (!model) { toast('This device can’t run an on-device model.', 'var(--warn)'); return; }
+    const host = $('#overlays');
+    const paint = (pct, label) => {
+        host.innerHTML = `<div class="sheet-dim"></div>
+        <div class="sheet" role="dialog" aria-label="On-device AI">
+            <div class="grab"></div>
+            <h3>${esc(model.label)} · on-device</h3>
+            <p style="color:var(--ink-2); font-size:var(--fs-sub); line-height:1.5; margin:2px 0 16px;">
+                ${esc(model.download_mb)} MB · runs privately on your ${esc(TIER_LABEL[info.scan?.tier] || 'device').toLowerCase()}. Once installed, the coach answers offline.</p>
+            <div class="splash-bar"><i style="width:${pct}%"></i></div>
+            <div class="splash-status">${esc(label)}</div>
+        </div>`;
+    };
+    paint(0, 'starting…');
+    const res = await localAI.install(model.id, (pct, label) => paint(pct, `${label} ${pct}%`));
+    store.localAI = await localAI.probe();
+    host.innerHTML = '';
+    if (res.ok) {
+        sound.chime();
+        toast('On-device AI ready — the coach now runs offline', 'var(--ok)');
+        if (routeId() === 'coach' || routeId() === 'settings') render();
+    } else {
+        toast(res.error || 'Could not install the model', 'var(--err)');
+    }
 }
 const msgHtml = (m) => m.role === 'user'
     ? `<div class="msg user">${esc(m.text)}</div>`
@@ -916,6 +972,7 @@ function paintPlans() {
 async function viewSettings(el) {
     const theme = localStorage.getItem('lifeline.theme') || 'auto';
     const acct = account.current;
+    const ai = store.localAI || (store.localAI = await localAI.probe());
     const health = await api.health();
     el.innerHTML = `${offlineBanner()}
     <div class="page-head">
@@ -958,8 +1015,9 @@ async function viewSettings(el) {
             <div class="kv"><span class="k">Raw biometrics</span><span class="v">never leave device</span></div>
             <div class="kv"><span class="k">Vault documents</span><span class="v">E2EE ciphertext</span></div>
             <div class="kv"><span class="k">Arena shares</span><span class="v">one opaque integer</span></div>
-            <div class="kv"><span class="k">Coach proxy</span><span class="v">identity-stripped</span></div>
+            <div class="kv"><span class="k">Coach</span><span class="v">${localAI.ready() ? 'on-device · offline' : 'identity-stripped proxy'}</span></div>
         </div>
+        ${onDeviceAiCard(ai)}
     </div>`;
 
     $('#signOutBtn')?.addEventListener('click', () => {
@@ -982,6 +1040,52 @@ async function viewSettings(el) {
         e.currentTarget.classList.toggle('on', sound.enabled);
         e.currentTarget.setAttribute('aria-checked', String(sound.enabled));
     });
+    $('#installAiBtn')?.addEventListener('click', (e) => downloadOnDeviceModel(e.currentTarget.dataset.model));
+    $('#removeAiBtn')?.addEventListener('click', async () => {
+        if (confirm('Remove the on-device model? The coach will use the private cloud proxy again.')) {
+            await localAI.remove();
+            store.localAI = await localAI.probe();
+            render();
+        }
+    });
+}
+
+/* The "Private AI" card: shows what this device scored, and — on eligible
+   premium devices — lets the user download a Gemma model to run the coach
+   entirely offline. On devices that can't, it explains why, honestly. */
+function onDeviceAiCard(ai) {
+    if (!ai) return '';
+    const tier = ai.scan?.tier || 'entry';
+    const ready = localAI.ready();
+    const ramTxt = ai.scan?.ramGb ? `${ai.scan.ramGb}${ai.scan.ramExact ? '' : '+'} GB` : 'unknown';
+    const backendTxt = ai.backend === 'native' ? 'native ML runtime'
+        : ai.backend === 'webgpu' ? 'WebGPU'
+        : ai.scan?.backends?.length ? ai.scan.backends.join(', ') : 'none detected';
+    const rec = (ai.models || [])[0];
+
+    let action;
+    if (ready) {
+        action = `<div class="ai-ready">${I.check}<span>Running on-device — the coach works offline.</span></div>
+            <button class="btn btn-ghost btn-sm" id="removeAiBtn" style="margin-top:12px;">Remove model</button>`;
+    } else if (ai.eligible && rec) {
+        action = `<button class="btn btn-pulse btn-sm btn-block" id="installAiBtn" data-model="${esc(rec.id)}" style="margin-top:12px;">
+            Download ${esc(rec.label)} · ${esc(rec.download_mb)} MB</button>
+            <p class="ai-note">Runs the coach privately on this device. After install it works with no internet at all.</p>`;
+    } else {
+        action = `<p class="ai-note">This device isn’t powerful enough to run a private model well, so the coach uses the identity-stripping cloud proxy. On-device AI is offered on premium phones with ≥4 GB RAM and a modern accelerator.</p>`;
+    }
+
+    return `<div class="card col-12 ai-card">
+        <div class="card-title">Private on-device AI ${ready ? '<span class="pill live">active</span>' : ai.eligible ? '<span class="pill">available</span>' : ''}</div>
+        <div class="card-sub">run Lifeline’s coach as a local model — no network, nothing leaves your phone</div>
+        <div class="ai-scan">
+            <div class="tile"><div class="v">${esc(TIER_LABEL[tier] || tier)}</div><div class="l">device class</div></div>
+            <div class="tile"><div class="v tnum">${esc(ramTxt)}</div><div class="l">memory</div></div>
+            <div class="tile"><div class="v tnum">${ai.scan?.cores ?? '—'}</div><div class="l">cores</div></div>
+            <div class="tile"><div class="v" style="font-size:var(--fs-sub)">${esc(backendTxt)}</div><div class="l">inference</div></div>
+        </div>
+        ${action}
+    </div>`;
 }
 
 function applyTheme() {
@@ -1068,6 +1172,8 @@ async function bootSequence(withGate) {
     if (game.status === 200) store.game = game.data;
     if (billing.status === 200) store.billing = billing.data;
     setP(66, 'loading rulebooks…');
+    // Scan the device and check what on-device AI (if any) it can run.
+    try { store.localAI = await localAI.probe(); } catch { store.localAI = null; }
     if (status().authed) {
         await Promise.all([refreshArena(), refreshBillingState(), refreshSources()]);
     }
@@ -1173,6 +1279,9 @@ function authGate() {
 async function main() {
     applyTheme();
     armGlobalSounds();
+    // Register the offline service worker first thing — independent of sign-in —
+    // so the app shell + rulebooks cache even before the user reaches the app.
+    registerServiceWorker();
     renderFrame();
     const first = !localStorage.getItem('lifeline.onboarded');
     if (first) {
@@ -1202,6 +1311,7 @@ async function main() {
     }
     keepAlive();
     await render();
+    registerServiceWorker();
     // Refresh signals + portrait at midnight rollover.
     setInterval(() => {
         const fresh = engine.todaySignals();
@@ -1210,6 +1320,21 @@ async function main() {
             if (routeId() === 'portrait') render();
         }
     }, 60_000);
+}
+
+/* Register the offline service worker. It precaches the shell + rulebooks so
+   that — once an on-device model is installed — the app works with no network.
+   Best-effort and non-blocking: a registration failure never affects the app.
+   Requires a secure context (https or localhost), which the SW spec enforces. */
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    if (!window.isSecureContext) return;
+    const reg = () => navigator.serviceWorker.register('/sw.js').catch((e) => {
+        console.warn('Service worker registration failed:', e);
+    });
+    // main() is async, so the window 'load' event may already have fired by now.
+    if (document.readyState === 'complete') reg();
+    else window.addEventListener('load', reg, { once: true });
 }
 
 main();
