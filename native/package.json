@@ -7,6 +7,7 @@
         "add:ios": "cap add ios",
         "add:android": "cap add android",
         "sync": "cap sync",
+        "assets": "capacitor-assets generate --iconBackgroundColor '#0e1116' --splashBackgroundColor '#000000' --iconBackgroundColorDark '#0e1116' --splashBackgroundColorDark '#000000'",
         "open:ios": "cap open ios",
         "open:android": "cap open android"
     },
@@ -15,9 +16,13 @@
         "@capacitor/ios": "^6.1.0",
         "@capacitor/android": "^6.1.0",
         "@capacitor/haptics": "^6.0.0",
-        "@capacitor/status-bar": "^6.0.0"
+        "@capacitor/status-bar": "^6.0.0",
+        "@capacitor/local-notifications": "^6.1.0",
+        "@capacitor/device": "^6.0.0",
+        "lifeline-native": "file:./plugins/lifeline-native"
     },
     "devDependencies": {
-        "@capacitor/cli": "^6.1.0"
+        "@capacitor/cli": "^6.1.0",
+        "@capacitor/assets": "^3.0.5"
     }
 }

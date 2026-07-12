@@ -1,0 +1,31 @@
+{
+    "name": "lifeline-native",
+    "version": "1.0.0",
+    "description": "Native capabilities for the Lifeline app — IAP, notifications, on-device AI, HealthKit/Health Connect, Sign in with Apple/Google, App Attest, device profile.",
+    "main": "dist/plugin.cjs.js",
+    "module": "dist/esm/index.js",
+    "types": "dist/esm/index.d.ts",
+    "private": true,
+    "scripts": {
+        "build": "tsc && rollup -c rollup.config.js",
+        "watch": "tsc --watch"
+    },
+    "capacitor": {
+        "ios": { "src": "ios" },
+        "android": { "src": "android" }
+    },
+    "files": [
+        "dist/",
+        "ios/",
+        "android/",
+        "LifelineNative.podspec"
+    ],
+    "peerDependencies": {
+        "@capacitor/core": "^6.0.0"
+    },
+    "devDependencies": {
+        "@capacitor/core": "^6.1.0",
+        "rollup": "^4.0.0",
+        "typescript": "~5.4.0"
+    }
+}
