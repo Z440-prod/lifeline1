@@ -10,6 +10,7 @@ import * as charts from './charts.js';
 import { sound, armGlobalSounds } from './sound.js';
 import { localAI } from './localai.js';
 import { TIER_LABEL } from './device.js';
+import { notify } from './notify.js';
 
 /* Native store shells (Capacitor) must not show web-payment surfaces —
    subscriptions go through StoreKit / Play Billing there, and donations are
@@ -36,6 +37,7 @@ const store = {
     labMeta: JSON.parse(localStorage.getItem('lifeline.labs') || '{}'),
     journalDrafts: 0,
     localAI: null,       // device scan + on-device model state (localAI.probe())
+    anecdote: null,      // { day, text } — the AI-written daily note (cached per day)
 };
 const saveLabMeta = () => localStorage.setItem('lifeline.labs', JSON.stringify(store.labMeta));
 
@@ -187,6 +189,124 @@ function personalShape() {
         signature,
         coachContext,
     };
+}
+
+/* ── Daily anecdote ───────────────────────────────────────────────────────────
+   Once a day the AI writes a short, personal note about your day — built from
+   the personal shape (vitality, focus, standout signal, league, streak). The
+   prompt is assembled on-device and answered by the on-device model when
+   installed, else the identity-stripping proxy, else an offline template. The
+   health numbers never leave the device; only the finished sentence does (to
+   the OS notification center, if you've opted in). Cached once per local day. */
+function anecdoteStats() {
+    const cfg = store.insights;
+    const s = store.signals;
+    const shape = personalShape();
+    const v = vitalityNow();
+    const devs = cfg ? engine.signalDeviations(cfg, s) : [];
+    const best = [...devs].sort((a, b) => b.goodness - a.goodness)[0];
+    const la = cfg ? engine.lifelineAge(cfg, s) : { offset: 0 };
+    return {
+        shape,
+        vitality: v,
+        focus: shape?.focusLabel || 'Longevity',
+        league: shape?.league?.name || '',
+        streak: store.profile?.streak_days ? `${store.profile.streak_days}-day streak` : '',
+        best_signal: best?.name || 'recovery',
+        age_delta: `${Math.abs(la.offset)} yrs ${la.offset <= 0 ? 'younger' : 'older'}`,
+    };
+}
+
+/* Fill a template's {tokens} from the stats. */
+function fillTemplate(tpl, st) {
+    return tpl
+        .replace(/\{vitality\}/g, st.vitality)
+        .replace(/\{focus\}/g, st.focus.toLowerCase())
+        .replace(/\{league\}/g, st.league || 'your league')
+        .replace(/\{streak\}/g, st.streak || 'streak')
+        .replace(/\{best_signal\}/g, st.best_signal.toLowerCase())
+        .replace(/\{age_delta\}/g, st.age_delta)
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/* Deterministic offline anecdote from the server's templates — always works,
+   even with no network and no model. Picks a template by mode, seeded by the
+   day so it's stable within a day but varies across days. */
+function templateAnecdote(st) {
+    const a = store.insights?.anecdote;
+    const modeId = st.shape?.mode?.id || 'maintain';
+    const list = (a?.templates?.[modeId]) || [
+        `Vitality ${st.vitality} today — ${st.best_signal.toLowerCase()} led the way. Keep the rhythm going.`,
+    ];
+    const daySeed = new Date().getDate();
+    return fillTemplate(list[daySeed % list.length], st);
+}
+
+/* Keep only the first sentence and trim it to a notification-friendly length. */
+function oneSentence(text, maxWords = 30) {
+    let t = String(text || '').replace(/\s+/g, ' ').trim();
+    // Strip a leading role label the model sometimes adds.
+    t = t.replace(/^["“]?(lifeline[:,-]\s*)/i, '');
+    const m = t.match(/^[^.!?]*[.!?]/);
+    if (m) t = m[0];
+    const words = t.split(' ');
+    if (words.length > maxWords) t = words.slice(0, maxWords).join(' ') + '…';
+    return t.trim();
+}
+
+/* Produce today's anecdote (cached per day). Order: on-device model → proxy →
+   template. Never throws — always returns a usable sentence. */
+async function generateDailyAnecdote(force = false) {
+    const day = new Date().toISOString().slice(0, 10);
+    if (!force && store.anecdote?.day === day && store.anecdote.text) return store.anecdote.text;
+
+    const st = anecdoteStats();
+    const cfg = store.insights?.anecdote;
+    const system = cfg?.system || 'Write one warm, specific sentence about the user\'s day from the stats.';
+    const statLine = `vitality ${st.vitality}, ${st.focus} focus, standout ${st.best_signal}`
+        + `${st.league ? ', ' + st.league + ' league' : ''}${st.streak ? ', ' + st.streak : ''}, `
+        + `biological age ${st.age_delta} than passport`;
+    const prompt = `${system}\n\nToday's stats: ${statLine}.`;
+    const maxWords = cfg?.max_words || 28;
+
+    let text = null;
+    // 1. On-device model (fully offline, most private).
+    try {
+        const local = await localAI.generate(prompt, { system, signals: store.signals, summary: statLine });
+        if (local) text = oneSentence(local, maxWords);
+    } catch { /* fall through */ }
+    // 2. Identity-stripping proxy. Ignore the development mock echo (returned
+    //    when no API key is configured) so dev/offline gets the real template.
+    if (!text && status().authed) {
+        try {
+            const ch = await api.challenge();
+            const res = await api.aiProxy(prompt, ch.data?.challenge || 'token');
+            if (res.status === 200) {
+                const raw = res.data?.content?.[0]?.text || res.data?.content;
+                if (raw && !String(raw).includes('[Mock Claude Response]')) {
+                    text = oneSentence(raw, maxWords);
+                }
+            }
+        } catch { /* fall through */ }
+    }
+    // 3. Offline template.
+    if (!text) text = templateAnecdote(st);
+
+    store.anecdote = { day, text };
+    return text;
+}
+
+/* Once a local day, when enabled, fire the daily note as an OS notification.
+   Also (re)arms the native background schedule. Safe to call on every boot. */
+async function maybeSendDailyNotification() {
+    try {
+        notify.scheduleDaily(); // keep the native daily reminder armed
+        if (!notify.enabled() || notify.sentToday()) return;
+        if (notify.permission() !== 'granted' && !window.LifelineNotifications) return;
+        const text = await generateDailyAnecdote();
+        await notify.show(store.insights?.anecdote?.notification_title || 'Your Lifeline is ready', text);
+    } catch { /* notifications are best-effort; never block the app */ }
 }
 
 /* ── Toasts ───────────────────────────────────────────────────────────────── */
@@ -404,6 +524,10 @@ function viewPortrait(el) {
         ${shape.league ? `<span class="chip shape-league"><span class="d" style="background:${charts.LEAGUE_COLORS[shape.league.id]}"></span>${esc(shape.league.name)}</span>` : ''}
         <span class="chip shape-data" data-rich="${shape.dataRichness}">${esc(shape.dataRichness)} data</span>
     </div>
+    <div class="daily-note" id="dailyNote">
+        <span class="dn-mark">${I.coach}</span>
+        <span class="dn-text">${store.anecdote?.text ? esc(store.anecdote.text) : 'Writing your note for today…'}</span>
+    </div>
     ${streakAtRisk ? `<div class="streak-warn"><span class="flame">${I.flame}</span><span>Your <b>${store.profile.streak_days}-day streak</b> is on the line — log today's score to keep it alive.</span></div>` : ''}
     <div class="grid">
         <div class="card hero col-12">
@@ -461,6 +585,13 @@ function viewPortrait(el) {
 
     // Tapping the focus chip jumps to the Focus control in Settings.
     $('#focusChip')?.addEventListener('click', () => { location.hash = '#/settings'; });
+
+    // Fill (or refresh) today's AI note. Cached per day; regenerated if the
+    // day rolled over since it was last written.
+    generateDailyAnecdote().then((text) => {
+        const t = $('#dailyNote .dn-text');
+        if (t) t.textContent = text;
+    }).catch(() => {});
 
     // The Conductor's call-to-action routes to the mode's suggested view (or
     // logs today's score when the mode wants a check-in).
@@ -1126,6 +1257,11 @@ async function viewSettings(el) {
             <div class="seg seg-wrap" id="focusSeg">
                 ${['auto', 'sleep', 'heart', 'activity', 'longevity'].map((f) => `<button data-focus="${f}" class="${userFocus() === f ? 'active' : ''}">${FOCI[f].label}</button>`).join('')}
             </div>
+            ${notify.supported() ? `
+            <div class="kv" style="margin-top:14px;">
+                <span class="k">Daily check-in<br><small style="color:var(--ink-3); font-weight:500; font-size:var(--fs-micro)">a once-a-day AI note about your day</small></span>
+                <span class="switch ${notify.enabled() && notify.permission() === 'granted' ? 'on' : ''}" id="notifySwitch" role="switch" aria-checked="${notify.enabled() && notify.permission() === 'granted'}" tabindex="0"></span>
+            </div>` : ''}
         </div>
         <div class="card col-6">
             <div class="card-title">Appearance &amp; feel</div>
@@ -1166,6 +1302,27 @@ async function viewSettings(el) {
         $$('#focusSeg button').forEach((x) => x.classList.toggle('active', x === b));
         toast(`Focus set to ${FOCI[b.dataset.focus].label} — your Today view will lead with it`);
     }));
+    $('#notifySwitch')?.addEventListener('click', async (e) => {
+        const el = e.currentTarget;
+        if (el.classList.contains('on')) {
+            notify.disable();
+            el.classList.remove('on');
+            el.setAttribute('aria-checked', 'false');
+            toast('Daily check-in off');
+            return;
+        }
+        const ok = await notify.enable();
+        el.classList.toggle('on', ok);
+        el.setAttribute('aria-checked', String(ok));
+        if (ok) {
+            toast('Daily check-in on — your first note is on its way');
+            // Fire today's note now as a welcome (respects the once-a-day gate).
+            const text = await generateDailyAnecdote();
+            await notify.show(store.insights?.anecdote?.notification_title || 'Your Lifeline is ready', text);
+        } else {
+            toast('Notifications are blocked — enable them in your device settings', 'var(--warn)');
+        }
+    });
     $('#soundSwitch')?.addEventListener('click', (e) => {
         sound.setEnabled(!sound.enabled);
         e.currentTarget.classList.toggle('on', sound.enabled);
@@ -1479,12 +1636,16 @@ async function main() {
     keepAlive();
     await render();
     registerServiceWorker();
+    // Once-a-day AI note → OS notification, if the user has opted in.
+    maybeSendDailyNotification();
     // Refresh signals + portrait at midnight rollover.
     setInterval(() => {
         const fresh = engine.todaySignals();
         if (JSON.stringify(fresh) !== JSON.stringify(store.signals)) {
             store.signals = fresh;
+            store.anecdote = null; // a new day → a fresh note
             if (routeId() === 'portrait') render();
+            maybeSendDailyNotification();
         }
     }, 60_000);
 }

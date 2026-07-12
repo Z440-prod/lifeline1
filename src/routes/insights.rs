@@ -23,7 +23,7 @@ pub async fn insights_config_handler(
         .increment(1);
 
     Ok(Json(json!({
-        "version": "1.1.0",
+        "version": "1.2.0",
         "policy_matrix_version": state.config.ai.policy_matrix_version,
 
         // ── Lifeline Age ─────────────────────────────────────────────────────
@@ -205,6 +205,36 @@ pub async fn insights_config_handler(
                 "balanced": "Be clear, steady, and practical. Reinforce consistency and small wins.",
                 "driven": "Be energizing and motivating. The user is primed — encourage ambitious but safe effort."
             }
+        },
+
+        // ── Daily anecdote ──────────────────────────────────────────────────
+        // Style rules for the once-a-day note the AI writes about the user's
+        // day. Rules only: the client builds the stats prompt on-device (the
+        // server never sees the health numbers), sends it to the on-device
+        // model or the identity-stripping proxy, and falls back to these
+        // templates offline. Every {token} is substituted on-device.
+        "anecdote": {
+            "system": "You are Lifeline, a warm, sharp health companion. Write EXACTLY ONE sentence (max 28 words) about the user's day from the stats provided. Name their standout signal and their rank if present. Be encouraging and specific. No medical advice, no diagnosis, and never invent numbers that aren't given.",
+            "notification_title": "Your Lifeline is ready",
+            "max_words": 28,
+            // Offline fallback templates per Conductor mode. The client fills
+            // {vitality} {focus} {league} {streak} {best_signal} {age_delta}.
+            "templates": {
+                "recover": [
+                    "Recovery day — vitality {vitality}, and your body asked for a lighter touch. Rest is the work today; {league} still holds.",
+                    "Your {best_signal} carried you at vitality {vitality}. Ease off, sleep well, and let tomorrow come to you."
+                ],
+                "maintain": [
+                    "Steady day at vitality {vitality} — {best_signal} led the way and your rhythm is holding. Log it to keep your {streak}.",
+                    "Balanced signals, vitality {vitality}, {league} league. Consistency is quietly compounding — one more good day."
+                ],
+                "push": [
+                    "Green light: vitality {vitality}, {best_signal} on point, {league} league. Today's a day to reach — go take a rank.",
+                    "You're primed — vitality {vitality} and a {streak}. This is the day to climb the Arena."
+                ]
+            },
+            // A tiny library of openers so repeated days don't read identically.
+            "openers": ["Today,", "Right now,", "This morning,", "Heads up —"]
         }
     })))
 }

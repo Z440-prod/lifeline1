@@ -41,6 +41,13 @@ conversation is stored or used for training. The coach declines medical
 diagnosis and directs users to clinicians where appropriate (clinical-first
 policy matrix, versioned, served at `/api/v1/ai/policy-matrix`).
 
+## Daily notifications (opt-in)
+Off by default. **Settings → Daily check-in** requests OS permission and then
+sends one notification per day: a short, AI-written note about the user's day
+(vitality, standout signal, rank, streak). The text is generated on-device — no
+health data is transmitted; only the finished sentence reaches the notification
+center. The app is fully functional with notifications off.
+
 ## On-device AI (optional, premium devices)
 On capable phones, Settings offers to download a small on-device model (Gemma)
 so the coach runs **entirely on the device** with no network. The downloaded

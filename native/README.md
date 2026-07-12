@@ -65,6 +65,31 @@ The model catalog (sizes, hardware floors) is served rules-only at
 size with the user (the web card already displays it). The downloaded weights
 are *data, not executable code* (Guideline 2.5.2).
 
+## Daily notifications (opt-in)
+
+The web layer writes a once-a-day AI note about the user's day and, when the
+user turns on **Settings → Daily check-in**, delivers it as a notification. On
+the web it fires on app-open (a browser can't reliably wake in the background);
+the native shells should schedule a **real background daily local notification**
+via `@capacitor/local-notifications`, exposed to the web layer through a bridge:
+
+```js
+window.LifelineNotifications = {
+  permission: () => 'granted' | 'denied' | 'default',
+  requestPermission: async () => boolean,     // OS auth prompt
+  scheduleDaily: (hour, minute) => {},         // repeating local notification
+  cancelDaily: () => {},
+  show: async (title, body) => {},             // fire one now
+};
+```
+
+The note text is generated **on-device** (personal shape → on-device model /
+identity-stripping proxy / offline template) — no health data is sent anywhere;
+only the finished sentence reaches the OS notification center. iOS surfaces the
+authorization prompt automatically; add `NSUserNotificationsUsageDescription`
+if you want a custom rationale. Notifications must remain **opt-in** (both
+stores) — the app is fully functional with them off.
+
 ## ⚠️ Subscriptions in the store builds
 
 Apple (App Review 3.1.1) and Google (Play Payments policy) both require
