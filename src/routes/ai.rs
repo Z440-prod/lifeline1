@@ -196,3 +196,91 @@ pub async fn policy_matrix_handler(
         }
     })))
 }
+
+/// Handler for `GET /api/v1/ai/local-models`.
+///
+/// Ships the **catalog** of on-device AI models the client can download so the
+/// coach runs entirely on the phone — no network, maximum privacy. Rules-only
+/// (no user data): model sizes, hardware floors, and the eligibility criteria
+/// the client scanner checks. Public + cacheable like the policy matrix.
+///
+/// This is the server half of "the app doesn't need the internet anymore":
+/// once a premium device downloads a model listed here, the coach answers
+/// locally and the cloud proxy is only a fallback for devices that can't.
+#[tracing::instrument(skip(state))]
+pub async fn local_models_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/ai/local-models")
+        .increment(1);
+    Ok(Json(json!({
+        "version": "1.0.0",
+        "policy_matrix_version": state.config.ai.policy_matrix_version,
+        // Same clinical-first voice as the cloud coach, so answers feel
+        // identical whether they come from the phone or the proxy.
+        "system_prompt": "You are Lifeline AI, a private on-device health companion. \
+            All computation happens on the user's device; nothing is sent anywhere. \
+            Give clinical-first, empathetic guidance from the biometric context provided. \
+            Never ask for identifying information.",
+        // Eligibility the on-device scanner evaluates. A device must clear the
+        // floor AND expose an inference backend (a native runtime bridge, or
+        // WebGPU in a capable browser) to be offered a download.
+        "eligibility": {
+            "min_ram_gb": 4,
+            "min_cpu_cores": 6,
+            // Any one of these backends being present makes local inference
+            // possible; the client prefers them in this order.
+            "backends": ["native-mediapipe", "native-coreml", "webgpu"],
+            "notes": "Offered only on premium devices that clear the floor and \
+                expose a supported inference backend."
+        },
+        // Ordered best-first. `min_device_tier` gates which the scanner offers;
+        // `recommended` marks the default pick per tier. Sizes are int4/int8
+        // on-device quantizations. `sha256` lets the client verify a finished
+        // download before trusting it.
+        "models": [
+            {
+                "id": "gemma-3-1b-it-int4",
+                "label": "Gemma 3 · 1B",
+                "family": "gemma",
+                "params_b": 1.0,
+                "quantization": "int4",
+                "download_mb": 555,
+                "min_ram_gb": 3,
+                "min_device_tier": "capable",
+                "context_tokens": 4096,
+                "backends": ["native-mediapipe", "webgpu"],
+                "sha256": "",
+                "recommended_for": ["capable"]
+            },
+            {
+                "id": "gemma-3n-e2b-int4",
+                "label": "Gemma 3n · E2B",
+                "family": "gemma",
+                "params_b": 2.0,
+                "quantization": "int4",
+                "download_mb": 1400,
+                "min_ram_gb": 4,
+                "min_device_tier": "premium",
+                "context_tokens": 8192,
+                "backends": ["native-mediapipe", "native-coreml", "webgpu"],
+                "sha256": "",
+                "recommended_for": ["premium"]
+            },
+            {
+                "id": "gemma-2-2b-it-int8",
+                "label": "Gemma 2 · 2B",
+                "family": "gemma",
+                "params_b": 2.6,
+                "quantization": "int8",
+                "download_mb": 2500,
+                "min_ram_gb": 6,
+                "min_device_tier": "premium",
+                "context_tokens": 8192,
+                "backends": ["native-mediapipe", "native-coreml"],
+                "sha256": "",
+                "recommended_for": []
+            }
+        ]
+    })))
+}

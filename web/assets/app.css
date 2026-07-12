@@ -368,6 +368,51 @@ html[data-theme="dark"] .seg button.active, .seg button.active { background: col
     .conductor-banner .cb-cta { width: 100%; margin-top: 4px; }
 }
 
+/* ── On-device AI ─────────────────────────────────────────────────────────
+   Coach backend badge, the download offer, and the Settings capability card. */
+.coach-head { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.ai-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--fs-micro); font-weight: 650; letter-spacing: 0.01em;
+    padding: 5px 10px; border-radius: 99px; line-height: 1;
+}
+.ai-badge svg { width: 13px; height: 13px; }
+.ai-badge.on-device { background: color-mix(in srgb, var(--ok) 16%, var(--card)); color: var(--ok-deep, var(--ok)); }
+.ai-badge.cloud { background: var(--card-2); color: var(--ink-2); }
+/* Offer to install a local model — a large, comfortable touch target (≥48px). */
+.ondevice-offer {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    min-height: 56px; padding: 13px 15px; margin: 4px 0 12px;
+    background: linear-gradient(120deg, color-mix(in srgb, var(--tint) 12%, var(--card)), var(--card));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 26%, transparent);
+    border-radius: 16px; color: var(--ink); font-size: var(--fs-sub); line-height: 1.4;
+    transition: transform 0.25s var(--spring);
+}
+.ondevice-offer:active { transform: scale(0.98); }
+.ondevice-offer svg { width: 22px; height: 22px; flex-shrink: 0; color: var(--tint); }
+.ondevice-offer b { color: var(--ink); font-weight: 700; }
+.ondevice-offer .chev { margin-left: auto; color: var(--ink-3); font-size: 1.3rem; font-weight: 700; }
+
+.ai-card .ai-scan {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0 4px;
+}
+@media (max-width: 460px) { .ai-card .ai-scan { grid-template-columns: repeat(2, 1fr); } }
+.ai-card .ai-scan .tile { background: var(--card-2); border-radius: 13px; padding: 11px 12px; text-align: left; }
+.ai-card .ai-scan .tile .v { font-family: var(--font-round); font-weight: 750; font-size: var(--fs-body); letter-spacing: -0.01em; }
+.ai-card .ai-scan .tile .l { color: var(--ink-3); font-size: var(--fs-micro); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+.ai-card .ai-note { color: var(--ink-3); font-size: var(--fs-sub); line-height: 1.5; margin-top: 10px; }
+.ai-card .ai-ready { display: flex; align-items: center; gap: 9px; color: var(--ok); font-weight: 650; font-size: var(--fs-sub); }
+.ai-card .ai-ready svg { width: 18px; height: 18px; }
+.pill {
+    display: inline-block; vertical-align: middle; margin-left: 8px;
+    font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 99px; background: var(--card-2); color: var(--ink-2);
+}
+.pill.live { background: color-mix(in srgb, var(--ok) 18%, var(--card)); color: var(--ok); }
+@media (prefers-reduced-motion: reduce) {
+    .ai-badge, .ondevice-offer, .conductor-banner .cb-glyph { animation: none; transition: none; }
+}
+
 /* League emblem glint — the flex */
 .emblem { border-radius: 22px; }
 .emblem::after {

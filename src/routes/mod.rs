@@ -85,6 +85,7 @@ async fn harden_and_cache(
                 | "/api/v1/game/config"
                 | "/api/v1/billing/config"
                 | "/api/v1/ai/policy-matrix"
+                | "/api/v1/ai/local-models"
         ) {
             Some("public, max-age=300, stale-while-revalidate=3600")
         } else {
@@ -227,6 +228,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/account/login", post(account::login_handler))
         .route("/account/oauth", post(account::oauth_handler))
         .route("/ai/policy-matrix", get(ai::policy_matrix_handler))
+        // Catalog of on-device AI models (Gemma sizes, hardware floors) so
+        // premium phones can run the coach offline. Rules-only, cacheable.
+        .route("/ai/local-models", get(ai::local_models_handler))
         // Rules-only insights config for the on-device longevity engine; ships
         // no user data, so it's public + cacheable like the policy matrix.
         .route("/insights/config", get(insights::insights_config_handler))
@@ -260,6 +264,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
     // client-side routes deep-link correctly.
     let assets = tower_http::services::ServeDir::new("web/assets");
     let manifest = tower_http::services::ServeFile::new("web/manifest.webmanifest");
+    // Service worker — must be served from the root so it can control the whole
+    // origin scope (a worker's scope is capped at its own URL path).
+    let service_worker = tower_http::services::ServeFile::new("web/sw.js");
     // Store listings (App Store / Google Play) require a public privacy
     // policy URL — served by the same binary at /privacy.
     let privacy = tower_http::services::ServeFile::new("web/privacy.html");
@@ -273,6 +280,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1", protected_routes)
         .nest_service("/assets", assets)
         .route_service("/manifest.webmanifest", manifest)
+        .route_service("/sw.js", service_worker)
         .route_service("/privacy", privacy)
         .fallback_service(shell)
         .layer(middleware::from_fn_with_state(

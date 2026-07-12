@@ -1664,3 +1664,51 @@ async fn test_account_signin_signup_flow() {
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "unknown provider must 400");
 }
+
+#[tokio::test]
+async fn test_local_models_catalog_is_rules_only() {
+    // The on-device model catalog powers the offline coach on premium phones.
+    // It must be public (no session), cacheable, and carry only rules — model
+    // sizes + hardware floors + eligibility — never any user data.
+    let (state, _db) = create_test_state();
+    let app = create_router(state);
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12362));
+
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/ai/local-models")
+                .extension(axum::extract::ConnectInfo(addr))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    // Public, user-independent surface → cacheable.
+    assert!(
+        res.headers().get("cache-control").is_some(),
+        "catalog should be cacheable"
+    );
+    let body = axum::body::to_bytes(res.into_body(), 20000).await.unwrap();
+    let cfg: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+    let models = cfg["models"].as_array().expect("models array");
+    assert!(!models.is_empty(), "at least one model offered");
+    // Every model advertises the fields the client scanner needs to gate it.
+    for m in models {
+        assert!(m["id"].is_string());
+        assert!(m["download_mb"].is_number());
+        assert!(m["min_ram_gb"].is_number());
+        assert!(m["min_device_tier"].is_string());
+        assert!(m["backends"].is_array());
+    }
+    // Eligibility floor is present for the scanner to evaluate.
+    assert!(cfg["eligibility"]["min_ram_gb"].is_number());
+    assert!(cfg["eligibility"]["backends"].is_array());
+    // A Gemma model is on the menu, as the product promises.
+    assert!(
+        models.iter().any(|m| m["family"] == "gemma"),
+        "Gemma should be offered"
+    );
+}
