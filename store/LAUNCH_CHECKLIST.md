@@ -38,16 +38,16 @@
 - [ ] Privacy policy at `/privacy` mentions on-device AI + account email.
 
 ## 4. Store binaries (see `native/README.md`)
-- [ ] `npx cap add ios && npx cap add android`, set signing, point `server.url` at production.
-- [ ] Generate app icons + splash from a source asset (`@capacitor/assets`).
+The native capabilities are **already coded** as the `lifeline-native` Capacitor
+plugin (`native/plugins/lifeline-native`) and auto-wired by the web app — so
+this phase is mostly "build, enable capabilities, sign, submit," not "write."
+- [ ] `cd native && npm install && npx cap add ios && npx cap add android`, set signing, point `server.url` at production.
+- [ ] `npm run assets` — generates all icons + splash from `native/assets/icon.svg`.
+- [ ] `npx cap sync` — picks up the plugin + `@capacitor/local-notifications` + `@capacitor/device`.
 - [ ] Create in-app subscriptions in App Store Connect & Play Console
-      (`pro_monthly`, `elite_monthly`) — **store builds must use IAP, not Stripe** (Apple 3.1.1 / Play Payments policy).
-- [ ] Implement `POST /billing/store-receipt` receipt validation feeding the same `upsert_subscription` (backend tier logic unchanged).
-- [ ] Hide Stripe purchase buttons when `window.Capacitor` is defined.
-- [ ] HealthKit / Health Connect permissions + usage strings.
-- [ ] Adopt real App Attest in the iOS shell.
-- [ ] (Optional) On-device AI: implement the `window.LifelineLocalAI` bridge
-      (MediaPipe LLM / Core ML) and gate large model downloads to Wi-Fi.
+      (`pro_monthly`, `elite_monthly`) — **store builds must use IAP, not Stripe** (Apple 3.1.1 / Play Payments policy). The `purchase` bridge → `POST /billing/store-receipt` path is already implemented end-to-end.
+- [ ] Enable capabilities: iOS — In-App Purchase, HealthKit, App Attest, Sign in with Apple, Push; add `NSHealthShareUsageDescription` + `NSUserNotificationsUsageDescription`. (Stripe buttons already auto-hide inside the shell.)
+- [ ] Wire the plugin's ⚙️ integration points you want (see plugin README): Google sign-in client ID, Health Connect query, and (optional) MediaPipe on-device AI + Wi-Fi-gated download.
 
 ## 4. Listings
 - [ ] Copy from `store/LISTING.md`; privacy answers from `store/PRIVACY_LABELS.md`.

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Daily check-in notifications (Android 13+). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Health Connect: request only what the insights engine reads. -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+
+    <!-- Play Billing -->
+    <uses-permission android:name="com.android.vending.BILLING" />
+
+    <queries>
+        <!-- Health Connect availability check. -->
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+</manifest>

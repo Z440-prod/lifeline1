@@ -44,3 +44,10 @@ yarn-error.log*
 
 # run-lifeline driver screenshots
 .driver-shots/
+
+# Capacitor / native build artifacts
+native/node_modules/
+native/ios/
+native/android/
+native/plugins/*/dist/
+native/plugins/*/node_modules/

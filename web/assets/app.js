@@ -11,6 +11,12 @@ import { sound, armGlobalSounds } from './sound.js';
 import { localAI } from './localai.js';
 import { TIER_LABEL } from './device.js';
 import { notify } from './notify.js';
+import { installNativeBridges } from './native-bridge.js';
+
+// Wire the native capability bridges (IAP, notifications, on-device AI, device,
+// sign-in, health) the moment the module loads — before boot reads any of them.
+// No-ops entirely on the web; lights up inside the iOS/Android shell.
+installNativeBridges();
 
 /* Native store shells (Capacitor) must not show web-payment surfaces —
    subscriptions go through StoreKit / Play Billing there, and donations are
@@ -189,6 +195,20 @@ function personalShape() {
         signature,
         coachContext,
     };
+}
+
+/* Today's health signals: real on-device data from HealthKit / Health Connect
+   when the native shell exposes window.LifelineHealth, else the deterministic
+   browser simulation. Merged so a partial native payload still fills the rest. */
+async function refreshSignals() {
+    const base = engine.todaySignals();
+    try {
+        if (typeof window !== 'undefined' && window.LifelineHealth?.read) {
+            const real = await window.LifelineHealth.read();
+            if (real && typeof real === 'object') return { ...base, ...real };
+        }
+    } catch { /* fall back to the simulation */ }
+    return base;
 }
 
 /* ── Daily anecdote ───────────────────────────────────────────────────────────
@@ -1496,6 +1516,9 @@ async function bootSequence(withGate) {
     if (game.status === 200) store.game = game.data;
     if (billing.status === 200) store.billing = billing.data;
     setP(66, 'loading rulebooks…');
+    // Real sensor data on the native shells (HealthKit / Health Connect); the
+    // deterministic browser simulation otherwise.
+    store.signals = await refreshSignals();
     // Scan the device and check what on-device AI (if any) it can run.
     try { store.localAI = await localAI.probe(); } catch { store.localAI = null; }
     if (status().authed) {
@@ -1589,7 +1612,18 @@ function authGate() {
             const social = (provider) => {
                 const email = $('#authEmail').value.trim() || '';
                 if (email && !emailRe.test(email)) { setErr('That email looks off — clear it or fix it.'); return; }
-                handle(() => account.social(provider, email));
+                // On the native shells, run the real Sign in with Apple / Google
+                // flow and pass the provider's id-token to the backend to verify;
+                // on the web, fall back to the simulated token.
+                const nativeFn = window.LifelineSignIn?.[provider];
+                handle(async () => {
+                    let idToken;
+                    if (nativeFn) {
+                        try { idToken = await nativeFn(); }
+                        catch { return { status: 0, data: { error: { message: `${provider} sign-in was cancelled.` } } }; }
+                    }
+                    return account.social(provider, email, idToken);
+                });
             };
             $('#appleBtn').addEventListener('click', () => social('apple'));
             $('#googleBtn').addEventListener('click', () => social('google'));
@@ -1638,9 +1672,10 @@ async function main() {
     registerServiceWorker();
     // Once-a-day AI note → OS notification, if the user has opted in.
     maybeSendDailyNotification();
-    // Refresh signals + portrait at midnight rollover.
-    setInterval(() => {
-        const fresh = engine.todaySignals();
+    // Refresh signals + portrait at midnight rollover (and pick up fresh native
+    // health data through the day).
+    setInterval(async () => {
+        const fresh = await refreshSignals();
         if (JSON.stringify(fresh) !== JSON.stringify(store.signals)) {
             store.signals = fresh;
             store.anecdote = null; // a new day → a fresh note

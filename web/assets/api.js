@@ -204,12 +204,13 @@ export const account = {
     },
     register: (email, password) => accountCall('/account/register', { email, password }),
     login: (email, password) => accountCall('/account/login', { email, password }),
-    /* provider: "apple" | "google". Builds the dev-accepted simulated token
-       from a stable subject + the user's email so the flow is exercisable
-       without live OAuth client credentials in the browser. */
-    social: (provider, email) => {
-        const subject = oauthSubject(provider);
-        const id_token = `sim:${subject}:${email || ''}`;
+    /* provider: "apple" | "google". When the native shell provides a real OIDC
+       id-token (via window.LifelineSignIn), it's passed straight through for the
+       backend to verify. On the web, a dev-accepted simulated token is built
+       from a stable subject + email so the flow is exercisable without live
+       OAuth client credentials. */
+    social: (provider, email, idToken) => {
+        const id_token = idToken || `sim:${oauthSubject(provider)}:${email || ''}`;
         return accountCall('/account/oauth', { provider, id_token });
     },
     signOut() {

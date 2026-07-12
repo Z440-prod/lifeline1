@@ -5,16 +5,28 @@ Antigravity engine) into App Store / Google Play binaries. The config runs in
 **thin-client mode**: the shells load the deployed web app over TLS, so web
 releases reach both stores instantly without resubmission.
 
+## The native capabilities are already coded
+
+Every `window.Lifeline*` bridge the web app expects (IAP, notifications,
+on-device AI, HealthKit/Health Connect, Sign in with Apple/Google, device
+profile, App Attest) is implemented as a **local Capacitor plugin** at
+[`plugins/lifeline-native`](plugins/lifeline-native/README.md), and the web app
+auto-wires them in `web/assets/native-bridge.js`. So once you run the build
+steps below, most of it lights up with **no extra code** — the plugin's README
+lists which methods are turnkey (✅) vs. a small documented integration point
+(⚙️, e.g. add the Google/MediaPipe SDK and drop in ~10 lines).
+
 ## Build steps
 
 ```bash
 cd native
-npm install
-npx cap add ios        # requires Xcode 16+ on macOS
-npx cap add android    # requires Android Studio (SDK 35)
-npx cap sync
-npx cap open ios       # set signing team, bundle id health.lifeline.app
-npx cap open android   # set signing config, applicationId health.lifeline.app
+npm install                    # pulls @capacitor/*, the local plugin, assets tool
+npx cap add ios                # requires Xcode 16+ on macOS
+npx cap add android            # requires Android Studio (SDK 35)
+npm run assets                 # generate all app icons + splash from assets/icon.svg
+npx cap sync                   # picks up lifeline-native + official plugins
+npx cap open ios               # set signing team, bundle id health.lifeline.app
+npx cap open android           # set signing config, applicationId health.lifeline.app
 ```
 
 Before building, point `server.url` in `capacitor.config.json` at your
