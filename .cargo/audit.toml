@@ -1,0 +1,11 @@
+# cargo-audit configuration.
+#
+# RUSTSEC-2023-0071 (Marvin timing attack in the `rsa` crate) is reported because
+# `rsa` appears in Cargo.lock as a transitive dependency of `sqlx-mysql`. We only
+# enable sqlx's `postgres` feature — `sqlx-mysql` (and therefore `rsa`) is NEVER
+# compiled into the binary (verified: `cargo tree -i rsa` returns nothing, and no
+# rsa/sqlx-mysql build artifacts are produced). There is no fixed `rsa` version
+# available upstream. Since the vulnerable code never runs in our build, this
+# advisory is not exploitable here. Re-evaluate if we ever enable sqlx MySQL.
+[advisories]
+ignore = ["RUSTSEC-2023-0071"]
