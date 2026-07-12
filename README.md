@@ -1,118 +1,232 @@
-# 🛡️ Antigravity Engine
-### Secure, Zero-Knowledge E2EE Backend for Lifeline iOS
+<div align="center">
 
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-blue.svg)](https://www.rust-lang.org/)
+# 🫀 Lifeline
+
+### The zero-knowledge longevity app — your health, computed on your device, ranked worldwide.
+
+[![Rust](https://img.shields.io/badge/engine-Rust%20%2B%20Axum-orange.svg)](https://www.rust-lang.org/)
+[![Frontend](https://img.shields.io/badge/app-vanilla%20JS%20PWA-f7df1e.svg)]()
+[![Native](https://img.shields.io/badge/native-Capacitor%20(iOS%20%2B%20Android)-119eff.svg)]()
+[![Privacy](https://img.shields.io/badge/architecture-zero--knowledge%20E2EE-2ea44f.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/status-production--ready-success.svg)]()
 
-**Antigravity** is a high-performance, security-first Rust backend framework engine designed specifically to power the **Lifeline iOS** application. Built on top of the Axum web framework and Tokio runtime, it implements state-of-the-art cryptographic validation and client privacy protections.
-
----
-
-## ✨ Features
-
-### 1. 🔒 Apple App Attest & Assertion
-Protects endpoints against botnets, malicious scripts, and cost abuse.
-*   **Hardware-Backed Identity:** Integrates Apple App Attest to cryptographically verify device and app integrity before allowing registration.
-*   **Replay Protection:** Enforces strict monotonic counter verification for subsequent assertions, preventing replay attacks.
-*   **Cryptographic Key Registration:** Securely registers EC P-256 client public keys in PostgreSQL database.
-
-### 2. 🔑 Zero-Knowledge E2EE Document Sync
-The backend is completely blind to user data.
-*   **Blind Persistence:** Synchronizes user biometric data and documents using encrypted blobs.
-*   **AEAD Validation:** Opaque payloads contain IV, ciphertext, and authentication tags encrypted on-device via Secure Enclave.
-*   **Optimistic Concurrency:** Uses a PostgreSQL `SERIALIZABLE` transaction isolation level with automatic retry mechanisms to ensure conflict-free sync resolution.
-
-### 3. 🤖 Anonymized AI Proxy
-A privacy-first gateway to Claude 3.5 Sonnet.
-*   **Metadata Stripping:** Completely strips client-identifying details (IP addresses, device IDs, browser user-agents, etc.) before calling upstream LLM services.
-*   **Policy Matrix Enforcement:** Implements behavior model checks and clinical-first assistance prompts locally on the server.
-
-### 4. 🔗 Health Platform Integrations
-Connect Apple Health, Google Health Connect, and Whoop.
-*   **On-Device Providers:** Apple HealthKit and Google Health Connect are read locally on the client — the server only records that a device authorized access, never the underlying data.
-*   **Whoop OAuth2:** The one provider requiring a server-held credential. Refresh tokens are encrypted at rest with a key derived from the server secret (`crypto::token_vault`) and the authorize/callback flow is bound to the requesting device with a signed, short-lived `state` parameter (`crypto::oauth_state`).
-
-### 5. 🧪 Doctor-Provided Lab Results
-Uploaded through the same zero-knowledge E2EE sync pipeline as any other document — the server stores an opaque, client-encrypted blob tagged with a `document_type` category (e.g. `lab_result`) purely for UI grouping, and never sees test values or provider names.
-
-### 6. ⚡ Production-Ready Performance & Security
-*   **Rate Limiting:** IP-based rate limiting via a token bucket algorithm powered by `tower-governor`.
-*   **Structured Errors:** Clean domain-specific error handling utilizing the `thiserror` and `anyhow` crates.
-*   **Observability:** Out-of-the-box `/health` liveness checks and Prometheus scraping `/metrics` endpoints tracking request latencies.
-*   **PGO Pipeline:** Profile-Guided Optimization scripts for 10-20% runtime performance enhancements.
+</div>
 
 ---
 
-## 🛠️ Tech Stack
-*   **Runtime:** `tokio` (Async multi-threaded)
-*   **Web Framework:** `axum` (Routing & Middleware)
-*   **Database:** `sqlx` (Async PostgreSQL client with automatic migration engine)
-*   **Crypto:** `ring` (HMAC, ECDSA signature verification), `x509-cert` / `der` (Certificate validation)
-*   **Caching:** `moka` (TTL-based single-use nonce caching)
+## What is Lifeline?
+
+Lifeline turns your body's signals — heart rate, HRV, sleep, movement, lab
+results — into **one daily vitality score**, a biological **"Lifeline Age,"** a
+cross-source **readiness** number, and the habits that actually move them. Then
+it does something no other health app does: it lets you **compete on your health
+itself**, on a global leaderboard the server ranks *blind*.
+
+The whole thing is **zero-knowledge by construction**. Your raw health data is
+computed on your device, from rule tables the server publishes. The server never
+sees a heartbeat — only encrypted blobs it cannot read and a single opaque 0–100
+integer you *choose* to share. On premium phones the AI coach even runs a local
+**Gemma** model, so the app works with **no internet at all**.
+
+One Rust binary — the **Antigravity engine** — is the entire product: it exposes
+the API *and* serves the web app, which the iOS/Android shells wrap for the
+stores.
 
 ---
 
-## 🚀 Getting Started
+## Highlights
 
-### 📋 Prerequisites
-*   **Rust** (1.75+ or newer)
-*   **PostgreSQL** (14+ for SERIALIZABLE advisory lock support)
-
-### ⚙️ Local Development Setup
-
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/your-username/antigravity-engine.git
-    cd antigravity-engine
-    ```
-
-2.  **Environment Variables Setup:**
-    Copy the example configuration to `.env`:
-    ```bash
-    cp .env.example .env
-    ```
-    Edit `.env` to supply your local PostgreSQL database URL and development parameters.
-
-3.  **Run Migrations & Start Server:**
-    The engine runs database migrations automatically on startup:
-    ```bash
-    cargo run
-    ```
-    The server will start listening at `http://0.0.0.0:8443` (port configurable in `.env`).
-
-4.  **Open the Lifeline web app:**
-    The full product front end lives in `web/` and is served by the same binary —
-    open **http://localhost:8443/** and you're in the app. In development the
-    browser authenticates via `POST /auth/dev-session` (registers a real WebCrypto
-    P-256 key for this browser, so vault documents are genuinely encrypted and
-    signed client-side). The endpoint is hard-disabled outside
-    `ENVIRONMENT=development`; on iOS hardware the native client uses Apple App
-    Attest against the same API.
-
-    > **TLS:** Antigravity speaks plain HTTP. In production it must sit behind a TLS-terminating
-    > reverse proxy, load balancer, or platform ingress (e.g. nginx, Caddy, an AWS/GCP load
-    > balancer) — it does not perform TLS termination itself.
+| | |
+|---|---|
+| 🧬 **Lifeline Age** | A transparent, additive biological-age model — inspect every year it adds or subtracts. |
+| ⚡ **Cross-source readiness** | Apple Health, Health Connect, and Whoop fuse into one readiness score, renormalized over whatever you've connected. |
+| 🎚️ **The Conductor** | The app's rhythm adapts daily to your own readiness + habits: accent color, lead view, primary action, and the coach's tone all shift between **Recover / Maintain / Push** modes — computed on-device. |
+| 🏆 **The Arena** | Log your opaque vitality score to a global ladder: six leagues (Bronze → Apex), weekly seasons, streaks, XP. Rivals see a handle and a number — never a biometric. |
+| 🤖 **Private AI coach** | Clinical-first guidance through an identity-stripping proxy — or, on capable phones, a **downloaded on-device Gemma model** that answers fully offline. Hard token budgets keep costs bounded. |
+| 🔐 **The Vault** | Journals and lab results are AES-GCM-encrypted on-device and signed; the server stores ciphertext it can never decrypt. Labs are plotted against reference ranges locally. |
+| 💳 **Subscriptions & donations** | Free / Pro / Elite tiers, enforced **server-side**. Stripe on the web; native IAP (StoreKit / Play Billing) in the store apps. |
+| 👤 **Accounts, done privately** | Email + password (PBKDF2), Sign in with Apple, or Google — an identity layer that holds **no keys and no health data**. Delete it and everything tied to it, in-app. |
+| 📴 **Offline-first** | A service worker precaches the shell + rule tables; with an on-device model installed, the app needs no network. |
 
 ---
 
-## 📦 Production Builds & Profile-Guided Optimization (PGO)
-To achieve maximum compiler optimization for your target architecture, utilize the PGO build pipeline:
+## Architecture
 
-1.  Build the instrumented binary:
-    ```bash
-    ./scripts/pgo_build.sh
-    ```
-2.  Run the server and perform a load test / representative workload.
-3.  Re-run the script to compile the final optimized production binary.
+```
+┌────────────────────────────────────────────────────────────────────┐
+│  iOS shell (Capacitor)        Android shell (Capacitor)             │
+│      └──────────────┬───────────────────┘                          │
+│                     │  thin client: loads the web app over TLS      │
+│              ┌──────▼───────────────────────────────────────┐       │
+│              │  Web app  (web/ — vanilla JS PWA)             │       │
+│              │  • on-device insights engine (engine.js)     │       │
+│              │  • WebCrypto E2EE (P-256 sign + AES-GCM)      │       │
+│              │  • device scanner + on-device AI (Gemma)      │       │
+│              │  • service worker (offline)                   │       │
+│              └──────┬───────────────────────────────────────┘       │
+│                     │  HTTPS  /api/v1/*                              │
+│              ┌──────▼───────────────────────────────────────┐       │
+│              │  Antigravity engine  (Rust · Axum · Tokio)    │       │
+│              │  • serves the web app AND the API             │       │
+│              │  • App Attest · sessions · rate limiting      │       │
+│              │  • ships RULES, never computes on health data │       │
+│              │  • Stripe + IAP receipt verification          │       │
+│              └──────┬───────────────────────────────────────┘       │
+│                     │                                                │
+│              ┌──────▼──────┐   (falls back to in-memory mock if      │
+│              │ PostgreSQL  │    unavailable — great for local dev)   │
+│              └─────────────┘                                         │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+**The zero-knowledge contract.** The server publishes *rules* — band tables,
+model coefficients, reference ranges, the Conductor's thresholds, the AI
+policy matrix. The client applies them to plaintext health data that never
+leaves the device. The only things the server ever stores are: client-side
+encrypted vault blobs, a pseudonymous Arena score, subscription state, and an
+account email for sign-in.
 
 ---
 
-## 📈 Monitoring
-*   **Liveness Check:** `GET /health`
-*   **Prometheus Exporter:** `GET /metrics`
+## Quick start
+
+Requires the Rust toolchain. PostgreSQL is optional — without it the engine
+falls back to an in-memory mock, which is perfect for local development.
+
+```bash
+cargo run
+# → Antigravity engine listening on http://0.0.0.0:8443
+# open http://127.0.0.1:8443  — the full app is served by the binary
+```
+
+For local development, run in dev mode so the browser can mint a session
+(`/auth/dev-session`) and the sign-in gate can simulate Apple/Google:
+
+```bash
+ANTIGRAVITY__AUTH__ENVIRONMENT=development cargo run
+```
+
+### Build, run, and drive it
+
+There's a ready-made skill that builds, launches, and end-to-end **drives** the
+app (sign-up → portrait → coach → vault → settings, with screenshots):
+
+```bash
+# see .claude/skills/run-lifeline/SKILL.md
+node .claude/skills/run-lifeline/driver.mjs
+```
+
+### Tests & quality gates
+
+```bash
+cargo test                                    # unit + integration
+cargo clippy --all-targets -- -D warnings     # lint (warnings are errors)
+cargo fmt --check                             # formatting
+```
 
 ---
 
-## 📜 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+## Security model
+
+- **Apple App Attest** — hardware-backed device identity; EC P-256 keys, strict
+  monotonic replay protection. Browsers use a dev-only session mint (hard-disabled
+  in production); accounts provide the production browser session.
+- **End-to-end encryption** — the Vault is AES-256-GCM ciphertext with per-doc
+  IV + auth tag, signed with the device's P-256 key (WebCrypto in the browser,
+  Secure Enclave on device). The server verifies signatures against the
+  registered public key and stores opaque blobs.
+- **Passwords** — PBKDF2-HMAC-SHA256, 600k iterations, constant-time verify.
+  Login never reveals whether an email exists.
+- **OAuth** — Apple/Google id-tokens verified server-side (refused unverified in
+  production by default).
+- **Transport & headers** — TLS everywhere; CSP, HSTS (prod), `nosniff`,
+  frame `DENY`, referrer/permissions policies on every response; Brotli/gzip.
+- **Abuse & cost control** — per-IP token-bucket rate limiting; three-gate AI
+  budget (per-device daily + monthly caps and a global daily circuit breaker).
+- **Secrets** — never hardcoded; injected via `ANTIGRAVITY__*` env vars.
+- **Data rights** — in-app **account deletion** (`DELETE /api/v1/account`)
+  transactionally erases the account and all associated data.
+
+See [`web/privacy.html`](web/privacy.html) for the user-facing policy and
+[`store/PRIVACY_LABELS.md`](store/PRIVACY_LABELS.md) for the App Store / Play
+data-safety answers.
+
+---
+
+## Project structure
+
+```
+src/                  Antigravity engine (Rust)
+  routes/             API handlers (auth, account, sync, ai, game, billing, insights, integrations)
+  crypto/             attestation, assertion, sessions, password (PBKDF2), token vault, oauth state
+  db/                 Database trait + Postgres impl + in-memory MockDatabase
+  models/             domain types (device, account, sync doc, game profile, subscription)
+  middleware/         attest_guard (session verification)
+migrations/           PostgreSQL schema (attested devices, sync, gamification, billing, accounts)
+config/               default.toml + Apple App Attest root CA
+web/                  the app the engine serves
+  index.html          shell
+  sw.js               offline service worker
+  assets/             app.js/.css, api.js, engine.js (on-device insights),
+                      charts.js, sound.js, device.js (scanner), localai.js (on-device AI)
+  privacy.html        privacy policy (served at /privacy)
+native/               Capacitor shells (iOS + Android) + bridge docs
+store/                App Store / Play listing, privacy labels, review notes, launch checklist
+tests/                integration tests (end-to-end over the router)
+scripts/              load test + PGO build helpers
+.claude/skills/       run-lifeline: build/launch/drive skill
+```
+
+---
+
+## API surface (v1)
+
+Everything is under `/api/v1`. A selection:
+
+| Method & path | Purpose |
+|---|---|
+| `GET /auth/challenge` · `POST /auth/verify-attestation` · `POST /auth/assert` | App Attest device registration + assertion |
+| `POST /account/register` · `/account/login` · `/account/oauth` | Sign up / in (email/password, Apple, Google) |
+| `DELETE /account` | Permanent account + data deletion |
+| `POST /sync/delta` · `GET /sync/document/{id}` | E2EE document sync (ciphertext only) |
+| `POST /ai/proxy` | Identity-stripped coach proxy (budget-enforced) |
+| `GET /ai/policy-matrix` · `GET /ai/local-models` | Coach policy + on-device model catalog |
+| `GET /insights/config` | Rules for the on-device engine (incl. the Conductor) |
+| `POST /game/score` · `GET /game/leaderboard` · `GET /game/profile` | The Arena |
+| `POST /billing/checkout` · `/billing/webhook` · `/billing/store-receipt` | Stripe + native IAP |
+| `GET /integrations` · `POST /integrations/{provider}/connect` | Apple/Google/Whoop sources |
+| `GET /health` · `GET /metrics` | Liveness + Prometheus metrics |
+
+---
+
+## Deploying to the App Store & Google Play
+
+The store apps are thin Capacitor shells that load the deployed web app over
+TLS, so web releases reach both stores without resubmission. The full,
+step-by-step path lives in:
+
+- **[`store/LAUNCH_CHECKLIST.md`](store/LAUNCH_CHECKLIST.md)** — backend → Stripe → binaries → listings → final gates
+- **[`native/README.md`](native/README.md)** — Capacitor build, App Attest, HealthKit, IAP + on-device AI bridge
+- **[`store/LISTING.md`](store/LISTING.md)** · **[`store/PRIVACY_LABELS.md`](store/PRIVACY_LABELS.md)** · **[`store/REVIEW_NOTES.md`](store/REVIEW_NOTES.md)**
+
+Compliance highlights already handled in-app: Sign in with Apple (4.8),
+in-app account deletion (5.1.1(v)), server-side entitlement enforcement, native
+IAP for store builds (3.1.1), and on-device model weights treated as data (2.5.2).
+
+---
+
+## Tech stack
+
+**Engine:** Rust · Axum · Tokio · SQLx (PostgreSQL) · ring / RustCrypto · moka
+(in-process cache) · tower-governor (rate limiting) · axum-prometheus.
+**App:** vanilla JS (no framework, instant first paint) · WebCrypto · hash
+router · service worker · Canvas/SVG charts.
+**Native:** Capacitor (iOS + Android).
+**Payments:** Stripe (web) · StoreKit / Play Billing (native).
+**AI:** Claude via proxy · on-device Gemma (MediaPipe LLM / Core ML).
+
+---
+
+<div align="center">
+<sub>Zero-knowledge by design. Your body, drawn fresh every morning — and never shared without your say-so.</sub>
+</div>

@@ -30,9 +30,12 @@ Labs are plotted against healthy reference ranges — on-device.
 Apple Health, Health Connect, and Whoop fuse into a single readiness score,
 weighted over whatever you've connected.
 
-**A coach that forgets.**
+**A coach that forgets — and one that never phones home.**
 Ask anything. Messages pass through a privacy proxy that strips your identity
-before the model reads them, and nothing is stored.
+before any model reads them, and nothing is stored. On premium phones you can
+download a small **on-device AI model** (Gemma) once, and from then on the coach
+answers entirely on your device — instant, private, and working with no
+internet connection at all.
 
 **Plans**
 - **Lifeline** — free forever: your daily portrait, one source, 7-day history,
@@ -41,8 +44,10 @@ before the model reads them, and nothing is stored.
   and coaching, weekly-season competition, ad-free.
 - **Lifeline Elite** — everything in Pro, plus beta releases and early features.
 
-No account. No e-mail. No password. Your device *is* your identity, proven by
-hardware attestation.
+**Your data stays yours.** Sign in with email, Apple, or Google — your account
+only unlocks access; it never holds your health data, which is computed and
+encrypted on your device. Delete your account and everything tied to it, any
+time, right from Settings.
 
 ## Keywords (App Store, ≤100 chars)
 `health,longevity,biological age,HRV,readiness,streak,leaderboard,privacy,sleep,vitality`

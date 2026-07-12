@@ -30,6 +30,40 @@ production deployment (must be HTTPS; both platforms reject cleartext).
 - **HealthKit**: add the HealthKit capability + `NSHealthShareUsageDescription`.
   Signals are read on-device and fed to the same insights engine the web app
   uses (`web/assets/engine.js` mirrors the server's published rules).
+- **Sign in with Apple**: enable the capability (required by Guideline 4.8
+  because the app also offers Google sign-in). The web layer already renders the
+  Apple button; wire it to `ASAuthorizationAppleIDProvider` and pass the id-token
+  to `POST /account/oauth`.
+
+## Account deletion (Guideline 5.1.1(v))
+
+Already implemented and shipped in the web layer: **Settings → Delete account**
+calls `DELETE /api/v1/account`, which erases the account and all associated data
+server-side (encrypted vault, scores, subscription, device records) and wipes
+local storage. No native work required beyond surfacing Settings.
+
+## On-device AI (optional, premium devices)
+
+The coach can run a local model (Gemma) so it works with no network. The web
+layer detects capability (`web/assets/device.js`), offers the download, and
+routes replies through a bridge the shell injects. Implement it with the OS ML
+runtime (MediaPipe LLM Inference on Android, Core ML / MediaPipe on iOS):
+
+```js
+window.LifelineLocalAI = {
+  isReady: () => boolean,                       // is a model installed & loaded
+  download: async (modelId, onProgress) => {},  // fetch weights, report 0–100; verify sha256
+  generate: async (prompt, { system, context, maxTokens }) => 'reply text',
+  remove: async () => {},                       // delete weights, free space
+};
+// Optional richer device facts for the scanner:
+window.LifelineDevice = { profile: { ram_gb, cores, chipset, os, os_version, has_npu, ai_backends: ['native-mediapipe'] } };
+```
+
+The model catalog (sizes, hardware floors) is served rules-only at
+`GET /api/v1/ai/local-models`. **Gate large downloads to Wi-Fi** and confirm the
+size with the user (the web card already displays it). The downloaded weights
+are *data, not executable code* (Guideline 2.5.2).
 
 ## ⚠️ Subscriptions in the store builds
 

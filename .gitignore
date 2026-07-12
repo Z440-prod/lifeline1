@@ -1,6 +1,8 @@
 # ── Rust / Cargo ──────────────────────────────────────────────────────────────
 /target/
-Cargo.lock
+# Cargo.lock IS committed: this crate ships a binary (the engine), so the
+# lockfile is pinned for reproducible, auditable builds — important for store
+# review and CI.
 
 # ── Local Configurations & Secrets ────────────────────────────────────────────
 .env

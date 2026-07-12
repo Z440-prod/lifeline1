@@ -243,8 +243,19 @@ svg { display: block; }
 .btn:disabled { opacity: 0.4; }
 .btn-pulse { background: var(--tint); color: var(--tint-ink); box-shadow: 0 6px 18px color-mix(in srgb, var(--tint) 35%, transparent); }
 .btn-ghost { background: var(--card-2); color: var(--tint); }
+.btn-danger { background: color-mix(in srgb, var(--err) 14%, var(--card)); color: var(--err); }
+.btn-danger:hover { filter: none; background: color-mix(in srgb, var(--err) 22%, var(--card)); }
 .btn-block { width: 100%; }
 .btn-sm { padding: 9px 15px; font-size: var(--fs-sub); }
+
+/* Destructive "danger zone" — account deletion, clearly set apart. */
+.danger-zone {
+    margin-top: 16px; padding-top: 15px; border-top: 0.5px solid var(--hairline);
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.danger-zone .dz-copy { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
+.danger-zone .dz-copy b { color: var(--err); font-size: var(--fs-sub); font-weight: 700; }
+.danger-zone .dz-copy span { color: var(--ink-3); font-size: var(--fs-micro); line-height: 1.45; }
 
 .chip {
     display: inline-flex; align-items: center; gap: 6px;

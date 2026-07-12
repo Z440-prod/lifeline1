@@ -993,6 +993,13 @@ async function viewSettings(el) {
                 <button class="btn btn-ghost btn-sm" id="resetBtn">Reset identity</button>
                 <button class="btn btn-ghost btn-sm" id="replayBtn">Replay onboarding</button>
             </div>
+            <div class="danger-zone">
+                <div class="dz-copy">
+                    <b>Delete account</b>
+                    <span>Permanently erases your account and all data on our servers — vault, scores, subscription. This can’t be undone.</span>
+                </div>
+                <button class="btn btn-danger btn-sm" id="deleteAcctBtn">Delete account</button>
+            </div>
         </div>
         <div class="card col-6">
             <div class="card-title">Engine</div>
@@ -1026,6 +1033,7 @@ async function viewSettings(el) {
             location.reload();
         }
     });
+    $('#deleteAcctBtn')?.addEventListener('click', confirmDeleteAccount);
     $('#resetBtn').addEventListener('click', () => {
         if (confirm('Reset this device identity? Your handle, plan, and vault links are tied to it.')) identity.reset();
     });
@@ -1086,6 +1094,42 @@ function onDeviceAiCard(ai) {
         </div>
         ${action}
     </div>`;
+}
+
+/* Permanent account deletion (App Store 5.1.1(v)). A clear, two-tap destructive
+   confirmation sheet, then a server-side erase + full local wipe, then back to
+   the sign-in gate. */
+function confirmDeleteAccount() {
+    const host = $('#overlays');
+    host.innerHTML = `
+        <div class="sheet-dim" id="dzDim"></div>
+        <div class="sheet" role="dialog" aria-label="Delete account" aria-describedby="dzText">
+            <div class="grab"></div>
+            <h3>Delete your account?</h3>
+            <p id="dzText" style="color:var(--ink-2); font-size:var(--fs-sub); line-height:1.55; margin:2px 0 18px;">
+                This permanently erases your account and <b>everything</b> tied to it on our
+                servers — your encrypted vault, Arena scores, streak, and subscription record.
+                It cannot be undone. Your on-device data is wiped too.</p>
+            <div style="display:flex; flex-direction:column; gap:9px;">
+                <button class="btn btn-danger btn-block" id="dzConfirm">Delete forever</button>
+                <button class="btn btn-ghost btn-block" id="dzCancel">Keep my account</button>
+            </div>
+        </div>`;
+    const close = () => { host.innerHTML = ''; };
+    $('#dzDim').addEventListener('click', close);
+    $('#dzCancel').addEventListener('click', close);
+    $('#dzConfirm').addEventListener('click', async () => {
+        const btn = $('#dzConfirm');
+        btn.disabled = true; btn.textContent = 'Deleting…';
+        const res = await account.deleteAccount();
+        if (res.status === 200) {
+            // Local state already wiped by deleteAccount(); reload into the gate.
+            location.reload();
+        } else {
+            close();
+            toast(res.data?.error?.message || `Couldn’t delete account (${res.status})`, 'var(--err)');
+        }
+    });
 }
 
 function applyTheme() {

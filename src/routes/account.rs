@@ -6,7 +6,7 @@
 //! id-tokens verified against the provider (simulated in development so the
 //! flow is testable without live client credentials).
 
-use axum::{extract::State, Json};
+use axum::{extract::State, Extension, Json};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -14,6 +14,7 @@ use uuid::Uuid;
 
 use crate::crypto::password;
 use crate::errors::AppError;
+use crate::middleware::attest_guard::VerifiedDevice;
 use crate::models::account::{normalize_email, Account};
 use crate::routes::auth::register_device_and_issue_token;
 use crate::state::AppState;
@@ -214,6 +215,34 @@ pub async fn oauth_handler(
         &account,
         state.config.auth.session_token_ttl_seconds,
     ))
+}
+
+/// `DELETE /api/v1/account` — permanently delete the account and all of its
+/// data. Authenticated by the device session (attest_guard). Required for App
+/// Store submission (Guideline 5.1.1(v)) and satisfies GDPR/CCPA erasure.
+///
+/// Erases every device under the account: the encrypted vault, provider
+/// connections, game profile, subscription, audit logs, device registration,
+/// and the account record itself — in one transaction. After this the session
+/// token is dead (its device no longer exists).
+#[tracing::instrument(skip(state), fields(device_id = %verified_device.device_id))]
+pub async fn delete_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(verified_device): Extension<VerifiedDevice>,
+) -> Result<Json<Value>, AppError> {
+    metrics::counter!("antigravity_api_requests_total", "endpoint" => "/account/delete")
+        .increment(1);
+
+    let had_account = state
+        .db
+        .delete_account_and_data(verified_device.device_id)
+        .await?;
+
+    Ok(Json(json!({
+        "deleted": true,
+        "had_account": had_account,
+        "message": "Your account and all associated data have been permanently deleted.",
+    })))
 }
 
 /// Verify a provider id-token, returning `(subject, email)`.

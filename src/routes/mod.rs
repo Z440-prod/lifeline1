@@ -207,6 +207,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/billing/beta-features",
             get(billing::beta_features_handler),
         )
+        // Permanent account + data deletion (App Store 5.1.1(v) / GDPR erasure).
+        // Authenticated by the device session like every other protected route.
+        .route("/account", delete(account::delete_handler))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             crate::middleware::attest_guard::attest_guard,
