@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark light">
+    <title>Lifeline — join the waitlist</title>
+    <meta name="description" content="Your health, zero-knowledge. Lifeline computes everything on your device and never sees your data. Join the waitlist.">
+    <meta property="og:title" content="Lifeline — your health, zero-knowledge">
+    <meta property="og:description" content="A longevity app that computes everything on your device and never sees your data. Join the waitlist.">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e1116'/%3E%3Cpath d='M4 18h6l3-8 4 12 3-6h8' fill='none' stroke='%23e05a52' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --bg:#0b0d10; --card:#16191f; --line:#262b34;
+            --ink:#f2f4f8; --ink-2:#a6afbd; --ink-3:#6b7280;
+            --pulse:#e05a52; --tint:#4fb0a8; --ok:#34c759; --err:#ff6b6b;
+        }
+        @media (prefers-color-scheme: light) {
+            :root { --bg:#f6f7f9; --card:#fff; --line:#e2e5ea; --ink:#0b0d10; --ink-2:#4b5563; --ink-3:#9aa2ae; }
+        }
+        * { box-sizing: border-box; margin: 0; }
+        body { background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.55; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+        .wrap { width: 100%; max-width: 520px; text-align: center; }
+        .mark { width: 72px; height: 72px; margin: 0 auto 26px; border-radius: 20px; background: linear-gradient(160deg, #1b1f27, #0e1116); display: grid; place-items: center; box-shadow: 0 12px 40px rgba(0,0,0,.4); }
+        .mark svg { width: 42px; height: 42px; }
+        .eyebrow { color: var(--tint); font-weight: 700; font-size: 0.76rem; letter-spacing: 0.11em; text-transform: uppercase; }
+        h1 { font-size: clamp(2rem, 8vw, 2.9rem); font-weight: 850; letter-spacing: -0.035em; line-height: 1.05; margin: 12px 0 14px; }
+        h1 .hl { color: var(--pulse); }
+        .lede { color: var(--ink-2); font-size: clamp(1rem, 3vw, 1.14rem); max-width: 40ch; margin: 0 auto 30px; }
+        form { display: flex; gap: 10px; max-width: 440px; margin: 0 auto; }
+        @media (max-width: 480px) { form { flex-direction: column; } }
+        input[type=email] { flex: 1; background: var(--card); border: 1px solid var(--line); color: var(--ink); border-radius: 14px; padding: 15px 18px; font-size: 1rem; outline: none; transition: border-color .15s; }
+        input[type=email]:focus { border-color: var(--tint); }
+        input[type=email]::placeholder { color: var(--ink-3); }
+        button { background: var(--pulse); color: #fff; font-weight: 750; font-size: 1rem; border: none; border-radius: 14px; padding: 15px 24px; cursor: pointer; transition: filter .15s, transform .2s; white-space: nowrap; }
+        button:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+        button:disabled { opacity: .6; cursor: default; }
+        .msg { margin-top: 16px; font-size: 0.95rem; min-height: 1.4em; font-weight: 600; }
+        .msg.ok { color: var(--ok); }
+        .msg.err { color: var(--err); }
+        .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+        .pillars { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 34px; }
+        .pillars span { background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 7px 14px; font-size: 0.82rem; color: var(--ink-2); }
+        .foot { color: var(--ink-3); font-size: 0.8rem; margin-top: 34px; }
+        .foot a { color: var(--ink-2); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="mark">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M3 18h6l3-9 4 14 3-7h10" stroke="#e05a52" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="eyebrow">Coming soon</div>
+    <h1>Your health.<br><span class="hl">Zero-knowledge.</span></h1>
+    <p class="lede">A longevity app that computes everything on your device and never sees your data. Be first in line when Lifeline opens.</p>
+
+    <form id="waitForm" novalidate>
+        <input type="text" class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+        <button type="submit" id="submitBtn">Join the waitlist</button>
+    </form>
+    <div class="msg" id="msg" role="status" aria-live="polite"></div>
+
+    <div class="pillars">
+        <span>🔒 On-device &amp; encrypted</span>
+        <span>⌚ Bring your own wearable</span>
+        <span>🤖 Offline AI coach</span>
+    </div>
+
+    <p class="foot">We only use your email to tell you when Lifeline launches. Nothing else — ever.</p>
+</div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>
