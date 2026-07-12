@@ -14,6 +14,7 @@ use tower_http::cors::{Any, CorsLayer};
 use crate::state::AppState;
 
 pub mod account;
+pub mod admin;
 pub mod ai;
 pub mod auth;
 pub mod billing;
@@ -231,6 +232,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/account/login", post(account::login_handler))
         .route("/account/oauth", post(account::oauth_handler))
         .route("/ai/policy-matrix", get(ai::policy_matrix_handler))
+        // Admin dashboard stats. Public route because it does its own admin-token
+        // auth (constant-time) and is disabled unless a token is configured —
+        // it must not sit behind the device attest_guard.
+        .route("/admin/stats", get(admin::admin_stats_handler))
         // Catalog of on-device AI models (Gemma sizes, hardware floors) so
         // premium phones can run the coach offline. Rules-only, cacheable.
         .route("/ai/local-models", get(ai::local_models_handler))
@@ -273,6 +278,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
     // Store listings (App Store / Google Play) require a public privacy
     // policy URL — served by the same binary at /privacy.
     let privacy = tower_http::services::ServeFile::new("web/privacy.html");
+    // Operator dashboard page. Static HTML; the data it loads is admin-token
+    // gated server-side (see admin::admin_stats_handler).
+    let admin_page = tower_http::services::ServeFile::new("web/admin.html");
     let shell = tower_http::services::ServeFile::new("web/index.html");
 
     // Combine routes with middleware layers.
@@ -285,6 +293,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route_service("/manifest.webmanifest", manifest)
         .route_service("/sw.js", service_worker)
         .route_service("/privacy", privacy)
+        .route_service("/admin", admin_page)
         .fallback_service(shell)
         .layer(middleware::from_fn_with_state(
             state.clone(),

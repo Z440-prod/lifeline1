@@ -59,6 +59,7 @@ fn create_test_state_with_env(environment: &str) -> (Arc<AppState>, Arc<MockData
                 .to_string(),
         },
         billing: antigravity::config::BillingConfig::default(),
+        admin: antigravity::config::AdminConfig::default(),
     };
 
     let db = Arc::new(MockDatabase::new(&config.auth.server_secret));
@@ -85,6 +86,7 @@ fn create_test_state_with_env(environment: &str) -> (Arc<AppState>, Arc<MockData
         token_vault_key,
         doc_cache,
         ai_usage,
+        started_at: chrono::Utc::now(),
     });
 
     (state, db)
@@ -1810,5 +1812,33 @@ async fn test_account_deletion_erases_account_and_device() {
         relogin,
         StatusCode::UNAUTHORIZED,
         "deleted account can't sign in"
+    );
+}
+
+#[tokio::test]
+async fn test_admin_stats_disabled_without_token() {
+    // The admin dashboard must be OFF unless an admin_token is configured, so a
+    // default/misconfigured deployment never exposes operational stats. The test
+    // state has no admin token → 403, even with a bearer header.
+    let (state, _db) = create_test_state();
+    let app = create_router(state);
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 12364));
+
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/stats")
+                .header(header::AUTHORIZATION, "Bearer anything")
+                .extension(axum::extract::ConnectInfo(addr))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        res.status(),
+        StatusCode::FORBIDDEN,
+        "admin stats must be disabled without a configured token"
     );
 }

@@ -133,6 +133,7 @@ async fn main() -> anyhow::Result<()> {
         token_vault_key,
         doc_cache,
         ai_usage,
+        started_at: chrono::Utc::now(),
     });
 
     // 10. Build router with all submodules nested under `/api/v1`

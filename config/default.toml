@@ -75,3 +75,10 @@ apple_verify_url = ""
 apple_product_pro = ""
 apple_product_elite = ""
 
+
+# ── Admin dashboard ───────────────────────────────────────────────────────────
+# The operator stats page (/admin) and its API (/api/v1/admin/stats) are
+# DISABLED until an admin_token is set. Provide a long random string via
+# ANTIGRAVITY__ADMIN__ADMIN_TOKEN in production; never commit a real token.
+[admin]
+admin_token = ""

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark light">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Lifeline · Admin</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e1116'/%3E%3Cpath d='M4 18h6l3-8 4 12 3-6h8' fill='none' stroke='%23e05a52' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --bg: #0b0d10; --card: #16191f; --card-2: #1e222a; --line: #262b34;
+            --ink: #f2f4f8; --ink-2: #a6afbd; --ink-3: #6b7280;
+            --tint: #4fb0a8; --ok: #34c759; --warn: #ff9f0a; --err: #ff453a;
+            --pro: #4fb0a8; --elite: #e4a11b;
+        }
+        @media (prefers-color-scheme: light) {
+            :root { --bg:#f2f2f7; --card:#fff; --card-2:#f2f2f7; --line:#e2e5ea; --ink:#0b0d10; --ink-2:#4b5563; --ink-3:#9aa2ae; }
+        }
+        * { box-sizing: border-box; margin: 0; }
+        body { background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; padding: 24px 18px 60px; line-height: 1.5; }
+        .wrap { max-width: 980px; margin: 0 auto; }
+        header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+        h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+        h1 small { color: var(--ink-3); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; margin-left: 8px; }
+        .sys { color: var(--ink-2); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+        .sys b { color: var(--ink); }
+        /* Login */
+        .login { max-width: 380px; margin: 12vh auto 0; text-align: center; }
+        .login .logo { width: 64px; height: 64px; margin: 0 auto 18px; }
+        .login h2 { font-size: 1.25rem; font-weight: 800; }
+        .login p { color: var(--ink-2); font-size: 0.9rem; margin: 8px 0 20px; }
+        input { width: 100%; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; font: inherit; }
+        input:focus { outline: none; border-color: var(--tint); }
+        button { cursor: pointer; background: var(--tint); color: #04120f; border: none; border-radius: 12px; padding: 13px 18px; font: inherit; font-weight: 700; width: 100%; margin-top: 10px; transition: filter .15s; }
+        button:hover { filter: brightness(1.07); }
+        button.ghost { background: var(--card-2); color: var(--ink-2); }
+        .err { color: var(--err); font-size: 0.85rem; min-height: 20px; margin-top: 10px; }
+        /* Grid + cards */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
+        .stat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 15px 16px; }
+        .stat .v { font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+        .stat .l { color: var(--ink-3); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+        .stat .sub { color: var(--ink-2); font-size: 0.78rem; margin-top: 6px; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin-bottom: 14px; }
+        .card h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin-bottom: 12px; }
+        .row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+        .row:last-child { border-bottom: none; }
+        .row .rank { width: 22px; color: var(--ink-3); font-weight: 700; text-align: right; }
+        .row .name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .row .lg { font-size: 0.72rem; color: var(--ink-2); text-transform: capitalize; }
+        .row .score { font-weight: 800; }
+        .bar { height: 9px; border-radius: 99px; background: var(--card-2); overflow: hidden; flex: 1; }
+        .bar > i { display: block; height: 100%; background: var(--tint); border-radius: 99px; }
+        .bar-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 0.85rem; }
+        .bar-row .lb { width: 84px; text-transform: capitalize; color: var(--ink-2); }
+        .bar-row .n { width: 34px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .muted { color: var(--ink-3); font-size: 0.8rem; }
+        .toolbar { display: flex; gap: 8px; align-items: center; }
+        .toolbar button { width: auto; margin: 0; padding: 8px 14px; font-size: 0.82rem; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <!-- Login gate -->
+        <div id="login" class="login">
+            <svg class="logo" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#16191f"/><path d="M5 18h5.5l2.8-7.5 3.8 11 2.8-5.5H27" fill="none" stroke="#4fb0a8" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <h2>Lifeline Admin</h2>
+            <p>Enter the admin token to view operational statistics.</p>
+            <input id="token" type="password" placeholder="Admin token" autocomplete="off" autofocus>
+            <button id="signin">View dashboard</button>
+            <div class="err" id="loginErr"></div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dash" class="hidden">
+            <header>
+                <h1>Lifeline <small>Admin</small></h1>
+                <div class="toolbar">
+                    <span class="sys" id="sys"></span>
+                    <button class="ghost" id="refresh">Refresh</button>
+                    <button class="ghost" id="signout">Sign out</button>
+                </div>
+            </header>
+            <div id="content"></div>
+        </div>
+    </div>
+    <script src="/assets/admin.js"></script>
+</body>
+</html>

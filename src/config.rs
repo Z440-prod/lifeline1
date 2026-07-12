@@ -13,6 +13,28 @@ pub struct AppConfig {
     pub integrations: IntegrationsConfig,
     #[serde(default)]
     pub billing: BillingConfig,
+    #[serde(default)]
+    pub admin: AdminConfig,
+}
+
+/// Admin dashboard settings. The stats endpoint (`GET /api/v1/admin/stats`) and
+/// the `/admin` page are **disabled by default** — they only work once an
+/// `admin_token` is configured, so a fresh/misconfigured deployment never
+/// exposes them. Set it via `ANTIGRAVITY__ADMIN__ADMIN_TOKEN` (a long random
+/// string); never commit a real token.
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(default)]
+pub struct AdminConfig {
+    /// Bearer token required to read admin stats. Empty ⇒ admin disabled.
+    pub admin_token: String,
+}
+
+impl AdminConfig {
+    /// Admin surfaces are only reachable once a token is set.
+    #[must_use]
+    pub fn enabled(&self) -> bool {
+        !self.admin_token.is_empty()
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
