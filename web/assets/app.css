@@ -49,8 +49,8 @@
     --font-round: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Google Sans', Roboto, 'Segoe UI', sans-serif;
     --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
 
-    --fs-large-title: clamp(2rem, 5.5vw, 2.55rem);
-    --fs-title: 1.28rem;
+    --fs-large-title: clamp(2.5rem, 9vw, 3.6rem);   /* oversized display — exaggerated minimalism */
+    --fs-title: 1.32rem;
     --fs-head: 1.02rem;
     --fs-body: 0.98rem;
     --fs-sub: 0.86rem;
@@ -192,16 +192,18 @@ svg { display: block; }
 }
 
 /* ═══ PAGE SCAFFOLD ═══════════════════════════════════════════════════════ */
-.page-head { padding: calc(26px + env(safe-area-inset-top)) 4px 6px; margin-bottom: 12px; }
+/* Exaggerated Minimalism: an oversized display title with real breathing room,
+   led by a small editorial eyebrow. High contrast, generous negative space. */
+.page-head { padding: calc(38px + env(safe-area-inset-top)) 4px 10px; margin-bottom: 16px; }
 .page-head .eyebrow {
-    font-family: var(--font-round); font-size: var(--fs-foot); font-weight: 700;
-    letter-spacing: 0.02em; color: var(--tint); text-transform: none; margin-bottom: 2px;
+    font-family: var(--font-round); font-size: var(--fs-micro); font-weight: 800;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--tint); margin-bottom: 9px;
 }
 .page-head h1 {
     font-family: var(--font-round);
-    font-size: var(--fs-large-title); font-weight: 800; letter-spacing: -0.03em; line-height: 1.04;
+    font-size: var(--fs-large-title); font-weight: 860; letter-spacing: -0.045em; line-height: 0.98;
 }
-.page-head .sub { color: var(--ink-2); margin-top: 7px; max-width: 46ch; font-size: var(--fs-sub); line-height: 1.5; }
+.page-head .sub { color: var(--ink-2); margin-top: 12px; max-width: 42ch; font-size: var(--fs-body); line-height: 1.5; }
 
 .grid { display: grid; gap: 13px; grid-template-columns: repeat(12, 1fr); }
 .grid > * { grid-column: span 12; }   /* one iOS column, always */
@@ -210,15 +212,17 @@ svg { display: block; }
 .card {
     background: var(--card);
     border-radius: var(--r-card);
-    padding: 18px;
+    padding: 20px;
     box-shadow: 0 1px 0 var(--hairline-2);
-    animation: settle 0.4s var(--spring) backwards;
+    animation: settle 0.44s var(--spring) backwards;
 }
-.grid > .card:nth-child(2) { animation-delay: 0.04s; }
-.grid > .card:nth-child(3) { animation-delay: 0.08s; }
-.grid > .card:nth-child(4) { animation-delay: 0.12s; }
-.grid > .card:nth-child(5) { animation-delay: 0.16s; }
-@keyframes settle { from { opacity: 0; transform: translateY(14px) scale(0.985); } }
+.grid > .card:nth-child(2) { animation-delay: 0.05s; }
+.grid > .card:nth-child(3) { animation-delay: 0.10s; }
+.grid > .card:nth-child(4) { animation-delay: 0.15s; }
+.grid > .card:nth-child(5) { animation-delay: 0.20s; }
+.grid > .card:nth-child(6) { animation-delay: 0.25s; }
+.grid > .card:nth-child(7) { animation-delay: 0.30s; }
+@keyframes settle { from { opacity: 0; transform: translateY(18px) scale(0.97); } }
 
 .card.hero {
     background:
@@ -315,7 +319,7 @@ html[data-theme="dark"] .seg button.active, .seg button.active { background: col
 /* ═══ PORTRAIT ════════════════════════════════════════════════════════════ */
 .vitality-hero { display: flex; flex-direction: column; gap: 14px; }
 .vitality-num { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.vitality-num .n { font-family: var(--font-round); font-size: clamp(3.4rem, 11vw, 4.6rem); font-weight: 800; letter-spacing: -0.05em; line-height: 0.9; }
+.vitality-num .n { font-family: var(--font-round); font-size: clamp(4.2rem, 15vw, 6rem); font-weight: 850; letter-spacing: -0.055em; line-height: 0.86; }
 .vitality-num .cap { font-size: var(--fs-sub); color: var(--ink-2); max-width: 25ch; line-height: 1.4; }
 .vitality-trace { width: 100%; }
 .vitality-side { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
