@@ -13,6 +13,7 @@ import { TIER_LABEL } from './device.js';
 import { notify } from './notify.js';
 import { installNativeBridges } from './native-bridge.js';
 import { mountFeelSlider } from './feelslider.js';
+import { usage } from './usage.js';
 
 // Wire the native capability bridges (IAP, notifications, on-device AI, device,
 // sign-in, health) the moment the module loads — before boot reads any of them.
@@ -109,6 +110,18 @@ function applyConductor() {
             return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
         });
     }
+    // Habit layer: the Conductor's lead view stays the hero (index 0), but the
+    // rest reorder by how much THIS user actually uses them — so a heavy Coach
+    // user sees Coach bubble into the visible tab bar, a Vault-first user sees
+    // Vault. A fresh user (no history) keeps the Conductor order (stable sort).
+    if (ROUTES.length > 2) {
+        const lead = ROUTES[0];
+        const rest = ROUTES.slice(1);
+        const ranked = usage.rank(rest.map((r) => r.id));
+        rest.sort((a, b) => ranked.indexOf(a.id) - ranked.indexOf(b.id));
+        ROUTES.length = 0;
+        ROUTES.push(lead, ...rest);
+    }
     return mode;
 }
 
@@ -173,11 +186,16 @@ function personalShape() {
     const richScore = sources + (labs > 0 ? 1 : 0) + (labs >= 3 ? 1 : 0);
     const dataRichness = richScore >= 3 ? 'rich' : richScore >= 1 ? 'growing' : 'sparse';
 
+    // What the user actually uses most (recency-weighted), for the coach.
+    const labelForView = (id) => (ROUTES.find((r) => r.id === id)?.label) || id;
+    const habits = usage.summary(labelForView, ['portrait', 'arena', 'coach', 'vault', 'sources', 'plans', 'settings']);
+
     const signature = `${mode ? mode.label : 'Steady'} · ${spec.label} focus${lg ? ' · ' + lg.name : ''}`;
     const coachContext = `The user's focus today is ${spec.label}`
         + `${setting === 'auto' ? ' (their weakest signal)' : ' (their choice)'}. `
         + `${lg ? `They compete in the ${lg.name} league. ` : ''}`
         + `${labs > 0 ? `They have uploaded ${labs} lab result(s). ` : ''}`
+        + `${habits ? `They spend most of their time in ${habits}. ` : ''}`
         + `Bias your guidance toward ${spec.label.toLowerCase()}.`;
 
     return {
@@ -405,7 +423,7 @@ function paintTabbar() {
     tabbarOrder = order;
     nav.innerHTML = `${ROUTES.slice(0, 4).map((r) => `<button class="tab" data-nav="${r.id}">${r.icon}<span>${r.label}</span></button>`).join('')}
         <button class="tab" id="moreTab">${MORE_ICON}<span>More</span></button>`;
-    $$('[data-nav]', nav).forEach((b) => b.addEventListener('click', () => { location.hash = `#/${b.dataset.nav}`; }));
+    $$('[data-nav]', nav).forEach((b) => b.addEventListener('click', () => { usage.record(b.dataset.nav); location.hash = `#/${b.dataset.nav}`; }));
     $('#moreTab', nav).addEventListener('click', openMoreSheet);
     setActiveNav(routeId());
 }
@@ -420,11 +438,13 @@ function setActiveNav(id) {
 /* iOS bottom sheet for the secondary destinations. */
 function openMoreSheet() {
     const host = $('#overlays');
-    const rows = [
-        { id: 'sources', name: 'Sources', sub: 'Apple · Google · Whoop', color: 'var(--sleep)', icon: I.sources },
-        { id: 'plans', name: 'Plans', sub: store.sub?.tier === 'free' || !store.sub ? 'Free plan' : `${cap(store.sub.tier)} member`, color: 'var(--recovery)', icon: I.plans },
-        { id: 'settings', name: 'Settings', sub: 'Identity, theme & privacy', color: 'var(--ink-3)', icon: I.settings },
-    ];
+    const rowDefs = {
+        sources: { id: 'sources', name: 'Sources', sub: 'Apple · Google · Whoop', color: 'var(--sleep)', icon: I.sources },
+        plans: { id: 'plans', name: 'Plans', sub: store.sub?.tier === 'free' || !store.sub ? 'Free plan' : `${cap(store.sub.tier)} member`, color: 'var(--recovery)', icon: I.plans },
+        settings: { id: 'settings', name: 'Settings', sub: 'Identity, theme & privacy', color: 'var(--ink-3)', icon: I.settings },
+    };
+    // Order the secondary destinations by how often this user opens them.
+    const rows = usage.rank(Object.keys(rowDefs)).map((id) => rowDefs[id]);
     host.innerHTML = `
         <div class="sheet-dim" id="sheetDim"></div>
         <div class="sheet" role="dialog" aria-label="More">
@@ -440,7 +460,7 @@ function openMoreSheet() {
         </div>`;
     const close = () => { host.innerHTML = ''; };
     $('#sheetDim').addEventListener('click', close);
-    $$('.sheet-row', host).forEach((b) => b.addEventListener('click', () => { close(); location.hash = `#/${b.dataset.go}`; }));
+    $$('.sheet-row', host).forEach((b) => b.addEventListener('click', () => { usage.record(b.dataset.go); close(); location.hash = `#/${b.dataset.go}`; }));
 }
 
 /* Confetti — because logging your score should feel like something. */
