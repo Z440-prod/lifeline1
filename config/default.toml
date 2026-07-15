@@ -79,6 +79,11 @@ price_elite = "price_1TrvpyV05D55xsPfbURkZaBD"
 # (stripe_webhook_secret) with an endpoint at /billing/webhook.
 payment_link_pro = "https://buy.stripe.com/6oU7sO5HQdJ358I2W53ZK01"
 payment_link_elite = "https://buy.stripe.com/7sY6oKc6efRb0Ss7cl3ZK00"
+# Expected first-invoice amounts per tier, in cents. The webhook grants the tier
+# matching the amount ACTUALLY paid, so the tier can't be spoofed via the
+# checkout URL. Set these to your real Payment Link prices ($7.99 / $14.99 here).
+amount_pro_cents = 799
+amount_elite_cents = 1499
 # Redirect targets for Stripe Checkout / billing portal. Point these at your
 # app's deep links or web return pages in production.
 success_url = "http://localhost:8443/billing/success"

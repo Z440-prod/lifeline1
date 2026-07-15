@@ -463,9 +463,25 @@ pub async fn webhook_handler(
             let device_id = Uuid::parse_str(id_part).ok();
             let customer = object["customer"].as_str().map(str::to_owned);
             let subscription_id = object["subscription"].as_str().map(str::to_owned);
-            // Prefer the tier from the Payment Link ref, then Stripe metadata,
-            // else default to pro.
-            let tier = link_tier
+            // SECURITY: the tier a customer receives is derived from the amount
+            // they actually paid (`amount_total`), NOT from any payer-controlled
+            // field. In a Payment Link checkout the `client_reference_id`
+            // (and its "__tier" suffix) is set via a URL param the payer can
+            // edit, so trusting it would let someone pay the Pro price and claim
+            // Elite. The amount is the source of truth; `link_tier`/metadata are
+            // only a fallback when expected amounts aren't configured.
+            let amount_total = object["amount_total"].as_i64().unwrap_or(0);
+            let amount_tier = state.config.billing.tier_for_amount(amount_total);
+            if let (Some(a), Some(l)) = (amount_tier, link_tier) {
+                if a != l {
+                    tracing::warn!(
+                        claimed = l, paid_for = a, amount_total,
+                        "Payment Link tier claim did not match amount paid; granting the paid-for tier"
+                    );
+                }
+            }
+            let tier = amount_tier
+                .or(link_tier)
                 .or_else(|| object["metadata"]["tier"].as_str())
                 .unwrap_or("pro")
                 .to_owned();

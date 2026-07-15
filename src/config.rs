@@ -246,6 +246,13 @@ pub struct BillingConfig {
     /// StoreKit product identifiers mapped to tiers.
     pub apple_product_pro: String,
     pub apple_product_elite: String,
+
+    /// Expected first-invoice amounts (in the smallest currency unit, e.g. cents)
+    /// for each paid tier. Used to derive the granted tier from the amount a
+    /// customer actually paid in a Stripe Payment Link checkout — so the tier
+    /// can't be spoofed via the `client_reference_id`. 0 = not enforced.
+    pub amount_pro_cents: i64,
+    pub amount_elite_cents: i64,
 }
 
 impl BillingConfig {
@@ -276,6 +283,22 @@ impl BillingConfig {
             _ => return None,
         };
         (!id.is_empty()).then_some(id.as_str())
+    }
+
+    /// Derive the paid tier from the amount actually charged (smallest currency
+    /// unit). This is the trusted source of truth for Payment Link checkouts,
+    /// where the tier in `client_reference_id` is payer-controlled and must not
+    /// be believed. Returns the highest tier whose configured price the payment
+    /// meets. `None` if amounts aren't configured or the payment is below Pro.
+    #[must_use]
+    pub fn tier_for_amount(&self, amount: i64) -> Option<&'static str> {
+        if self.amount_elite_cents > 0 && amount >= self.amount_elite_cents {
+            Some("elite")
+        } else if self.amount_pro_cents > 0 && amount >= self.amount_pro_cents {
+            Some("pro")
+        } else {
+            None
+        }
     }
 
     /// A pre-created Stripe Payment Link for a paid tier, if configured.
@@ -380,6 +403,24 @@ mod tests {
         // …but a forced provider with no key falls through to whatever is set.
         assert_eq!(ai("anthropic", "osk", "").cloud_provider(), "openai");
         assert_eq!(ai("openai", "", "ak").cloud_provider(), "anthropic");
+    }
+
+    #[test]
+    fn tier_from_amount_is_spoof_proof() {
+        let mut b = super::BillingConfig::default();
+        // Unconfigured amounts → no tier derivable (fall back handled elsewhere).
+        assert_eq!(b.tier_for_amount(1499), None);
+        b.amount_pro_cents = 799;
+        b.amount_elite_cents = 1499;
+        // Paying the Pro price only ever grants Pro, even if the URL claimed elite.
+        assert_eq!(b.tier_for_amount(799), Some("pro"));
+        assert_eq!(b.tier_for_amount(1498), Some("pro"));
+        // Elite price grants Elite; higher (annual) still grants Elite.
+        assert_eq!(b.tier_for_amount(1499), Some("elite"));
+        assert_eq!(b.tier_for_amount(9999), Some("elite"));
+        // Below Pro grants nothing.
+        assert_eq!(b.tier_for_amount(100), None);
+        assert_eq!(b.tier_for_amount(0), None);
     }
 
     #[test]
