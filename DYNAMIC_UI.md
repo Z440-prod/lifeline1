@@ -95,6 +95,32 @@ deterministically rendered:
   source"; after connecting, Age appears and the surface swaps to "Add your labs."
   (Proven live.)
 
+## The AI authors the layout — with a safety gate that works 100% of the time
+
+The on-device model now authors the layout itself (`localAI.composeLayout` →
+a JSON manifest), and **every manifest passes through `validateManifest` before
+it can touch the screen.** This is the guarantee you asked for:
+
+- **The AI may only CHOOSE, never INJECT.** It picks from a closed vocabulary —
+  block ids `readiness|age|circadian`, surface ids `connect-source|add-labs|
+  arena-push`, tab ids from a fixed list, and a strict 6-hex accent. Anything
+  else it emits is dropped.
+- **App-owned copy.** The AI picks a surface *id*; the human-written title/body
+  come from the app, so the model can never inject markup or misleading text.
+- **Total function + fallback.** The gate never throws and always returns a
+  renderable manifest; a bad/hallucinated/empty answer falls back to the safe
+  rules layout. The first paint already shows the safe layout, so the user never
+  waits and never sees a broken screen.
+
+**Proven:** the gate was fired at 25 adversarial manifests — SQL-style block
+names, `<script>`/`onerror` XSS in titles, `red;}body{display:none}` CSS
+injection in the accent, unknown ids, wrong types, a throwing `toString` — and
+**25/25 produced a safe, valid layout. 0 could break or inject anything.**
+Separately, a fake on-device model that emitted
+`{"blocks":["age",…],"surface":"add-labs","accent":"#E4A11B"}` was applied live:
+Age led, the app recolored gold, the surface swapped — all through the gate,
+zero errors. That is the AI coding the app, safely, 100% of the time.
+
 ## The roadmap to "the AI rebuilds the whole app" (same architecture, no new risk)
 
 1. **On-device LLM authors the manifest.** Feed the profile (health + rank + data

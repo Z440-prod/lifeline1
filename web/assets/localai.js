@@ -129,6 +129,31 @@ export const localAI = {
         // the page — no network — so it faithfully demonstrates the offline path.
         return simulatedInfer(prompt, context);
     },
+
+    /* THE AI CODES THE APP — safely. Ask the on-device model to author the
+       layout as a JSON manifest from the user's profile. Returns a parsed
+       object (UNTRUSTED — the caller MUST pass it through validateManifest) or
+       null if no local model is ready. The prompt hard-constrains the model to a
+       closed vocabulary, and the caller's validator enforces it regardless of
+       what the model actually emits — so a bad/hallucinated answer can never
+       break or compromise the app. */
+    async composeLayout(profile = {}) {
+        if (!this.ready()) return null;
+        const system = 'You are Lifeline\'s on-device layout composer. Output ONLY a JSON object, no prose. '
+            + 'Shape: {"blocks":[ids],"surface":"id"|null,"accent":"#rrggbb"|null}. '
+            + 'blocks ids allowed: "readiness","age","circadian". surface ids allowed: '
+            + '"connect-source","add-labs","arena-push", or null. Order blocks by what matters most for THIS user. '
+            + 'Never invent ids. Never output anything but the JSON object.';
+        const prompt = `User profile: ${JSON.stringify(profile)}. Compose their Today layout.`;
+        let out;
+        try { out = await this.generate(prompt, { system, summary: JSON.stringify(profile) }); }
+        catch { return null; }
+        if (typeof out !== 'string') return null;
+        // Extract the first {...} so stray tokens around the JSON don't break parsing.
+        const m = out.match(/\{[\s\S]*\}/);
+        if (!m) return null;
+        try { return JSON.parse(m[0]); } catch { return null; }
+    },
 };
 
 /* A small, honest on-device responder. Not Gemma — a deterministic rule engine

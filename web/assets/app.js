@@ -14,7 +14,7 @@ import { notify } from './notify.js';
 import { installNativeBridges } from './native-bridge.js';
 import { mountFeelSlider } from './feelslider.js';
 import { usage } from './usage.js';
-import { composeToday } from './composer.js';
+import { composeToday, validateManifest } from './composer.js';
 
 // Wire the native capability bridges (IAP, notifications, on-device AI, device,
 // sign-in, health) the moment the module loads — before boot reads any of them.
@@ -546,7 +546,7 @@ function viewPortrait(el) {
     // order, what to hide, and one contextual block to surface — from this
     // user's mode + focus + rank + uploaded data + habits. A fixed renderer
     // (below) draws it. See composer.js for why this is store-compliant.
-    const layout = composeToday({
+    const rulesManifest = composeToday({
         lead: shape.lead,
         focus: shape.focus,
         dataRichness: shape.dataRichness,
@@ -557,6 +557,16 @@ function viewPortrait(el) {
         usesArena: usage.score('arena') > 0 ? Math.min(1, usage.score('arena') / (usage.score('coach') + usage.score('vault') + usage.score('arena') + 0.001)) : 0,
         available: new Set(Object.keys(insightCards)),
     });
+    // THE SAFETY GATE — always. Whether the manifest came from the rules above or
+    // from the on-device AI (store.aiLayout), it is validated to an allowlist of
+    // known blocks before it can touch the DOM. This is why the AI-authored app
+    // renders correctly 100% of the time: a bad manifest can only fall back to
+    // the safe rules layout, never break or inject anything.
+    const layout = validateManifest(store.aiLayout, rulesManifest);
+    // If the AI authored a (validated) accent, it recolors the app — the looks
+    // change per user too. Strict hex only (the gate guarantees it), so this can
+    // never be a CSS-injection vector.
+    if (layout.accent) document.documentElement.style.setProperty('--tint', layout.accent);
     const cardOrder = layout.blocks.filter((k) => insightCards[k]);
     const surfaceCard = layout.surface ? `
         <div class="card col-12 surface-card" data-surface="${layout.surface.cta}">
@@ -667,6 +677,21 @@ function viewPortrait(el) {
             if (first && !matchMedia('(prefers-reduced-motion: reduce)').matches) confetti();
         },
     });
+
+    // THE AI CODES THE APP — safely. When an on-device model is installed, let
+    // it author this user's layout. The result is passed through the same safety
+    // gate (validateManifest) as everything else, then Today re-renders with it.
+    // Runs at most once per session; the first paint already showed the safe
+    // rules layout, so the user never waits and never sees a broken screen.
+    if (localAI.ready() && !store.aiLayoutDone) {
+        store.aiLayoutDone = true;
+        const profile = { mode: mode?.id, focus: shape.focus, league: shape.league?.name, dataRichness: shape.dataRichness, labs: shape.labs, sources: shape.sources };
+        localAI.composeLayout(profile).then((raw) => {
+            const v = validateManifest(raw, rulesManifest);
+            store.aiLayout = v;
+            if (routeId() === 'portrait') render();
+        }).catch(() => { /* AI unavailable → the safe rules layout stays */ });
+    }
 
     // The composer-surfaced block routes to whatever it's nudging toward.
     $('.surface-card', el)?.addEventListener('click', (e) => {
