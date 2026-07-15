@@ -55,3 +55,4 @@ native/plugins/*/node_modules/
 # Production secrets — never commit
 deploy/.env.production
 .env.production
+.gstack/
