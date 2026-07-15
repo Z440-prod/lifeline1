@@ -43,3 +43,25 @@ Skills like `/office-hours`, `/autoplan`, `/qa`, `/review`, `/ship`,
 `/investigate`, `/cso` (security), and `/browse` become available after install.
 Use `/browse` for all web browsing. Use `~/.claude/skills/gstack/...` for gstack
 file paths.
+
+---
+
+## graphify (codebase knowledge graph)
+
+This repo ships a committed knowledge graph in `graphify-out/` — a queryable map
+of the whole codebase (1258 nodes, 2521 edges, 77 named communities like
+"Attestation Guard Middleware", "On-device AI & Billing UI"). Prefer querying it
+over blind file search for architecture questions.
+
+```bash
+uv tool install graphifyy && graphify install     # one-time (installs the skill)
+graphify query "how does subscription billing work"   # BFS over graph.json
+graphify path "webhook_handler()" "Subscription"      # trace a connection
+graphify explain "attest_guard"                       # explain a node + neighbors
+graphify update .                                     # rebuild after code changes (no LLM)
+```
+
+Open `graphify-out/graph.html` for the interactive visualization;
+`graphify-out/GRAPH_REPORT.md` is the human-readable overview. When
+`graphify-out/graph.json` exists, treat architecture questions as a graphify
+query first (the installed `/graphify` skill does this automatically).
