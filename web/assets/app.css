@@ -657,7 +657,9 @@ html[data-theme="dark"] .gate .social-apple svg { color: #000; }
 .splash-status { font-family: var(--font-round); font-weight: 600; font-size: var(--fs-foot); color: var(--ink-3); margin-top: 11px; }
 
 /* ═══ TOASTS + CONFETTI ═══════════════════════════════════════════════════ */
-.toasts { position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 120; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+/* Toasts float above the tab bar, not over the (now oversized) page title —
+   thumb-adjacent and never colliding with a header. */
+.toasts { position: fixed; bottom: calc(104px + env(safe-area-inset-bottom)); top: auto; left: 50%; transform: translateX(-50%); z-index: 120; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; pointer-events: none; }
 .toast {
     background: var(--glass);
     -webkit-backdrop-filter: blur(20px) saturate(1.7); backdrop-filter: blur(20px) saturate(1.7);
@@ -667,7 +669,7 @@ html[data-theme="dark"] .gate .social-apple svg { color: #000; }
     animation: toast-drop 0.45s var(--spring); display: flex; gap: 9px; align-items: center;
     max-width: min(90vw, 480px);
 }
-@keyframes toast-drop { from { opacity: 0; transform: translateY(-18px) scale(0.9); } }
+@keyframes toast-drop { from { opacity: 0; transform: translateY(18px) scale(0.9); } }
 .toast .d { width: 9px; height: 9px; border-radius: 99px; flex-shrink: 0; }
 
 .confetti-bit {
