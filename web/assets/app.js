@@ -14,6 +14,7 @@ import { notify } from './notify.js';
 import { installNativeBridges } from './native-bridge.js';
 import { mountFeelSlider } from './feelslider.js';
 import { usage } from './usage.js';
+import { composeToday } from './composer.js';
 
 // Wire the native capability bridges (IAP, notifications, on-device AI, device,
 // sign-in, health) the moment the module loads — before boot reads any of them.
@@ -541,8 +542,30 @@ function viewPortrait(el) {
             ${charts.circadianTrack(chrono.windows, 420)}
         </div>`,
     };
-    const cardOrder = [shape.lead, 'readiness', 'age', 'circadian']
-        .filter((k, i, a) => k && insightCards[k] && a.indexOf(k) === i);
+    // The layout composer emits a manifest — which insight blocks show, in what
+    // order, what to hide, and one contextual block to surface — from this
+    // user's mode + focus + rank + uploaded data + habits. A fixed renderer
+    // (below) draws it. See composer.js for why this is store-compliant.
+    const layout = composeToday({
+        lead: shape.lead,
+        focus: shape.focus,
+        dataRichness: shape.dataRichness,
+        labs: shape.labs,
+        sources: shape.sources,
+        league: shape.league,
+        prestige: shape.prestige,
+        usesArena: usage.score('arena') > 0 ? Math.min(1, usage.score('arena') / (usage.score('coach') + usage.score('vault') + usage.score('arena') + 0.001)) : 0,
+        available: new Set(Object.keys(insightCards)),
+    });
+    const cardOrder = layout.blocks.filter((k) => insightCards[k]);
+    const surfaceCard = layout.surface ? `
+        <div class="card col-12 surface-card" data-surface="${layout.surface.cta}">
+            <div class="surface-body">
+                <div class="surface-title">${esc(layout.surface.title)}</div>
+                <div class="surface-sub">${esc(layout.surface.body)}</div>
+            </div>
+            <svg class="chev" width="9" height="15" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1l6 6-6 6" stroke-linecap="round"/></svg>
+        </div>` : '';
 
     el.innerHTML = `
     ${offlineBanner()}
@@ -589,6 +612,8 @@ function viewPortrait(el) {
         </div>
 
         <div class="card col-12 feel-card" id="feelMount"></div>
+
+        ${surfaceCard}
 
         ${cardOrder.map((k) => insightCards[k]).join('')}
 
@@ -641,6 +666,12 @@ function viewPortrait(el) {
             toast(`Felt ${label.toLowerCase()} · ${val} — noted for today`);
             if (first && !matchMedia('(prefers-reduced-motion: reduce)').matches) confetti();
         },
+    });
+
+    // The composer-surfaced block routes to whatever it's nudging toward.
+    $('.surface-card', el)?.addEventListener('click', (e) => {
+        const go = e.currentTarget.dataset.surface;
+        if (go) { usage.record(go); location.hash = `#/${go}`; }
     });
 
     // Tapping the focus chip jumps to the Focus control in Settings.

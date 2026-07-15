@@ -268,6 +268,19 @@ svg { display: block; }
     .feel-thumb.pulse, .feel-burst.go { animation: none; }
 }
 
+/* Composer-surfaced contextual block — appears/disappears per user manifest. */
+.surface-card {
+    display: flex; align-items: center; gap: 14px; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--tint) 30%, var(--line));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--tint) 12%, var(--card)), var(--card));
+    transition: transform .2s var(--spring), filter .15s;
+}
+.surface-card:active { transform: scale(0.985); }
+.surface-card .surface-body { flex: 1; }
+.surface-card .surface-title { font-family: var(--font-round); font-weight: 800; font-size: var(--fs-head); }
+.surface-card .surface-sub { color: var(--ink-2); font-size: var(--fs-sub); margin-top: 3px; line-height: 1.45; }
+.surface-card .chev { color: var(--tint); flex-shrink: 0; }
+
 .card.hero {
     background:
         radial-gradient(120% 150% at 6% 0%, var(--tint-soft), transparent 55%),
