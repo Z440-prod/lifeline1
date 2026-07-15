@@ -12,6 +12,7 @@ import { localAI } from './localai.js';
 import { TIER_LABEL } from './device.js';
 import { notify } from './notify.js';
 import { installNativeBridges } from './native-bridge.js';
+import { mountFeelSlider } from './feelslider.js';
 
 // Wire the native capability bridges (IAP, notifications, on-device AI, device,
 // sign-in, health) the moment the module loads — before boot reads any of them.
@@ -567,6 +568,8 @@ function viewPortrait(el) {
             </div>
         </div>
 
+        <div class="card col-12 feel-card" id="feelMount"></div>
+
         ${cardOrder.map((k) => insightCards[k]).join('')}
 
         <div class="card col-7">
@@ -601,6 +604,23 @@ function viewPortrait(el) {
     $('#logScoreBtn')?.addEventListener('click', () => {
         if (loggedToday) { location.hash = '#/arena'; return; }
         submitScoreFlow();
+    });
+
+    // Tactile daily check-in. Drag to log how you feel — detent ticks, a light
+    // haptic, and a release burst. Persists per day; celebrates the first log.
+    mountFeelSlider($('#feelMount'), {
+        value: (() => {
+            if (store.feel != null) return store.feel;
+            try { const r = JSON.parse(localStorage.getItem('lifeline.feel') || 'null'); if (r && r.day === new Date().toDateString()) { store.feel = r.val; return r.val; } } catch (e) { /* private mode */ }
+            return 50;
+        })(),
+        onCommit: (val, label) => {
+            const first = store.feel == null;
+            store.feel = val;
+            try { localStorage.setItem('lifeline.feel', JSON.stringify({ day: new Date().toDateString(), val })); } catch (e) { /* private mode */ }
+            toast(`Felt ${label.toLowerCase()} · ${val} — noted for today`);
+            if (first && !matchMedia('(prefers-reduced-motion: reduce)').matches) confetti();
+        },
     });
 
     // Tapping the focus chip jumps to the Focus control in Settings.

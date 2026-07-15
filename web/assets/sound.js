@@ -47,6 +47,8 @@ export const sound = {
 
     /* fingertip on glass — tabs, rows */
     tick() { tone(1900, 0.035, { peak: 0.045 }); },
+    /* slider detent — pitch rises with position (0..1); tasteful, not a casino */
+    detent(t = 0.5) { tone(560 + Math.max(0, Math.min(1, t)) * 900, 0.026, { type: 'triangle', peak: 0.038 }); },
     /* button press — slightly weightier */
     tap() { tone(940, 0.05, { type: 'triangle', peak: 0.07 }); },
     /* success — a small major arpeggio */
